@@ -64,6 +64,7 @@ export function OrderActions({
 
   const cancelRef = useRef<HTMLFormElement>(null);
   const refundRef = useRef<HTMLFormElement>(null);
+  const fulfillRef = useRef<HTMLFormElement>(null);
 
   return (
     <div className="space-y-4">
@@ -73,6 +74,22 @@ export function OrderActions({
           <ResendButton />
           <Result state={resendState} />
         </form>
+      )}
+
+      {(status === "PENDING" || status === "PAID") && (
+        <div>
+          <form ref={fulfillRef} action={statusAction} className="hidden">
+            <input type="hidden" name="orderNumber" value={orderNumber} />
+            <input type="hidden" name="action" value="fulfill" />
+          </form>
+          <ConfirmDialog
+            triggerText="Mark as paid & deliver keys"
+            title="Deliver keys for this order?"
+            description="Use this only if you've confirmed the payment succeeded with the payment provider but the order is stuck (e.g. a missed webhook). This sells the reserved keys, marks the order fulfilled, and emails the keys to the customer immediately."
+            confirmText="Deliver keys"
+            onConfirm={() => fulfillRef.current?.requestSubmit()}
+          />
+        </div>
       )}
 
       {status === "PENDING" && (
