@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
-import { isStripeConfigured } from "@/lib/stripe";
+import { isPayHereConfigured } from "@/lib/payhere";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 
 export const metadata: Metadata = { title: "Checkout" };
@@ -14,7 +14,7 @@ export default async function CheckoutPage() {
       <CheckoutForm
         defaultEmail={session?.user?.email}
         emailLocked={Boolean(session?.user?.email)}
-        mockMode={!isStripeConfigured}
+        mockMode={!isPayHereConfigured}
       />
     </div>
   );

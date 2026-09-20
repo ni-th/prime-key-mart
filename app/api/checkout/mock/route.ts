@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getOrderByNumber, canViewOrder } from "@/lib/orders";
 import { fulfillOrder, releaseOrderReservation } from "@/lib/inventory";
-import { isStripeConfigured } from "@/lib/stripe";
+import { isPayHereConfigured } from "@/lib/payhere";
 
 export const runtime = "nodejs";
 
@@ -14,8 +14,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  // This endpoint only exists to stand in for Stripe in local dev.
-  if (isStripeConfigured) {
+  if (isPayHereConfigured) {
     return NextResponse.json({ error: "Not available." }, { status: 404 });
   }
 
@@ -41,7 +40,7 @@ export async function POST(req: Request) {
   }
 
   if (order.status === "PENDING" || order.status === "PAID") {
-    await fulfillOrder(order.id, { stripePaymentIntentId: "mock_pi" });
+    await fulfillOrder(order.id);
   }
   return NextResponse.json({ ok: true, status: "FULFILLED" });
 }

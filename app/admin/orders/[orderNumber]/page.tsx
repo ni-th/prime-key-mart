@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { decryptOrderKeys, getOrderByNumber } from "@/lib/orders";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
@@ -76,7 +76,7 @@ export default async function AdminOrderDetailPage({
                 {item.quantity > 1 ? ` × ${item.quantity}` : ""}
               </span>
               <span className="tabular-nums">
-                {formatUsd(item.unitPriceCents * item.quantity)}
+                {formatMoney(item.unitPriceCents * item.quantity, order.currency.toUpperCase())}
               </span>
             </li>
           ))}
@@ -84,7 +84,7 @@ export default async function AdminOrderDetailPage({
         <Separator className="my-3" />
         <div className="flex justify-between font-medium">
           <span>Total</span>
-          <span className="tabular-nums">{formatUsd(order.totalCents)}</span>
+          <span className="tabular-nums">{formatMoney(order.totalCents, order.currency.toUpperCase())}</span>
         </div>
       </Card>
 

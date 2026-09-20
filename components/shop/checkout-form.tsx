@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { selectCartSubtotal, useCart } from "@/lib/cart-store";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -31,8 +31,12 @@ export function CheckoutForm({
   const subtotal = useCart(selectCartSubtotal);
 
   const [email, setEmail] = useState(defaultEmail ?? "");
+  const [currency, setCurrency] = useState<"LKR" | "USD">("LKR");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const displayRate = 300;
+  const displayAmount =
+    currency === "LKR" ? Math.round(subtotal * displayRate) : subtotal;
 
   if (!hydrated) {
     return <Skeleton className="h-72 w-full" />;
@@ -67,16 +71,34 @@ export function CheckoutForm({
             productId: l.productId,
             quantity: l.quantity,
           })),
+          currency,
         }),
       });
-      const data = (await res.json()) as { url?: string; error?: string };
+      const data = (await res.json()) as {
+        url?: string;
+        fields?: Record<string, string>;
+        error?: string;
+      };
       if (!res.ok || !data.url) {
         setError(data.error ?? "Something went wrong. Please try again.");
         setPending(false);
         return;
       }
-      if (data.url.startsWith("http")) {
-        window.location.assign(data.url); // external Stripe Checkout
+      if (data.fields) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = data.url;
+        for (const [name, value] of Object.entries(data.fields)) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+      } else if (data.url.startsWith("http")) {
+        window.location.assign(data.url);
       } else {
         router.push(data.url);
       }
@@ -114,10 +136,34 @@ export function CheckoutForm({
           </div>
         </Card>
 
+        <Card className="p-5">
+          <h2 className="font-medium">Payment currency</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {(["LKR", "USD"] as const).map((option) => (
+              <label
+                key={option}
+                className="flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm"
+              >
+                <input
+                  type="radio"
+                  name="currency"
+                  value={option}
+                  checked={currency === option}
+                  onChange={() => setCurrency(option)}
+                />
+                {option === "LKR" ? "Sri Lanka (LKR)" : "International (USD)"}
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Sandbox rate: 1 USD = {displayRate} LKR.
+          </p>
+        </Card>
+
         {mockMode && (
           <Alert>
             <AlertDescription>
-              <strong>Test mode.</strong> Stripe isn&rsquo;t connected yet, so
+              <strong>Test mode.</strong> PayHere isn&rsquo;t connected yet, so
               the next step is a simulated payment — no card required.
             </AlertDescription>
           </Alert>
@@ -135,7 +181,12 @@ export function CheckoutForm({
                   {l.quantity > 1 ? ` × ${l.quantity}` : ""}
                 </span>
                 <span className="tabular-nums">
-                  {formatUsd(l.priceCents * l.quantity)}
+                  {formatMoney(
+                    currency === "LKR"
+                      ? Math.round(l.priceCents * l.quantity * displayRate)
+                      : l.priceCents * l.quantity,
+                    currency,
+                  )}
                 </span>
               </li>
             ))}
@@ -143,7 +194,7 @@ export function CheckoutForm({
           <Separator className="my-4" />
           <div className="flex justify-between font-medium">
             <span>Total</span>
-            <span className="tabular-nums">{formatUsd(subtotal)}</span>
+            <span className="tabular-nums">{formatMoney(displayAmount, currency)}</span>
           </div>
 
           {error && (

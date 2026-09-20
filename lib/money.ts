@@ -3,6 +3,13 @@ const usdFormatter = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
+export function formatMoney(cents: number, currency = "USD"): string {
+  return new Intl.NumberFormat(currency === "LKR" ? "en-LK" : "en-US", {
+    style: "currency",
+    currency,
+  }).format(cents / 100);
+}
+
 /** Format an integer cent amount as USD, e.g. 2999 -> "$29.99". */
 export function formatUsd(cents: number): string {
   return usdFormatter.format(cents / 100);

@@ -4,12 +4,13 @@ import { prisma } from "@/lib/db";
 import { checkoutSchema } from "@/lib/validation";
 import { generateOrderNumber } from "@/lib/orders";
 import { signOrderToken } from "@/lib/order-token";
+import { convertUsdCentsToCurrency } from "@/lib/payhere";
 import {
   InsufficientStockError,
   releaseOrderReservation,
   reserveKeysForOrder,
 } from "@/lib/inventory";
-import { isStripeConfigured, stripe } from "@/lib/stripe";
+import { createPayHereHash, isPayHereConfigured, payHereCheckoutUrl } from "@/lib/payhere";
 
 export const runtime = "nodejs";
 
@@ -57,6 +58,8 @@ export async function POST(req: Request) {
     (sum, l) => sum + l.product.priceCents * l.quantity,
     0,
   );
+  const currency = parsed.data.currency;
+  const paymentSubtotalCents = convertUsdCentsToCurrency(subtotalCents, currency);
 
   const orderNumber = generateOrderNumber();
   const order = await prisma.order.create({
@@ -65,14 +68,14 @@ export async function POST(req: Request) {
       email,
       userId: session?.user?.id ?? null,
       status: "PENDING",
-      subtotalCents,
-      totalCents: subtotalCents,
-      currency: "usd",
+      subtotalCents: paymentSubtotalCents,
+      totalCents: paymentSubtotalCents,
+      currency: currency.toLowerCase(),
       items: {
         create: lines.map((l) => ({
           productId: l.product.id,
           productName: l.product.name,
-          unitPriceCents: l.product.priceCents,
+          unitPriceCents: convertUsdCentsToCurrency(l.product.priceCents, currency),
           quantity: l.quantity,
         })),
       },
@@ -98,45 +101,42 @@ export async function POST(req: Request) {
 
   const token = signOrderToken(orderNumber);
 
-  // --- Mock payment (no Stripe key configured) ---------------------------------
-  if (!isStripeConfigured || !stripe) {
+  // --- Mock payment (PayHere credentials are not configured) -------------------
+  if (!isPayHereConfigured) {
     return NextResponse.json({
       url: `/checkout/mock?order=${orderNumber}&t=${token}`,
       mock: true,
     });
   }
 
-  // --- Real Stripe Checkout ---------------------------------------------------
+  // PayHere requires customer details that this temporary checkout does not
+  // collect yet. Replace these values when phone/address fields are added.
   try {
-    const checkout = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer_email: email,
-      client_reference_id: orderNumber,
-      metadata: { orderNumber },
-      line_items: lines.map((l) => ({
-        quantity: l.quantity,
-        price_data: {
-          currency: "usd",
-          unit_amount: l.product.priceCents,
-          product_data: {
-            name: l.product.name,
-            description: l.product.shortDescription,
-          },
-        },
-      })),
-      success_url: `${SITE_URL}/checkout/success?order=${orderNumber}&t=${token}`,
-      cancel_url: `${SITE_URL}/checkout/cancel?order=${orderNumber}`,
+    const amount = (paymentSubtotalCents / 100).toFixed(2);
+    return NextResponse.json({
+      url: payHereCheckoutUrl,
+      fields: {
+        merchant_id: process.env.PAYHERE_MERCHANT_ID,
+        return_url: `${SITE_URL}/checkout/success?order=${orderNumber}&t=${token}`,
+        cancel_url: `${SITE_URL}/checkout/cancel?order=${orderNumber}`,
+        notify_url: `${SITE_URL}/api/webhooks/payhere`,
+        order_id: orderNumber,
+        items: lines.map((l) => `${l.product.name} x ${l.quantity}`).join(", "),
+        currency,
+        amount,
+        first_name: "KeyMart",
+        last_name: "Customer",
+        email,
+        phone: "0000000000",
+        address: "Digital delivery",
+        city: "Colombo",
+        country: "Sri Lanka",
+        hash: createPayHereHash({ orderId: orderNumber, amount, currency }),
+      },
     });
-
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { stripeSessionId: checkout.id },
-    });
-
-    return NextResponse.json({ url: checkout.url });
   } catch (err) {
     await releaseOrderReservation(order.id, "FAILED");
-    console.error("[checkout] stripe session failed", err);
+    console.error("[checkout] PayHere session failed", err);
     return NextResponse.json(
       { error: "Payment could not be started. Please try again." },
       { status: 502 },

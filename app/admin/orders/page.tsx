@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminOrders } from "@/lib/admin";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
@@ -94,7 +94,7 @@ export default async function AdminOrdersPage({
                   {o.items.reduce((n, i) => n + i.quantity, 0)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatUsd(o.totalCents)}
+                  {formatMoney(o.totalCents, o.currency.toUpperCase())}
                 </TableCell>
                 <TableCell>
                   <OrderStatusBadge status={o.status} />

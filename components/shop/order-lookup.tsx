@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
 import { KeyList } from "@/components/shop/key-list";
 import { lookupOrderAction, type LookupState } from "@/app/actions/order-lookup";
@@ -80,7 +80,7 @@ export function OrderLookup() {
                     {item.quantity > 1 ? ` × ${item.quantity}` : ""}
                   </span>
                   <span className="tabular-nums">
-                    {formatUsd(item.unitPriceCents * item.quantity)}
+                    {formatMoney(item.unitPriceCents * item.quantity, state.order.currency.toUpperCase())}
                   </span>
                 </li>
               ))}
@@ -89,7 +89,7 @@ export function OrderLookup() {
             <div className="flex justify-between font-medium">
               <span>Total</span>
               <span className="tabular-nums">
-                {formatUsd(state.order.totalCents)}
+                {formatMoney(state.order.totalCents, state.order.currency.toUpperCase())}
               </span>
             </div>
           </Card>

@@ -17,6 +17,7 @@ export type LookupState =
         orderNumber: string;
         status: string;
         email: string;
+        currency: string;
         totalCents: number;
         items: { productName: string; quantity: number; unitPriceCents: number }[];
         keyGroups: { productName: string; keys: string[] }[];
@@ -52,6 +53,7 @@ export async function lookupOrderAction(
       orderNumber: order.orderNumber,
       status: order.status,
       email: order.email,
+      currency: order.currency,
       totalCents: order.totalCents,
       items: order.items.map((i) => ({
         productName: i.productName,

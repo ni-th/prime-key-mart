@@ -1,7 +1,7 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 let cached: Transporter | null = null;
 let cachedIsEthereal = false;
@@ -45,6 +45,7 @@ type OrderForEmail = {
   orderNumber: string;
   email: string;
   totalCents: number;
+  currency: string;
   items: {
     productName: string;
     licenseKeys: {
@@ -73,7 +74,7 @@ function renderEmail(order: OrderForEmail) {
   const text = [
     `Thanks for your order ${order.orderNumber}.`,
     ``,
-    `Total: ${formatUsd(order.totalCents)}`,
+    `Total: ${formatMoney(order.totalCents, order.currency.toUpperCase())}`,
     ``,
     ...groups.flatMap((g) => [
       `${g.name}`,
@@ -86,7 +87,7 @@ function renderEmail(order: OrderForEmail) {
   const html = `
     <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto">
       <h2>Thanks for your order</h2>
-      <p>Order <strong>${order.orderNumber}</strong> · ${formatUsd(order.totalCents)}</p>
+      <p>Order <strong>${order.orderNumber}</strong> · ${formatMoney(order.totalCents, order.currency.toUpperCase())}</p>
       ${groups
         .map(
           (g) => `

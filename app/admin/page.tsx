@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { getAdminOrders, getAdminProducts, getAdminStats, LOW_STOCK_THRESHOLD } from "@/lib/admin";
-import { formatUsd } from "@/lib/money";
+import { formatMoney, formatUsd } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -108,7 +108,7 @@ export default async function AdminDashboardPage() {
               </div>
               <div className="flex items-center gap-3">
                 <OrderStatusBadge status={o.status} />
-                <span className="tabular-nums">{formatUsd(o.totalCents)}</span>
+                <span className="tabular-nums">{formatMoney(o.totalCents, o.currency.toUpperCase())}</span>
               </div>
             </Link>
           ))}
