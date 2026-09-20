@@ -14,7 +14,7 @@ import { isStripeConfigured, stripe } from "@/lib/stripe";
 export const runtime = "nodejs";
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+  process.env.SITE_URL?.replace(/\/$/, "") ??
   "http://localhost:3000";
 
 export async function POST(req: Request) {
