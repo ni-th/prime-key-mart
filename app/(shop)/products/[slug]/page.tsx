@@ -113,7 +113,7 @@ export default async function ProductPage({
             </li>
             <li className="flex gap-2">
               <ShieldCheck className="size-4 shrink-0 text-primary" />
-              Secure Stripe checkout — guest checkout available.
+              Secure PayHere checkout — guest checkout available.
             </li>
             <li className="flex gap-2">
               <Mail className="size-4 shrink-0 text-primary" />

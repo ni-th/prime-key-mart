@@ -3,7 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getUserOrders } from "@/lib/orders";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -89,7 +89,7 @@ export default async function AccountOverviewPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <OrderStatusBadge status={o.status} />
-                  <span className="tabular-nums">{formatUsd(o.totalCents)}</span>
+                  <span className="tabular-nums">{formatMoney(o.totalCents, o.currency.toUpperCase())}</span>
                 </div>
               </Link>
             ))}

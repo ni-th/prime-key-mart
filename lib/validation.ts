@@ -16,6 +16,7 @@ export const registerSchema = z.object({
 
 export const checkoutSchema = z.object({
   email: z.email("Enter a valid email address").optional(),
+  currency: z.enum(["LKR", "USD"]),
   items: z
     .array(
       z.object({

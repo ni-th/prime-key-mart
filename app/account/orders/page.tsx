@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getUserOrders } from "@/lib/orders";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ export default async function AccountOrdersPage() {
                 <div className="text-xs text-muted-foreground">
                   {o.createdAt.toLocaleString()} ·{" "}
                   {o.items.reduce((n, i) => n + i.quantity, 0)} key(s) ·{" "}
-                  {formatUsd(o.totalCents)}
+                  {formatMoney(o.totalCents, o.currency.toUpperCase())}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">

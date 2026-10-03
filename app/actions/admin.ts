@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/admin";
 import { encryptSecret, keyFingerprint } from "@/lib/crypto";
 import { sendOrderKeysEmail } from "@/lib/mailer";
-import { releaseOrderReservation } from "@/lib/inventory";
+import { fulfillOrder, releaseOrderReservation } from "@/lib/inventory";
 import { productSchema, slugify } from "@/lib/validation";
 
 export type FormResult =
@@ -254,6 +254,11 @@ export async function updateOrderStatus(
       return { ok: false, error: "Only pending orders can be cancelled." };
     }
     await releaseOrderReservation(order.id, "EXPIRED");
+  } else if (action === "fulfill") {
+    if (order.status !== "PENDING" && order.status !== "PAID") {
+      return { ok: false, error: "Only pending or paid orders can be delivered manually." };
+    }
+    await fulfillOrder(order.id);
   } else {
     return { ok: false, error: "Unknown action." };
   }

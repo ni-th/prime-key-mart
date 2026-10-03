@@ -5,16 +5,18 @@ import { useState } from "react";
 import { CreditCard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 export function MockPayment({
   orderNumber,
   token,
   totalCents,
+  currency,
 }: {
   orderNumber: string;
   token: string;
   totalCents: number;
+  currency: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<"pay" | "cancel" | null>(null);
@@ -66,7 +68,7 @@ export function MockPayment({
         ) : (
           <CreditCard className="size-4" />
         )}
-        Pay {formatUsd(totalCents)} (simulated)
+        Pay {formatMoney(totalCents, currency.toUpperCase())} (simulated)
       </Button>
       <Button
         variant="ghost"

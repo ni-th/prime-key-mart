@@ -43,7 +43,7 @@ export default async function HomePage() {
       <section className="grid gap-4 border-y py-6 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { icon: Zap, title: "Instant delivery", body: "Keys land in your inbox right after payment." },
-          { icon: ShieldCheck, title: "Secure checkout", body: "Payments handled by Stripe. We never see your card." },
+          { icon: ShieldCheck, title: "Secure checkout", body: "Payments handled by PayHere. We never see your card." },
           { icon: BadgeCheck, title: "Genuine licenses", body: "Sourced to activate the first time, every time." },
           { icon: Mail, title: "Real support", body: "Lost a key? Look it up or email us any time." },
         ].map(({ icon: Icon, title, body }) => (

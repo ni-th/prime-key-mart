@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { FlaskConical } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { isStripeConfigured } from "@/lib/stripe";
+import { isPayHereConfigured } from "@/lib/payhere";
 import { canViewOrder, getOrderByNumber } from "@/lib/orders";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MockPayment } from "@/components/shop/mock-payment";
@@ -16,7 +16,7 @@ export default async function MockCheckoutPage({
 }: {
   searchParams: Promise<{ order?: string; t?: string }>;
 }) {
-  if (isStripeConfigured) notFound();
+  if (isPayHereConfigured) notFound();
 
   const { order: orderNumber, t: token } = await searchParams;
   if (!orderNumber || !token) notFound();
@@ -35,7 +35,7 @@ export default async function MockCheckoutPage({
     <div className="mx-auto max-w-md px-4 py-12">
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         <FlaskConical className="size-3.5" />
-        Simulated payment screen — Stripe is not connected.
+        Simulated payment screen — PayHere is not connected.
       </div>
 
       <Card className="p-6">
@@ -52,7 +52,7 @@ export default async function MockCheckoutPage({
                 {item.quantity > 1 ? ` × ${item.quantity}` : ""}
               </span>
               <span className="tabular-nums">
-                {formatUsd(item.unitPriceCents * item.quantity)}
+                {formatMoney(item.unitPriceCents * item.quantity, order.currency.toUpperCase())}
               </span>
             </li>
           ))}
@@ -60,13 +60,14 @@ export default async function MockCheckoutPage({
         <Separator className="my-4" />
         <div className="mb-5 flex justify-between font-medium">
           <span>Total</span>
-          <span className="tabular-nums">{formatUsd(order.totalCents)}</span>
+          <span className="tabular-nums">{formatMoney(order.totalCents, order.currency.toUpperCase())}</span>
         </div>
 
         <MockPayment
           orderNumber={order.orderNumber}
           token={token}
           totalCents={order.totalCents}
+          currency={order.currency}
         />
       </Card>
     </div>
