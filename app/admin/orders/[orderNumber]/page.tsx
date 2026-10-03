@@ -88,6 +88,20 @@ export default async function AdminOrderDetailPage({
         </div>
       </Card>
 
+      {order.status === "REFUNDED" && (
+        <Card className="border-destructive/30 p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-medium">Refund</h2>
+            <span className="text-xs text-muted-foreground">
+              {order.refundedAt ? order.refundedAt.toLocaleString() : ""}
+            </span>
+          </div>
+          <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+            {order.refundNote || "No note was added."}
+          </p>
+        </Card>
+      )}
+
       {keyGroups.length > 0 && (
         <div className="space-y-3">
           <h2 className="font-medium">Delivered keys</h2>

@@ -240,9 +240,14 @@ export async function updateOrderStatus(
   if (!order) return { ok: false, error: "Order not found." };
 
   if (action === "refund") {
+    const note = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
     await prisma.order.update({
       where: { id: order.id },
-      data: { status: "REFUNDED" },
+      data: {
+        status: "REFUNDED",
+        refundedAt: new Date(),
+        refundNote: note || null,
+      },
     });
   } else if (action === "cancel") {
     if (order.status !== "PENDING") {
@@ -257,4 +262,96 @@ export async function updateOrderStatus(
   revalidatePath(`/admin/orders/${orderNumber}`);
   revalidatePath("/admin");
   return { ok: true, message: "Order updated." };
+}
+
+// --- Users -------------------------------------------------------------------
+
+function revalidateUsers(id?: string) {
+  revalidatePath("/admin/users");
+  if (id) revalidatePath(`/admin/users/${id}`);
+}
+
+export async function setUserSuspended(
+  formData: FormData,
+): Promise<FormResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { ok: false, error: "Not authorized." };
+
+  const userId = formData.get("userId") as string;
+  const suspend = formData.get("suspend") === "true";
+  const note = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
+
+  if (userId === admin.user.id) {
+    return { ok: false, error: "You can't suspend your own account." };
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { ok: false, error: "User not found." };
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      suspended: suspend,
+      suspendedAt: suspend ? new Date() : null,
+      suspensionNote: suspend ? note || null : null,
+    },
+  });
+
+  revalidateUsers(userId);
+  return {
+    ok: true,
+    message: suspend ? "Account suspended." : "Account re-enabled.",
+  };
+}
+
+export async function setUserRole(formData: FormData): Promise<FormResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { ok: false, error: "Not authorized." };
+
+  const userId = formData.get("userId") as string;
+  const role = formData.get("role") === "ADMIN" ? "ADMIN" : "USER";
+
+  if (userId === admin.user.id) {
+    return { ok: false, error: "You can't change your own role." };
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { ok: false, error: "User not found." };
+
+  if (user.role === "ADMIN" && role === "USER") {
+    const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (admins <= 1) {
+      return { ok: false, error: "There must be at least one admin." };
+    }
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { role } });
+  revalidateUsers(userId);
+  return { ok: true, message: `Role set to ${role.toLowerCase()}.` };
+}
+
+export async function setEmailBlocked(formData: FormData): Promise<FormResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { ok: false, error: "Not authorized." };
+
+  const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
+  const block = formData.get("block") === "true";
+  const note = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
+  if (!email) return { ok: false, error: "Missing email." };
+
+  if (email === admin.user.email?.toLowerCase()) {
+    return { ok: false, error: "You can't block your own email." };
+  }
+
+  if (block) {
+    await prisma.blockedEmail.upsert({
+      where: { email },
+      update: { note: note || null },
+      create: { email, note: note || null },
+    });
+  } else {
+    await prisma.blockedEmail.deleteMany({ where: { email } });
+  }
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/guest/${encodeURIComponent(email)}`);
+  return { ok: true, message: block ? "Email blocked." : "Email unblocked." };
 }

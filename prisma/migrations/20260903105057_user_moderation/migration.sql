@@ -1,0 +1,17 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "suspended" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "suspendedAt" TIMESTAMP(3),
+ADD COLUMN     "suspensionNote" TEXT;
+
+-- CreateTable
+CREATE TABLE "BlockedEmail" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "note" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "BlockedEmail_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "BlockedEmail_email_key" ON "BlockedEmail"("email");

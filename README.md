@@ -66,8 +66,11 @@ Test card: `4242 4242 4242 4242`, any future expiry, any CVC. No other code chan
   `npm run dev` console). Re-view them later at `/order-lookup`.
 - **Buy as a customer:** sign in first; the order shows up under `/account/orders`.
 - **Admin:** sign in as the admin account → `/admin` for the dashboard, add a product,
-  paste license keys on its *Manage keys* page, and manage orders (resend email, refund,
-  cancel).
+  paste license keys on its *Manage keys* page, manage orders (resend email, refund with a
+  note, cancel), and manage users at `/admin/users` — list and filter registered customers
+  vs. guest-checkout emails, suspend/re-enable accounts with a note, change roles, and
+  block/unblock guest emails (a suspended account can't sign in; a blocked email can't
+  check out or register).
 
 ## Email
 
@@ -92,7 +95,7 @@ and a preview URL is logged to the server console for every message.
 app/(shop)      storefront: home, catalog, product, cart, checkout, order-lookup, legal
 app/(auth)      login / register
 app/account     signed-in customer area (overview, order history, keys)
-app/admin       admin area (dashboard, product CRUD, key inventory, orders)
+app/admin       admin area (dashboard, product CRUD, key inventory, orders, users)
 app/api         checkout, mock payment, Stripe webhook, order status
 app/actions     server actions (auth, checkout support, admin, order lookup)
 lib/            db, auth, crypto, stripe, mailer, inventory, orders, products, cart store

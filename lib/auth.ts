@@ -22,6 +22,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: email.toLowerCase() },
         });
         if (!user?.passwordHash) return null;
+        if (user.suspended) return null;
 
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;

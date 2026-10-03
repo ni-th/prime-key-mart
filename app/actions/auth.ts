@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { registerSchema } from "@/lib/validation";
+import { isEmailBlocked } from "@/lib/moderation";
 
 export type RegisterResult =
   | { ok: true }
@@ -22,6 +23,15 @@ export async function registerUser(input: unknown): Promise<RegisterResult> {
   }
 
   const email = parsed.data.email.toLowerCase();
+
+  if (await isEmailBlocked(email)) {
+    return {
+      ok: false,
+      error: "This email address can't be used to register. Contact support.",
+      fieldErrors: { email: "This email address is not allowed." },
+    };
+  }
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return {

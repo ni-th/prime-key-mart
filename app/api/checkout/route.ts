@@ -10,6 +10,7 @@ import {
   reserveKeysForOrder,
 } from "@/lib/inventory";
 import { isStripeConfigured, stripe } from "@/lib/stripe";
+import { checkoutBlockReason } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,11 @@ export async function POST(req: Request) {
       { error: "An email address is required." },
       { status: 400 },
     );
+  }
+
+  const blockReason = await checkoutBlockReason(email, session?.user?.id);
+  if (blockReason) {
+    return NextResponse.json({ error: blockReason }, { status: 403 });
   }
 
   // Re-price everything from the database — never trust client prices.

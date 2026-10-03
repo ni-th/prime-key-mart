@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { KeyRound, LayoutDashboard, Package, Receipt, Store } from "lucide-react";
+import {
+  KeyRound,
+  LayoutDashboard,
+  Package,
+  Receipt,
+  Store,
+  Users,
+} from "lucide-react";
 import { getAdminSession } from "@/lib/admin";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,6 +16,7 @@ const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: Receipt },
+  { href: "/admin/users", label: "Users", icon: Users },
 ];
 
 export default async function AdminLayout({

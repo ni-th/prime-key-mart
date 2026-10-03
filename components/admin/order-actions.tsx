@@ -6,6 +6,7 @@ import { Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { RefundOrderDialog } from "@/components/admin/refund-order-dialog";
 import {
   resendOrderEmail,
   updateOrderStatus,
@@ -63,7 +64,6 @@ export function OrderActions({
   );
 
   const cancelRef = useRef<HTMLFormElement>(null);
-  const refundRef = useRef<HTMLFormElement>(null);
 
   return (
     <div className="space-y-4">
@@ -93,21 +93,10 @@ export function OrderActions({
       )}
 
       {(status === "FULFILLED" || status === "PAID") && (
-        <div>
-          <form ref={refundRef} action={statusAction} className="hidden">
-            <input type="hidden" name="orderNumber" value={orderNumber} />
-            <input type="hidden" name="action" value="refund" />
-          </form>
-          <ConfirmDialog
-            triggerText="Mark refunded"
-            triggerVariant="destructive"
-            title="Mark this order as refunded?"
-            description="This records the order as refunded. Issue the actual refund in your payment provider separately. Delivered keys are not revoked."
-            confirmText="Mark refunded"
-            confirmVariant="destructive"
-            onConfirm={() => refundRef.current?.requestSubmit()}
-          />
-        </div>
+        <RefundOrderDialog
+          orderNumber={orderNumber}
+          formAction={statusAction}
+        />
       )}
 
       <Result state={statusState} />

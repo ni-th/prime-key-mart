@@ -30,14 +30,24 @@ enum OrderStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String?
-  role         Role     @default(USER)
-  orders       Order[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String?
+  passwordHash   String?
+  role           Role      @default(USER)
+  suspended      Boolean   @default(false)
+  suspendedAt    DateTime?
+  suspensionNote String?
+  orders         Order[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model BlockedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  note      String?
+  createdAt DateTime @default(now())
 }
 
 model Category {
@@ -105,6 +115,8 @@ model Order {
   currency              String      @default("usd")
   stripeSessionId       String?     @unique
   stripePaymentIntentId String?
+  refundNote            String?
+  refundedAt            DateTime?
   items                 OrderItem[]
   createdAt             DateTime    @default(now())
   paidAt                DateTime?
