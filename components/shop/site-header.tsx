@@ -30,7 +30,9 @@ export async function SiteHeader() {
           <Logo className="h-8" priority />
         </Link>
 
-        <nav className="ml-4 hidden items-center gap-1 md:flex">
+        {/* Category links only fit inline on wide screens; below xl they live
+            in the menu (MobileNav), so the account buttons never overflow. */}
+        <nav className="ml-4 hidden shrink-0 items-center gap-1 xl:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -45,10 +47,11 @@ export async function SiteHeader() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2">
+          {/* Search takes the leftover space and is the first thing to shrink. */}
           <form
             action="/products"
-            className="relative hidden sm:block"
+            className="relative hidden min-w-0 max-w-64 flex-1 sm:block"
             role="search"
           >
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -56,11 +59,11 @@ export async function SiteHeader() {
               type="search"
               name="q"
               placeholder="Search keys…"
-              className="h-8 w-40 pl-8 lg:w-56"
+              className="h-8 w-full pl-8"
             />
           </form>
 
-          <CartButton />
+          <CartButton className="shrink-0" />
 
           {session?.user ? (
             <AccountMenu
@@ -72,7 +75,10 @@ export async function SiteHeader() {
             <>
               <Link
                 href="/login"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "sm" }),
+                  "shrink-0",
+                )}
               >
                 Sign in
               </Link>
@@ -80,7 +86,7 @@ export async function SiteHeader() {
                 href="/register"
                 className={cn(
                   buttonVariants({ size: "sm" }),
-                  "hidden sm:inline-flex",
+                  "hidden shrink-0 sm:inline-flex",
                 )}
               >
                 Sign up

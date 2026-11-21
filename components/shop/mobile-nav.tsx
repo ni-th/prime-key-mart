@@ -23,7 +23,7 @@ export function MobileNav({ links }: { links: NavLink[] }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button variant="outline" size="icon" className="md:hidden" />
+          <Button variant="outline" size="icon" className="shrink-0 xl:hidden" />
         }
       >
         <Menu className="size-4" />
