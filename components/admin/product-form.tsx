@@ -163,7 +163,13 @@ export function ProductForm({
           />
         </Field>
         <Field label="Category" htmlFor="categoryId" error={fe.categoryId}>
-          <Select name="categoryId" defaultValue={product?.categoryId}>
+          {/* `items` lets the trigger show the name before the popup has opened
+              (otherwise Base UI shows the raw value, i.e. the category id). */}
+          <Select
+            name="categoryId"
+            defaultValue={product?.categoryId}
+            items={categories.map((c) => ({ value: c.id, label: c.name }))}
+          >
             <SelectTrigger id="categoryId" className="w-full">
               <SelectValue placeholder="Pick a category" />
             </SelectTrigger>

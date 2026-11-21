@@ -113,7 +113,14 @@ export function UserControls({
         <h3 className="mb-2 text-sm font-medium">Role</h3>
         <form action={roleAction} className="flex items-center gap-2">
           <input type="hidden" name="userId" value={userId} />
-          <Select name="role" defaultValue={role}>
+          <Select
+            name="role"
+            defaultValue={role}
+            items={[
+              { value: "USER", label: "Customer" },
+              { value: "ADMIN", label: "Admin" },
+            ]}
+          >
             <SelectTrigger size="sm" className="w-36">
               <SelectValue />
             </SelectTrigger>

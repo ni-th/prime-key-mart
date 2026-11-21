@@ -55,7 +55,16 @@ export function CatalogFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Select value={current.category} onValueChange={(v) => update("category", v)}>
+      {/* `items` gives each Select its labels up front, so the trigger shows
+          "Operating Systems" instead of the raw value ("operating-systems"). */}
+      <Select
+        value={current.category}
+        onValueChange={(v) => update("category", v)}
+        items={[
+          { value: "all", label: "All categories" },
+          ...categories.map((c) => ({ value: c.slug, label: c.name })),
+        ]}
+      >
         <SelectTrigger size="sm" className="w-44">
           <SelectValue placeholder="Category" />
         </SelectTrigger>
@@ -69,7 +78,14 @@ export function CatalogFilters({
         </SelectContent>
       </Select>
 
-      <Select value={current.brand} onValueChange={(v) => update("brand", v)}>
+      <Select
+        value={current.brand}
+        onValueChange={(v) => update("brand", v)}
+        items={[
+          { value: "all", label: "All brands" },
+          ...brands.map((b) => ({ value: b, label: b })),
+        ]}
+      >
         <SelectTrigger size="sm" className="w-36">
           <SelectValue placeholder="Brand" />
         </SelectTrigger>
@@ -83,7 +99,11 @@ export function CatalogFilters({
         </SelectContent>
       </Select>
 
-      <Select value={current.sort} onValueChange={(v) => update("sort", v)}>
+      <Select
+        value={current.sort}
+        onValueChange={(v) => update("sort", v)}
+        items={SORTS}
+      >
         <SelectTrigger size="sm" className="w-44">
           <SelectValue placeholder="Sort" />
         </SelectTrigger>
