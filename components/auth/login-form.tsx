@@ -105,7 +105,7 @@ export function LoginForm() {
               />
               <p className="text-xs text-muted-foreground">
                 Open your authenticator app and enter the 6-digit code for
-                KeyMart.
+                Keysby.
               </p>
             </div>
           )}

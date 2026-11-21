@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { KeyRound, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 import {
   Sheet,
   SheetContent,
@@ -30,9 +31,8 @@ export function MobileNav({ links }: { links: NavLink[] }) {
       </SheetTrigger>
       <SheetContent side="left" className="w-72">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <KeyRound className="size-4 text-primary" />
-            KeyMart
+          <SheetTitle>
+            <Logo markClassName="size-6" />
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-2">

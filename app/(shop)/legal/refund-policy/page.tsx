@@ -7,7 +7,7 @@ export default function RefundPolicyPage() {
     <div className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Refund policy</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        KeyMart is a demo project. This page is placeholder content.
+        Keysby is a demo project. This page is placeholder content.
       </p>
 
       <div className="mt-8 space-y-6 text-sm leading-6 text-muted-foreground">

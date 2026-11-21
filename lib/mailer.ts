@@ -102,7 +102,7 @@ function renderEmail(order: OrderForEmail) {
         </div>`,
         )
         .join("")}
-      <p style="color:#666;font-size:13px">Keep this email safe. You can also view these keys any time from your KeyMart account.</p>
+      <p style="color:#666;font-size:13px">Keep this email safe. You can also view these keys any time from your Keysby account.</p>
     </div>`;
 
   return { text, html };
@@ -126,9 +126,9 @@ export async function sendAdminAlertEmail(alert: {
   }
 
   const info = await transport.sendMail({
-    from: process.env.SMTP_FROM || "KeyMart <no-reply@keymart.test>",
+    from: process.env.SMTP_FROM || "Keysby <no-reply@keysby.test>",
     to,
-    subject: `[KeyMart] ${alert.subject}`,
+    subject: `[Keysby] ${alert.subject}`,
     text,
   });
 
@@ -145,7 +145,7 @@ async function sendSimpleEmail(to: string, subject: string, text: string, html: 
     return;
   }
   const info = await transport.sendMail({
-    from: process.env.SMTP_FROM || "KeyMart <no-reply@keymart.test>",
+    from: process.env.SMTP_FROM || "Keysby <no-reply@keysby.test>",
     to,
     subject,
     text,
@@ -167,7 +167,7 @@ export async function sendPasswordResetEmail(
   ttlMinutes: number,
 ): Promise<void> {
   const text = [
-    `Someone (hopefully you) asked to reset the password for your KeyMart account.`,
+    `Someone (hopefully you) asked to reset the password for your Keysby account.`,
     ``,
     `Reset it here (link works once, for ${ttlMinutes} minutes):`,
     resetUrl,
@@ -176,30 +176,30 @@ export async function sendPasswordResetEmail(
   ].join("\n");
   const html = emailShell(`
     <h2>Reset your password</h2>
-    <p>Someone (hopefully you) asked to reset the password for your KeyMart account.</p>
+    <p>Someone (hopefully you) asked to reset the password for your Keysby account.</p>
     <p style="margin:24px 0">
       <a href="${resetUrl}" style="background:#111;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">Choose a new password</a>
     </p>
     <p style="color:#666;font-size:13px">This link works once and expires in ${ttlMinutes} minutes.
     If you didn't ask for this, ignore this email - your password won't change.</p>
     <p style="color:#999;font-size:12px;word-break:break-all">${resetUrl}</p>`);
-  await sendSimpleEmail(to, "Reset your KeyMart password", text, html);
+  await sendSimpleEmail(to, "Reset your Keysby password", text, html);
 }
 
 /** Heads-up after a password change, so an owner notices an unexpected reset. */
 export async function sendPasswordChangedEmail(to: string): Promise<void> {
   const text = [
-    `The password for your KeyMart account was just changed.`,
+    `The password for your Keysby account was just changed.`,
     ``,
     `If this was you, no action is needed.`,
     `If it wasn't, reset your password right away from the sign-in page and contact support.`,
   ].join("\n");
   const html = emailShell(`
     <h2>Your password was changed</h2>
-    <p>The password for your KeyMart account was just changed.</p>
+    <p>The password for your Keysby account was just changed.</p>
     <p style="color:#666;font-size:13px">If this was you, no action is needed. If it wasn't,
     reset your password right away from the sign-in page and contact support.</p>`);
-  await sendSimpleEmail(to, "Your KeyMart password was changed", text, html);
+  await sendSimpleEmail(to, "Your Keysby password was changed", text, html);
 }
 
 /** Sends the license keys for a fulfilled order. Safe to call more than once. */
@@ -221,9 +221,9 @@ export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
   }
 
   const info = await transport.sendMail({
-    from: process.env.SMTP_FROM || "KeyMart <no-reply@keymart.test>",
+    from: process.env.SMTP_FROM || "Keysby <no-reply@keysby.test>",
     to: order.email,
-    subject: `Your KeyMart order ${order.orderNumber}`,
+    subject: `Your Keysby order ${order.orderNumber}`,
     text,
     html,
   });

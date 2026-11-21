@@ -7,7 +7,7 @@ export default function TermsPage() {
     <div className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Terms of service</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        KeyMart is a demo project. This page is placeholder content, not real
+        Keysby is a demo project. This page is placeholder content, not real
         legal terms.
       </p>
 
@@ -15,7 +15,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-medium text-foreground">1. What we sell</h2>
           <p>
-            KeyMart lists software license keys for operating systems, office
+            Keysby lists software license keys for operating systems, office
             suites and security software. Each order delivers one or more
             25-character product keys or redemption codes by email.
           </p>
@@ -38,7 +38,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-medium text-foreground">4. Acceptable use</h2>
           <p>
-            Do not resell, publish or share keys purchased through KeyMart.
+            Do not resell, publish or share keys purchased through Keysby.
             Fraudulent chargebacks may result in keys being revoked where the
             publisher supports it.
           </p>
@@ -46,7 +46,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-medium text-foreground">5. Liability</h2>
           <p>
-            As a demo, KeyMart is provided &ldquo;as is&rdquo; with no warranty
+            As a demo, Keysby is provided &ldquo;as is&rdquo; with no warranty
             of any kind.
           </p>
         </section>

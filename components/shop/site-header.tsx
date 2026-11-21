@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { KeyRound, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 import { auth } from "@/lib/auth";
 import { getCategories } from "@/lib/products";
 import { buttonVariants } from "@/components/ui/button";
@@ -25,9 +26,8 @@ export async function SiteHeader() {
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
         <MobileNav links={navLinks} />
 
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <KeyRound className="size-5 text-primary" />
-          <span className="text-base">KeyMart</span>
+        <Link href="/" aria-label="Keysby home">
+          <Logo className="text-base" markClassName="size-7" />
         </Link>
 
         <nav className="ml-4 hidden items-center gap-1 md:flex">

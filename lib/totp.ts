@@ -10,7 +10,7 @@ const STEP_SECONDS = 30;
 const DIGITS = 6;
 /** Accept the previous and next code too, to absorb phone/server clock drift. */
 const DRIFT_STEPS = 1;
-const ISSUER = "KeyMart";
+const ISSUER = "Keysby";
 
 const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 

@@ -1,4 +1,4 @@
-// KeyMart data model. See prisma/seed.ts for sample data.
+// Keysby data model. See prisma/seed.ts for sample data.
 
 generator client {
   provider = "prisma-client-js"

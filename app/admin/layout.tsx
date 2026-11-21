@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  KeyRound,
   LayoutDashboard,
   Package,
   Receipt,
@@ -10,6 +9,7 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getAdminSession } from "@/lib/admin";
+import { Logo } from "@/components/brand/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -37,9 +37,8 @@ export default async function AdminLayout({
     <div className="flex min-h-full flex-col">
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
-          <Link href="/admin" className="flex items-center gap-2 font-semibold">
-            <KeyRound className="size-5 text-primary" />
-            KeyMart
+          <Link href="/admin" className="flex items-center gap-2">
+            <Logo markClassName="size-7" />
             <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
               Admin
             </span>

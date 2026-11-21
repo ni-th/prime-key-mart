@@ -136,7 +136,7 @@ export async function POST(req: Request) {
         items: lines.map((l) => `${l.product.name} x ${l.quantity}`).join(", "),
         currency,
         amount,
-        first_name: "KeyMart",
+        first_name: "Keysby",
         last_name: "Customer",
         email,
         phone: "0000000000",

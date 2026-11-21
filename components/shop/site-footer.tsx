@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { KeyRound } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 
 export function SiteFooter() {
   return (
     <footer className="border-t bg-muted/30">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 md:grid-cols-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 font-semibold">
-            <KeyRound className="size-4 text-primary" />
-            KeyMart
-          </div>
+          <Logo markClassName="size-6" />
           <p className="text-xs text-muted-foreground">
             Genuine software keys, delivered instantly to your inbox.
           </p>
@@ -63,7 +60,7 @@ export function SiteFooter() {
 
       <div className="border-t py-4">
         <p className="mx-auto max-w-6xl px-4 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} KeyMart. Demo project - not a real store.
+          © {new Date().getFullYear()} Keysby. Demo project - not a real store.
         </p>
       </div>
     </footer>
