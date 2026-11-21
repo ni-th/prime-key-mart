@@ -47,7 +47,7 @@ export function RefundOrderDialog({
           <DialogTitle>Mark this order as refunded?</DialogTitle>
           <DialogDescription>
             This records the order as refunded. Issue the actual money-back in
-            your payment provider separately — delivered keys are not revoked.
+            your payment provider separately - delivered keys are not revoked.
           </DialogDescription>
         </DialogHeader>
         <form

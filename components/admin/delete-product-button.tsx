@@ -30,7 +30,7 @@ export function DeleteProductButton({ id }: { id: string }) {
         triggerIcon={<Trash2 className="size-4" />}
         triggerVariant="destructive"
         title="Delete this product?"
-        description="This permanently removes the product and any unsold keys. Products that appear in past orders can't be deleted — unpublish them instead."
+        description="This permanently removes the product and any unsold keys. Products that appear in past orders can't be deleted - unpublish them instead."
         confirmText="Delete product"
         confirmVariant="destructive"
         onConfirm={() => formRef.current?.requestSubmit()}

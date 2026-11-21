@@ -74,7 +74,7 @@ const products: SeedProduct[] = [
     name: "Office 2021 Professional Plus",
     shortDescription: "One-time purchase. Word, Excel, PowerPoint, Outlook & more.",
     description:
-      "Microsoft Office 2021 Professional Plus for one Windows PC. Includes Word, Excel, PowerPoint, Outlook, Access, Publisher and OneNote. No subscription — a permanent license with a one-time payment. Delivered instantly with a product key and download link.",
+      "Microsoft Office 2021 Professional Plus for one Windows PC. Includes Word, Excel, PowerPoint, Outlook, Access, Publisher and OneNote. No subscription - a permanent license with a one-time payment. Delivered instantly with a product key and download link.",
     brand: "Microsoft",
     platform: "Windows",
     region: "Global",
@@ -226,7 +226,7 @@ async function main() {
   }
 
   console.log("Seeding users...");
-  // Admin accounts are provisioned here only — there is no admin self-registration.
+  // Admin accounts are provisioned here only - there is no admin self-registration.
   const adminEmail = "nimantha.bt@gmail.com";
   const adminPassword = "Nimantha@123";
   const userPassword = "user12345";

@@ -104,7 +104,7 @@ export function OrderStatusView({
     );
   }
 
-  // Payment confirmed but we ran out of keys — an admin has been alerted.
+  // Payment confirmed but we ran out of keys - an admin has been alerted.
   // Keep polling (PAID isn't in DONE) so the keys appear once delivered.
   if (data?.status === "PAID") {
     return (
@@ -153,7 +153,7 @@ export function OrderStatusView({
     );
   }
 
-  // FULFILLED (or REFUNDED — still show what was delivered)
+  // FULFILLED (or REFUNDED - still show what was delivered)
   return (
     <div className="space-y-5">
       <Card className="p-6">

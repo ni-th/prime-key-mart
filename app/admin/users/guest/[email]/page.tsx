@@ -40,7 +40,7 @@ export default async function AdminGuestDetailPage({
             {guest.email}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Guest checkout — no account
+            Guest checkout - no account
           </p>
         </div>
         <div className="flex items-center gap-2">

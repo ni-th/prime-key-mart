@@ -223,7 +223,7 @@ export async function resendOrderEmail(formData: FormData): Promise<FormResult> 
   try {
     await sendOrderKeysEmail(orderNumber);
   } catch {
-    return { ok: false, error: "Sending failed — check the mail settings." };
+    return { ok: false, error: "Sending failed - check the mail settings." };
   }
   return { ok: true, message: `Keys email re-sent to ${order.email}.` };
 }

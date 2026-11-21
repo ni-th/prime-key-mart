@@ -17,7 +17,7 @@ type Tx = Prisma.TransactionClient;
 /**
  * Atomically move up to `need` AVAILABLE keys of a product to RESERVED for one
  * order item. `FOR UPDATE SKIP LOCKED` means two concurrent buyers never wait on
- * (or fight over) the same row — each simply takes the next free key.
+ * (or fight over) the same row - each simply takes the next free key.
  * Returns how many keys were actually claimed.
  */
 async function claimKeys(
@@ -54,7 +54,7 @@ async function itemsWithShortfall(tx: Tx, orderId: string) {
 /**
  * Reserve AVAILABLE license keys for every line of an order. Runs in a single
  * transaction: if any line is short on stock, nothing is reserved and an
- * InsufficientStockError is thrown. Idempotent — re-running tops up to the
+ * InsufficientStockError is thrown. Idempotent - re-running tops up to the
  * required quantity rather than double-reserving.
  */
 export async function reserveKeysForOrder(orderId: string): Promise<void> {
@@ -70,7 +70,7 @@ export async function reserveKeysForOrder(orderId: string): Promise<void> {
 export type FulfillOutcome =
   /** Keys are SOLD and the keys email was sent (now or earlier). */
   | { status: "FULFILLED"; orderNumber: string; alreadyFulfilled: boolean }
-  /** Payment is recorded but there were not enough keys — needs an admin. */
+  /** Payment is recorded but there were not enough keys - needs an admin. */
   | { status: "PAID"; orderNumber: string; missing: string[] }
   /** Order was refunded; nothing was changed. */
   | { status: "REFUNDED"; orderNumber: string };
@@ -83,7 +83,7 @@ export type FulfillOutcome =
  * can also arrive for an order whose reservation was already released (it
  * expired, or a failure notification came first). In that case we try to
  * reserve fresh keys; if stock has run out we never "fulfil" an order with no
- * keys — the order is parked as PAID and an admin is alerted to deliver later
+ * keys - the order is parked as PAID and an admin is alerted to deliver later
  * or refund.
  */
 export async function fulfillOrder(
@@ -115,7 +115,7 @@ export async function fulfillOrder(
     const paymentRef = opts.paymentRef ?? order.stripePaymentIntentId;
 
     if (missing.length > 0) {
-      // Keep whatever we could reserve — it stays held for this paid customer.
+      // Keep whatever we could reserve - it stays held for this paid customer.
       await tx.order.update({
         where: { id: orderId },
         data: { status: "PAID", paidAt, stripePaymentIntentId: paymentRef },
@@ -165,7 +165,7 @@ export async function fulfillOrder(
 
 /**
  * Release a PENDING order's reserved keys back to the pool. Does nothing for
- * any other status — in particular a PAID order (payment confirmed, waiting on
+ * any other status - in particular a PAID order (payment confirmed, waiting on
  * stock) must never lose its keys to a late failure/cancel notification.
  * Returns true if the order was released by this call.
  */

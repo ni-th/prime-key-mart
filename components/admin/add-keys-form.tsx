@@ -31,7 +31,7 @@ export function AddKeysForm({ productId }: { productId: string }) {
         <input type="hidden" name="productId" value={productId} />
         <div className="space-y-1.5">
           <label htmlFor="raw" className="text-sm font-medium">
-            Paste license keys — one per line
+            Paste license keys - one per line
           </label>
           <Textarea
             id="raw"

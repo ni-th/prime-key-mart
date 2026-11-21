@@ -164,7 +164,7 @@ export function CheckoutForm({
           <Alert>
             <AlertDescription>
               <strong>Test mode.</strong> PayHere isn&rsquo;t connected yet, so
-              the next step is a simulated payment — no card required.
+              the next step is a simulated payment - no card required.
             </AlertDescription>
           </Alert>
         )}

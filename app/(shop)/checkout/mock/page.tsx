@@ -35,7 +35,7 @@ export default async function MockCheckoutPage({
     <div className="mx-auto max-w-md px-4 py-12">
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         <FlaskConical className="size-3.5" />
-        Simulated payment screen — PayHere is not connected.
+        Simulated payment screen - PayHere is not connected.
       </div>
 
       <Card className="p-6">

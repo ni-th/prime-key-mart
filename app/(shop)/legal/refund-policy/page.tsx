@@ -23,7 +23,7 @@ export default function RefundPolicyPage() {
           <p>
             Because a license key cannot be &ldquo;returned&rdquo;, revealed keys
             are generally non-refundable. The exception is a key that fails to
-            activate and cannot be replaced — in that case we refund that line of
+            activate and cannot be replaced - in that case we refund that line of
             the order.
           </p>
         </section>

@@ -58,11 +58,11 @@ export default async function AdminOrderDetailPage({
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Paid</div>
-          <div>{order.paidAt ? order.paidAt.toLocaleString() : "—"}</div>
+          <div>{order.paidAt ? order.paidAt.toLocaleString() : "-"}</div>
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Payment ref</div>
-          <div className="truncate">{order.stripePaymentIntentId ?? "—"}</div>
+          <div className="truncate">{order.stripePaymentIntentId ?? "-"}</div>
         </Card>
       </div>
 

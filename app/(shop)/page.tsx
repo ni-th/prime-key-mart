@@ -23,7 +23,7 @@ export default async function HomePage() {
           Genuine software keys, at a fair price.
         </h1>
         <p className="max-w-xl text-lg text-muted-foreground">
-          Windows, Microsoft Office and antivirus licenses — bought in seconds,
+          Windows, Microsoft Office and antivirus licenses - bought in seconds,
           delivered straight to your inbox with clear activation instructions.
         </p>
         <div className="flex flex-wrap gap-3">

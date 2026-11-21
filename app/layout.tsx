@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     process.env.SITE_URL || "http://localhost:3000",
   ),
   title: {
-    default: "KeyMart — Genuine software keys, delivered instantly",
+    default: "KeyMart - Genuine software keys, delivered instantly",
     template: "%s · KeyMart",
   },
   description:

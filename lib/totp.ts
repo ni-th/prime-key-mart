@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { decryptSecret, encryptSecret, type EncryptedSecret } from "@/lib/crypto";
 
 /**
- * TOTP (RFC 6238) — the 6-digit codes Google Authenticator, Authy, 1Password
+ * TOTP (RFC 6238) - the 6-digit codes Google Authenticator, Authy, 1Password
  * etc. show. SHA-1 / 30 seconds / 6 digits is what every authenticator app
  * supports, so those parameters are fixed.
  */
@@ -87,7 +87,7 @@ export function totpUri(accountEmail: string, base32Secret: string): string {
 /**
  * Check a 6-digit code. Returns the matching time-step, or null if the code is
  * wrong. Pass `lastStep` (the last step accepted for this user) to reject a
- * code that was already used — a sniffed code can't be replayed.
+ * code that was already used - a sniffed code can't be replayed.
  */
 export function verifyTotp(
   base32Secret: string,

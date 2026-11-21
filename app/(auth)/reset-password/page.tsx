@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Reset password",
-  // The token is in the URL — never leak it to other sites via Referer.
+  // The token is in the URL - never leak it to other sites via Referer.
   referrer: "no-referrer",
 };
 

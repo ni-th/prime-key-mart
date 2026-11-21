@@ -22,7 +22,7 @@ async function getTransport(): Promise<Transporter | null> {
     return cached;
   }
 
-  // No SMTP configured — spin up a disposable Ethereal inbox so keys are still
+  // No SMTP configured - spin up a disposable Ethereal inbox so keys are still
   // "sent" somewhere you can look at (preview URL is logged).
   try {
     const test = await nodemailer.createTestAccount();
@@ -33,7 +33,7 @@ async function getTransport(): Promise<Transporter | null> {
       auth: { user: test.user, pass: test.pass },
     });
     cachedIsEthereal = true;
-    console.log(`[mailer] SMTP not configured — using Ethereal test inbox (${test.user})`);
+    console.log(`[mailer] SMTP not configured - using Ethereal test inbox (${test.user})`);
     return cached;
   } catch (err) {
     console.warn("[mailer] Could not create an Ethereal test account:", err);
@@ -172,7 +172,7 @@ export async function sendPasswordResetEmail(
     `Reset it here (link works once, for ${ttlMinutes} minutes):`,
     resetUrl,
     ``,
-    `If you didn't ask for this, ignore this email — your password won't change.`,
+    `If you didn't ask for this, ignore this email - your password won't change.`,
   ].join("\n");
   const html = emailShell(`
     <h2>Reset your password</h2>
@@ -181,7 +181,7 @@ export async function sendPasswordResetEmail(
       <a href="${resetUrl}" style="background:#111;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">Choose a new password</a>
     </p>
     <p style="color:#666;font-size:13px">This link works once and expires in ${ttlMinutes} minutes.
-    If you didn't ask for this, ignore this email — your password won't change.</p>
+    If you didn't ask for this, ignore this email - your password won't change.</p>
     <p style="color:#999;font-size:12px;word-break:break-all">${resetUrl}</p>`);
   await sendSimpleEmail(to, "Reset your KeyMart password", text, html);
 }

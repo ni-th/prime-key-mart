@@ -63,7 +63,7 @@ export function SiteFooter() {
 
       <div className="border-t py-4">
         <p className="mx-auto max-w-6xl px-4 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} KeyMart. Demo project — not a real store.
+          © {new Date().getFullYear()} KeyMart. Demo project - not a real store.
         </p>
       </div>
     </footer>

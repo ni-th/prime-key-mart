@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: blockReason }, { status: 403 });
   }
 
-  // Re-price everything from the database — never trust client prices.
+  // Re-price everything from the database - never trust client prices.
   const ids = [...new Set(parsed.data.items.map((i) => i.productId))];
   const products = await prisma.product.findMany({
     where: { id: { in: ids }, published: true },

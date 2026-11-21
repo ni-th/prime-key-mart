@@ -57,7 +57,7 @@ export function RegisterForm() {
     setPending(false);
 
     if (!res || res.error) {
-      // Account was created but auto sign-in failed — send them to login.
+      // Account was created but auto sign-in failed - send them to login.
       router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
       return;
     }

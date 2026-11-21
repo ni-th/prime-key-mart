@@ -57,7 +57,7 @@ function OtpInput({
   // Fire onComplete only after React has committed the new digits to the DOM,
   // so the hidden <input name> already holds the full code if the caller
   // submits the form from onComplete. (Calling it inside the change handler
-  // would submit the previous value — one digit short.)
+  // would submit the previous value - one digit short.)
   const onCompleteRef = React.useRef(onComplete)
   React.useEffect(() => {
     onCompleteRef.current = onComplete

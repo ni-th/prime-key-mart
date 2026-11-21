@@ -40,13 +40,13 @@ npm run dev             # http://localhost:3000
 | `nimantha.bt@gmail.com` | `Nimantha@123` | ADMIN    |
 | `user@keymart.test`     | `user12345`    | customer |
 
-Admin accounts are created only by the seed / directly in the database — there is no
+Admin accounts are created only by the seed / directly in the database - there is no
 admin option on the public registration form (it always creates a regular customer).
 
 ## Payments
 
 **Stripe is optional.** With no real `STRIPE_SECRET_KEY` in `.env`, checkout uses a local
-**simulated payment page** — order creation, key reservation, fulfillment and the keys
+**simulated payment page** - order creation, key reservation, fulfillment and the keys
 email all run for real, just without a card or an external account.
 
 To switch to real Stripe Checkout, paste a test secret key into `.env` and run the webhook
@@ -67,7 +67,7 @@ Test card: `4242 4242 4242 4242`, any future expiry, any CVC. No other code chan
 - **Buy as a customer:** sign in first; the order shows up under `/account/orders`.
 - **Admin:** sign in as the admin account → `/admin` for the dashboard, add a product,
   paste license keys on its *Manage keys* page, manage orders (resend email, refund with a
-  note, cancel), and manage users at `/admin/users` — list and filter registered customers
+  note, cancel), and manage users at `/admin/users` - list and filter registered customers
   vs. guest-checkout emails, suspend/re-enable accounts with a note, change roles, and
   block/unblock guest emails (a suspended account can't sign in; a blocked email can't
   check out or register).

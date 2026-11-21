@@ -39,7 +39,7 @@ function SubmitButton({
 /**
  * A moderation modal: a trigger button that opens a dialog with an optional
  * note field, submitting a form (with caller-supplied hidden fields) through
- * `formAction` — typically the dispatch from the parent's useActionState.
+ * `formAction` - typically the dispatch from the parent's useActionState.
  */
 export function ModerationDialog({
   triggerText,

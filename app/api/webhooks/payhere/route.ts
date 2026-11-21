@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       paymentRef: String(form.get("payment_id") ?? "") || null,
     });
   } else if (["-1", "-2", "-3"].includes(fields.status_code)) {
-    // Only affects PENDING orders — never undoes a confirmed payment.
+    // Only affects PENDING orders - never undoes a confirmed payment.
     await releaseOrderReservation(order.id, "FAILED");
   }
 

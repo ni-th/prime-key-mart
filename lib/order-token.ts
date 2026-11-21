@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 
 /**
  * A short HMAC that lets a guest view their own freshly-placed order (on the
- * success page) without an account. Not a substitute for auth — it only grants
+ * success page) without an account. Not a substitute for auth - it only grants
  * read access to one order number.
  */
 function secret(): string {

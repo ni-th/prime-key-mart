@@ -22,7 +22,7 @@ export type ForgotPasswordState =
 /**
  * Step 1: email a reset link. The response is identical whether or not the
  * account exists (and the email is sent after the response via `after`, so
- * timing doesn't give it away either) — the form can't be used to discover
+ * timing doesn't give it away either) - the form can't be used to discover
  * which emails are registered. Repeated requests are silently rate-limited.
  */
 export async function requestPasswordReset(

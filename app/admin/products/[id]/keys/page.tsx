@@ -116,7 +116,7 @@ export default async function ProductKeysPage({
                       {k.orderItem.order.orderNumber}
                     </Link>
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">

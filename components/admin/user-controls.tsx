@@ -72,7 +72,7 @@ export function UserControls({
   if (isSelf) {
     return (
       <p className="text-sm text-muted-foreground">
-        This is your own account — role and suspension controls are disabled.
+        This is your own account - role and suspension controls are disabled.
       </p>
     );
   }

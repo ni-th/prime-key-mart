@@ -20,7 +20,7 @@ export async function confirmTwoFactor(
   if (session?.user?.role !== "ADMIN") return { error: "Not authorized." };
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user?.totpSecret) return { error: "Setup expired — reload the page." };
+  if (!user?.totpSecret) return { error: "Setup expired - reload the page." };
   if (user.totpEnabled) return { error: "Two-factor is already on. Sign in again." };
 
   const code = String(formData.get("code") ?? "");
