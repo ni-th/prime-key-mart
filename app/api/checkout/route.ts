@@ -11,6 +11,7 @@ import {
   reserveKeysForOrder,
 } from "@/lib/inventory";
 import { createPayHereHash, isPayHereConfigured, payHereCheckoutUrl } from "@/lib/payhere";
+import { checkoutBlockReason } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 
@@ -46,18 +47,17 @@ export async function POST(req: Request) {
   });
   const byId = new Map(products.map((p) => [p.id, p]));
 
-  const lines = parsed.data.items.map((i) => {
-    const product = byId.get(i.productId);
-    if (!product) throw new Error("missing");
-    return { product, quantity: i.quantity };
-  });
-
-  if (lines.some((l) => !l.product)) {
+  if (parsed.data.items.some((i) => !byId.has(i.productId))) {
     return NextResponse.json(
       { error: "One or more items are no longer available." },
       { status: 409 },
     );
   }
+
+  const lines = parsed.data.items.map((i) => ({
+    product: byId.get(i.productId)!,
+    quantity: i.quantity,
+  }));
 
   const subtotalCents = lines.reduce(
     (sum, l) => sum + l.product.priceCents * l.quantity,
