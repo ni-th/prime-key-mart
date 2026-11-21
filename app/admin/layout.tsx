@@ -1,24 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  Receipt,
-  Store,
-  Users,
-} from "lucide-react";
+import { Store } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getAdminSession } from "@/lib/admin";
 import { Logo } from "@/components/brand/logo";
+import { AdminNav } from "@/components/admin/admin-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const NAV = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/orders", label: "Orders", icon: Receipt },
-  { href: "/admin/users", label: "Users", icon: Users },
-];
 
 export default async function AdminLayout({
   children,
@@ -35,7 +23,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b">
+      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
           <Link href="/admin" className="flex items-center gap-2">
             <Logo className="h-7" />
@@ -56,25 +44,16 @@ export default async function AdminLayout({
             </Link>
           </div>
         </div>
+        {/* Small screens: the sidebar is hidden, so show the sections as tabs. */}
+        <div className="mx-auto max-w-6xl px-4 pb-2 md:hidden">
+          <AdminNav orientation="horizontal" />
+        </div>
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 gap-8 px-4 py-8">
-        <aside className="hidden w-44 shrink-0 md:block">
-          <nav className="flex flex-col gap-1">
-            {NAV.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "sm" }),
-                  "justify-start",
-                )}
-              >
-                <Icon className="size-4" />
-                {label}
-              </Link>
-            ))}
-          </nav>
+        {/* Sticky just below the 3.5rem header (+ the 2rem page padding). */}
+        <aside className="sticky top-22 hidden h-fit w-44 shrink-0 self-start md:block">
+          <AdminNav orientation="vertical" />
         </aside>
 
         <main className="min-w-0 flex-1">{children}</main>
