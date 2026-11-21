@@ -3,12 +3,16 @@
 import { useRef, useState } from "react";
 import { ImagePlus, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { getProductImageUploadSignature } from "@/app/actions/uploads";
+import { ImageCropDialog } from "@/components/admin/image-crop-dialog";
 import { optimizedImageUrl } from "@/lib/image-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+/** Picked files can be large: they're cropped + re-encoded before upload. */
+const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
+/** Cap on what is actually sent to Cloudinary (a 1600x1000 WebP is far below). */
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const ACCEPT = ["image/jpeg", "image/png", "image/webp"];
 
 /**
@@ -33,6 +37,8 @@ export function ImageUpload({
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  // Object URL of the picked file while the crop dialog is open.
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploading = progress !== null;
 
@@ -48,14 +54,11 @@ export function ImageUpload({
     );
   }
 
-  async function upload(file: File) {
+  /** Upload the already-cropped image. */
+  async function upload(file: Blob) {
     setError(null);
-    if (!ACCEPT.includes(file.type)) {
-      setError("Use a JPG, PNG or WebP image.");
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      setError("That image is over 5 MB. Please use a smaller one.");
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError("The cropped image is over 5 MB. Try a smaller source image.");
       return;
     }
 
@@ -68,7 +71,7 @@ export function ImageUpload({
     }
     const s = res.signature;
     const body = new FormData();
-    body.append("file", file);
+    body.append("file", file, file.type === "image/png" ? "product.png" : "product.webp");
     body.append("api_key", s.apiKey);
     body.append("timestamp", String(s.timestamp));
     body.append("signature", s.signature);
@@ -101,14 +104,38 @@ export function ImageUpload({
     xhr.send(body);
   }
 
+  /** Validate the picked file, then open the crop dialog for it. */
   function onFiles(files: FileList | null) {
     const file = files?.[0];
-    if (file) void upload(file);
     if (fileRef.current) fileRef.current.value = "";
+    if (!file) return;
+    setError(null);
+    if (!ACCEPT.includes(file.type)) {
+      setError("Use a JPG, PNG or WebP image.");
+      return;
+    }
+    if (file.size > MAX_SOURCE_BYTES) {
+      setError("That image is over 20 MB. Please use a smaller one.");
+      return;
+    }
+    setCropSrc(URL.createObjectURL(file));
+  }
+
+  function closeCrop() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
   }
 
   return (
     <div className="space-y-2">
+      <ImageCropDialog
+        src={cropSrc}
+        onCancel={closeCrop}
+        onConfirm={(blob) => {
+          closeCrop();
+          void upload(blob);
+        }}
+      />
       <input type="hidden" name={name} value={url} />
       <input
         ref={fileRef}
@@ -190,7 +217,9 @@ export function ImageUpload({
                 <span className="font-medium text-foreground">Click to upload</span>{" "}
                 or drag an image here
               </span>
-              <span className="text-xs">JPG, PNG or WebP, up to 5 MB</span>
+              <span className="text-xs">
+                JPG, PNG or WebP, up to 20 MB. You&apos;ll crop it to 16:10 next.
+              </span>
             </>
           )}
         </button>
