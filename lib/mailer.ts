@@ -138,6 +138,70 @@ export async function sendAdminAlertEmail(alert: {
   }
 }
 
+async function sendSimpleEmail(to: string, subject: string, text: string, html: string) {
+  const transport = await getTransport();
+  if (!transport) {
+    console.log(`[mailer] (no transport) ${subject} -> ${to}\n${text}`);
+    return;
+  }
+  const info = await transport.sendMail({
+    from: process.env.SMTP_FROM || "KeyMart <no-reply@keymart.test>",
+    to,
+    subject,
+    text,
+    html,
+  });
+  if (cachedIsEthereal) {
+    const preview = nodemailer.getTestMessageUrl(info);
+    if (preview) console.log(`[mailer] Preview "${subject}": ${preview}`);
+  }
+}
+
+const emailShell = (body: string) =>
+  `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto">${body}</div>`;
+
+/** "Forgot password" email with a one-time reset link. */
+export async function sendPasswordResetEmail(
+  to: string,
+  resetUrl: string,
+  ttlMinutes: number,
+): Promise<void> {
+  const text = [
+    `Someone (hopefully you) asked to reset the password for your KeyMart account.`,
+    ``,
+    `Reset it here (link works once, for ${ttlMinutes} minutes):`,
+    resetUrl,
+    ``,
+    `If you didn't ask for this, ignore this email — your password won't change.`,
+  ].join("\n");
+  const html = emailShell(`
+    <h2>Reset your password</h2>
+    <p>Someone (hopefully you) asked to reset the password for your KeyMart account.</p>
+    <p style="margin:24px 0">
+      <a href="${resetUrl}" style="background:#111;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">Choose a new password</a>
+    </p>
+    <p style="color:#666;font-size:13px">This link works once and expires in ${ttlMinutes} minutes.
+    If you didn't ask for this, ignore this email — your password won't change.</p>
+    <p style="color:#999;font-size:12px;word-break:break-all">${resetUrl}</p>`);
+  await sendSimpleEmail(to, "Reset your KeyMart password", text, html);
+}
+
+/** Heads-up after a password change, so an owner notices an unexpected reset. */
+export async function sendPasswordChangedEmail(to: string): Promise<void> {
+  const text = [
+    `The password for your KeyMart account was just changed.`,
+    ``,
+    `If this was you, no action is needed.`,
+    `If it wasn't, reset your password right away from the sign-in page and contact support.`,
+  ].join("\n");
+  const html = emailShell(`
+    <h2>Your password was changed</h2>
+    <p>The password for your KeyMart account was just changed.</p>
+    <p style="color:#666;font-size:13px">If this was you, no action is needed. If it wasn't,
+    reset your password right away from the sign-in page and contact support.</p>`);
+  await sendSimpleEmail(to, "Your KeyMart password was changed", text, html);
+}
+
 /** Sends the license keys for a fulfilled order. Safe to call more than once. */
 export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
   const order = await prisma.order.findUnique({

@@ -51,10 +51,29 @@ function OtpInput({
 
   const commit = (next: string[]) => {
     setDigits(next)
-    const code = next.join("")
-    onChange?.(code)
-    if (code.length === length && next.every(Boolean)) onComplete?.(code)
+    onChange?.(next.join(""))
   }
+
+  // Fire onComplete only after React has committed the new digits to the DOM,
+  // so the hidden <input name> already holds the full code if the caller
+  // submits the form from onComplete. (Calling it inside the change handler
+  // would submit the previous value — one digit short.)
+  const onCompleteRef = React.useRef(onComplete)
+  React.useEffect(() => {
+    onCompleteRef.current = onComplete
+  })
+  const lastCompleted = React.useRef<string | null>(null)
+  React.useEffect(() => {
+    const code = digits.join("")
+    if (code.length === length && digits.every(Boolean)) {
+      if (lastCompleted.current !== code) {
+        lastCompleted.current = code
+        onCompleteRef.current?.(code)
+      }
+    } else {
+      lastCompleted.current = null
+    }
+  }, [digits, length])
 
   /** Write `chars` starting at box `start` (handles paste/autofill of many digits). */
   const fillFrom = (start: number, chars: string) => {

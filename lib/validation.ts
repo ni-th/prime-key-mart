@@ -3,13 +3,15 @@ import { z } from "zod";
 export const loginSchema = z.object({
   email: z.email("Enter a valid email address"),
   password: z.string().min(1, "Enter your password"),
-  // 6-digit authenticator code; only sent on the second step of an admin login.
+  // Authenticator code; only sent on the second step of an admin login. Kept
+  // lenient on purpose: a malformed code must surface as "wrong code"
+  // (verifyTotp rejects it), never as "wrong email or password".
   code: z
     .string()
     .trim()
-    .regex(/^\d{6}$/, "Enter the 6-digit code")
+    .max(16)
     .optional()
-    .or(z.literal("").transform(() => undefined)),
+    .transform((v) => v || undefined),
 });
 
 export const registerSchema = z.object({
@@ -20,6 +22,21 @@ export const registerSchema = z.object({
     .min(8, "Use at least 8 characters")
     .max(200, "That password is too long"),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.email("Enter a valid email address"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1).max(200),
+    password: registerSchema.shape.password,
+    confirm: z.string(),
+  })
+  .refine((d) => d.password === d.confirm, {
+    path: ["confirm"],
+    message: "Passwords don't match",
+  });
 
 export const checkoutSchema = z.object({
   email: z.email("Enter a valid email address").optional(),

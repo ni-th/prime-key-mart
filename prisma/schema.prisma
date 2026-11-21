@@ -44,8 +44,23 @@ model User {
   totpEnabled    Boolean   @default(false)
   totpLastStep   Int? // last accepted 30s time-step; blocks code replay
   orders         Order[]
+  passwordResets PasswordResetToken[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+/// One-time "forgot password" link. Only a SHA-256 of the token is stored, so a
+/// database leak can't be turned into working reset links.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model BlockedEmail {
