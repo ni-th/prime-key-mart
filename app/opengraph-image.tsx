@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { BRAND, LOGO_MARK_DATA_URI } from "@/lib/brand";
+import { BRAND } from "@/lib/brand";
 
 // Link-preview image (WhatsApp, Facebook, X, Slack, Discord...).
 export const alt = `${BRAND.name} - ${BRAND.tagline}`;
@@ -8,7 +10,16 @@ export const contentType = "image/png";
 
 const CHIPS = ["Windows", "Microsoft Office", "Antivirus", "Instant email delivery"];
 
-export default function OpenGraphImage() {
+// The full logo with white "keys" + key, which suits this dark background.
+// 1159x271 source, shown at height 110.
+const LOGO_W = Math.round((1159 / 271) * 110);
+
+export default async function OpenGraphImage() {
+  const logo = await readFile(
+    join(process.cwd(), "public/images/brand/keysby-logo-dark.png"),
+  );
+  const logoSrc = `data:image/png;base64,${logo.toString("base64")}`;
+
   return new ImageResponse(
     (
       <div
@@ -24,13 +35,8 @@ export default function OpenGraphImage() {
           backgroundImage: `radial-gradient(circle at 88% 12%, ${BRAND.to}66 0%, transparent 45%), radial-gradient(circle at 8% 100%, ${BRAND.from}55 0%, transparent 50%)`,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse needs <img> */}
-          <img src={LOGO_MARK_DATA_URI} width={112} height={112} alt="" />
-          <div style={{ fontSize: 92, letterSpacing: -3, lineHeight: 1 }}>
-            {BRAND.name}
-          </div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse needs <img> */}
+        <img src={logoSrc} width={LOGO_W} height={110} alt="" />
 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ fontSize: 60, letterSpacing: -1.5, lineHeight: 1.1, maxWidth: 940 }}>

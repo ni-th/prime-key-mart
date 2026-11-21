@@ -32,7 +32,7 @@ export function MobileNav({ links }: { links: NavLink[] }) {
       <SheetContent side="left" className="w-72">
         <SheetHeader>
           <SheetTitle>
-            <Logo markClassName="size-6" />
+            <Logo className="h-6" />
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-2">

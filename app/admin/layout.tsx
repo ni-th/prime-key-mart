@@ -38,7 +38,7 @@ export default async function AdminLayout({
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
           <Link href="/admin" className="flex items-center gap-2">
-            <Logo markClassName="size-7" />
+            <Logo className="h-7" />
             <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
               Admin
             </span>

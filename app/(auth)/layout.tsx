@@ -9,7 +9,7 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-16">
       <Link href="/" aria-label="Keysby home" className="mb-8">
-        <Logo className="text-xl" markClassName="size-9" />
+        <Logo className="h-10" />
       </Link>
       <div className="w-full max-w-sm">{children}</div>
       <Link

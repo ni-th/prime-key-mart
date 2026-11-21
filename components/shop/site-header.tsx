@@ -26,8 +26,8 @@ export async function SiteHeader() {
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
         <MobileNav links={navLinks} />
 
-        <Link href="/" aria-label="Keysby home">
-          <Logo className="text-base" markClassName="size-7" />
+        <Link href="/" aria-label="Keysby home" className="shrink-0">
+          <Logo className="h-8" priority />
         </Link>
 
         <nav className="ml-4 hidden items-center gap-1 md:flex">
