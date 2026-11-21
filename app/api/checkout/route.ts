@@ -11,7 +11,12 @@ import {
   releaseOrderReservation,
   reserveKeysForOrder,
 } from "@/lib/inventory";
-import { createPayHereHash, isPayHereConfigured, payHereCheckoutUrl } from "@/lib/payhere";
+import {
+  allowMockPayments,
+  createPayHereHash,
+  isPayHereConfigured,
+  payHereCheckoutUrl,
+} from "@/lib/payhere";
 import { checkoutBlockReason } from "@/lib/moderation";
 
 export const runtime = "nodejs";
@@ -21,6 +26,16 @@ const SITE_URL =
   "http://localhost:3000";
 
 export async function POST(req: Request) {
+  // No real payment provider and not in local development: refuse, rather
+  // than create orders that could only be "paid" through the test flow.
+  if (!isPayHereConfigured && !allowMockPayments) {
+    console.error("[checkout] PayHere is not configured - refusing orders.");
+    return NextResponse.json(
+      { error: "Payments are temporarily unavailable. Please try again later." },
+      { status: 503 },
+    );
+  }
+
   const session = await auth();
 
   const parsed = checkoutSchema.safeParse(await req.json().catch(() => null));
@@ -113,8 +128,8 @@ export async function POST(req: Request) {
 
   const token = signOrderToken(orderNumber);
 
-  // --- Mock payment (PayHere credentials are not configured) -------------------
-  if (!isPayHereConfigured) {
+  // --- Mock payment (local development only, PayHere not configured) ----------
+  if (allowMockPayments) {
     return NextResponse.json({
       url: `/checkout/mock?order=${orderNumber}&t=${token}`,
       mock: true,

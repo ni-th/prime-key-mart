@@ -6,6 +6,12 @@ import { formatMoney } from "@/lib/money";
 let cached: Transporter | null = null;
 let cachedIsEthereal = false;
 
+/** Sender for all mail: SMTP_FROM, else the SMTP account itself. */
+function mailFrom(): string {
+  if (process.env.SMTP_FROM) return process.env.SMTP_FROM;
+  return process.env.SMTP_USER ? `Keysby <${process.env.SMTP_USER}>` : "Keysby";
+}
+
 async function getTransport(): Promise<Transporter | null> {
   if (cached) return cached;
 
@@ -126,7 +132,7 @@ export async function sendAdminAlertEmail(alert: {
   }
 
   const info = await transport.sendMail({
-    from: process.env.SMTP_FROM || "Keysby <no-reply@keysby.test>",
+    from: mailFrom(),
     to,
     subject: `[Keysby] ${alert.subject}`,
     text,
@@ -145,7 +151,7 @@ async function sendSimpleEmail(to: string, subject: string, text: string, html: 
     return;
   }
   const info = await transport.sendMail({
-    from: process.env.SMTP_FROM || "Keysby <no-reply@keysby.test>",
+    from: mailFrom(),
     to,
     subject,
     text,
@@ -221,7 +227,7 @@ export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
   }
 
   const info = await transport.sendMail({
-    from: process.env.SMTP_FROM || "Keysby <no-reply@keysby.test>",
+    from: mailFrom(),
     to: order.email,
     subject: `Your Keysby order ${order.orderNumber}`,
     text,

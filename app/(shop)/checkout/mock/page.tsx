@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { FlaskConical } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { isPayHereConfigured } from "@/lib/payhere";
+import { allowMockPayments } from "@/lib/payhere";
 import { canViewOrder, getOrderByNumber } from "@/lib/orders";
 import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
@@ -16,7 +16,7 @@ export default async function MockCheckoutPage({
 }: {
   searchParams: Promise<{ order?: string; t?: string }>;
 }) {
-  if (isPayHereConfigured) notFound();
+  if (!allowMockPayments) notFound();
 
   const { order: orderNumber, t: token } = await searchParams;
   if (!orderNumber || !token) notFound();

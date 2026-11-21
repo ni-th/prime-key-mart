@@ -160,7 +160,31 @@ function makeFakeKey(): string {
   return Array.from({ length: 5 }, () => randomBlock(5)).join("-");
 }
 
+/**
+ * The seed creates FAKE license keys and a test customer, so it must never run
+ * against the production database (fake keys would be sold to real buyers).
+ * It only runs against a local database unless SEED_ALLOW_REMOTE=1 is set.
+ */
+function assertLocalDatabase() {
+  const url = process.env.DATABASE_URL ?? "";
+  let host = "";
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    // fall through: unknown host is treated as remote
+  }
+  const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host);
+  if (!local && process.env.SEED_ALLOW_REMOTE !== "1") {
+    console.error(
+      `Refusing to seed: DATABASE_URL points at "${host || "an unknown host"}", not a local database.\n` +
+        "The seed creates fake license keys and test accounts. Set SEED_ALLOW_REMOTE=1 only for a throwaway database.",
+    );
+    process.exit(1);
+  }
+}
+
 async function main() {
+  assertLocalDatabase();
   console.log("Seeding categories...");
   const categoryBySlug = new Map<string, string>();
   for (const c of categories) {
@@ -227,20 +251,29 @@ async function main() {
 
   console.log("Seeding users...");
   // Admin accounts are provisioned here only - there is no admin self-registration.
-  const adminEmail = "nimantha.bt@gmail.com";
-  const adminPassword = "Nimantha@123";
+  // No passwords in code: the admin is created from env vars, and an existing
+  // admin's password is never overwritten (re-seeding can't reset it).
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? "nimantha.bt@gmail.com").toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
   const userPassword = "user12345";
 
-  await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: { role: "ADMIN", name: "Nimantha", passwordHash: await bcrypt.hash(adminPassword, 10) },
-    create: {
-      email: adminEmail,
-      name: "Nimantha",
-      role: "ADMIN",
-      passwordHash: await bcrypt.hash(adminPassword, 10),
-    },
-  });
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (existingAdmin) {
+    await prisma.user.update({ where: { id: existingAdmin.id }, data: { role: "ADMIN" } });
+  } else if (adminPassword && adminPassword.length >= 8) {
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        name: "Admin",
+        role: "ADMIN",
+        passwordHash: await bcrypt.hash(adminPassword, 10),
+      },
+    });
+  } else {
+    console.warn(
+      `  Skipped creating admin ${adminEmail}: set SEED_ADMIN_PASSWORD (8+ characters) to create it.`,
+    );
+  }
   // Drop the old demo admin if it exists from an earlier seed.
   await prisma.user.deleteMany({ where: { email: "admin@keymart.test" } });
 
@@ -256,8 +289,8 @@ async function main() {
   });
 
   console.log("\nDone. Sign-in credentials:");
-  console.log(`  ${adminEmail} / ${adminPassword}  (ADMIN)`);
-  console.log(`  user@keymart.test / ${userPassword}   (customer)`);
+  console.log(`  ${adminEmail}  (ADMIN, password unchanged / from SEED_ADMIN_PASSWORD)`);
+  console.log(`  user@keymart.test / ${userPassword}   (test customer, local only)`);
 }
 
 main()

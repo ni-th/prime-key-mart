@@ -14,6 +14,14 @@ export const isPayHereConfigured =
   !merchantId.includes("xxx") &&
   !merchantSecret.includes("xxx");
 
+/**
+ * The simulated "test payment" flow delivers real keys without charging, so it
+ * is only ever allowed in local development. In production a missing PayHere
+ * config makes checkout refuse orders instead of giving keys away.
+ */
+export const allowMockPayments =
+  !isPayHereConfigured && process.env.NODE_ENV !== "production";
+
 export const payHereCheckoutUrl =
   process.env.PAYHERE_MODE === "live"
     ? "https://www.payhere.lk/pay/checkout"

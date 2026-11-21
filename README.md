@@ -35,33 +35,32 @@ npm run dev             # http://localhost:3000
 
 ### Seeded accounts
 
-| Email                   | Password       | Role     |
-| ----------------------- | -------------- | -------- |
-| `nimantha.bt@gmail.com` | `Nimantha@123` | ADMIN    |
-| `user@keymart.test`     | `user12345`    | customer |
+| Email                   | Password                     | Role     |
+| ----------------------- | ---------------------------- | -------- |
+| `SEED_ADMIN_EMAIL`      | `SEED_ADMIN_PASSWORD` (.env) | ADMIN    |
+| `user@keymart.test`     | `user12345`                  | customer |
 
-Admin accounts are created only by the seed / directly in the database - there is no
-admin option on the public registration form (it always creates a regular customer).
+The seed is for **local development only**: it creates fake license keys and a test
+customer, and refuses to run against a non-local database. Admin accounts are created
+only by the seed or directly in the database; the public sign-up form always creates a
+regular customer. Admins must set up an authenticator app (2FA) on first visit to `/admin`.
 
 ## Payments
 
-**Stripe is optional.** With no real `STRIPE_SECRET_KEY` in `.env`, checkout uses a local
-**simulated payment page** - order creation, key reservation, fulfillment and the keys
-email all run for real, just without a card or an external account.
+Payments go through **PayHere**. Set `PAYHERE_MERCHANT_ID`, `PAYHERE_MERCHANT_SECRET` and
+`PAYHERE_MODE` (`sandbox` or `live`) in `.env`.
 
-To switch to real Stripe Checkout, paste a test secret key into `.env` and run the webhook
-forwarder in a separate terminal:
+In **local development only**, if PayHere isn't configured, checkout falls back to a
+simulated payment page so you can test the full order flow without a card. In
+production this fallback is disabled: without PayHere settings, checkout refuses orders.
 
-```bash
-stripe listen --forward-to localhost:3000/api/webhooks/stripe
-# paste the printed "whsec_..." into STRIPE_WEBHOOK_SECRET in .env, then restart `npm run dev`
-```
-
-Test card: `4242 4242 4242 4242`, any future expiry, any CVC. No other code changes.
+PayHere confirms payments by calling `SITE_URL/api/webhooks/payhere`, so locally you need
+a public tunnel (e.g. `cloudflared tunnel --url http://localhost:3000`) with `SITE_URL`
+set to the tunnel address.
 
 ## Try the flows
 
-- **Buy as a guest:** add to cart → `/checkout` → enter any email → pay (simulated) →
+- **Buy as a guest:** add to cart → `/checkout` → enter any email → pay (PayHere sandbox card, or simulated locally) →
   the success page polls until your keys appear; a copy is "emailed" (preview link in the
   `npm run dev` console). Re-view them later at `/order-lookup`.
 - **Buy as a customer:** sign in first; the order shows up under `/account/orders`.

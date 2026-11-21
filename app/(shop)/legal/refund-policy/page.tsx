@@ -1,48 +1,71 @@
 import type { Metadata } from "next";
+import { BUSINESS } from "@/lib/business";
+import { LegalPage, SupportEmail } from "@/components/shop/legal-page";
 
 export const metadata: Metadata = { title: "Refund policy" };
 
 export default function RefundPolicyPage() {
+  const b = BUSINESS;
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">Refund policy</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Keysby is a demo project. This page is placeholder content.
-      </p>
+    <LegalPage
+      title="Refund policy"
+      intro="License keys are digital and are delivered instantly, so refunds work a little differently from physical goods. Here is exactly when you can get your money back."
+    >
+      <section>
+        <h2>Order not delivered</h2>
+        <p>
+          If you paid but did not receive a key, contact us and we will either
+          deliver it or refund you in full.
+        </p>
+      </section>
 
-      <div className="mt-8 space-y-6 text-sm leading-6 text-muted-foreground">
-        <section>
-          <h2 className="font-medium text-foreground">Before a key is revealed</h2>
-          <p>
-            If your order has not yet been fulfilled, or a key could not be
-            delivered, contact support and we will cancel and refund it in full.
-          </p>
-        </section>
-        <section>
-          <h2 className="font-medium text-foreground">After a key is revealed</h2>
-          <p>
-            Because a license key cannot be &ldquo;returned&rdquo;, revealed keys
-            are generally non-refundable. The exception is a key that fails to
-            activate and cannot be replaced - in that case we refund that line of
-            the order.
-          </p>
-        </section>
-        <section>
-          <h2 className="font-medium text-foreground">Faulty keys</h2>
-          <p>
-            Report activation problems within 30 days with the error message you
-            see. We will first try to issue a replacement key, then refund if no
-            replacement is available.
-          </p>
-        </section>
-        <section>
-          <h2 className="font-medium text-foreground">How refunds are paid</h2>
-          <p>
-            Approved refunds go back to the original payment method, typically
-            within 5–10 business days.
-          </p>
-        </section>
-      </div>
-    </div>
+      <section>
+        <h2>Key does not work</h2>
+        <p>
+          If a key fails to activate, tell us within 30 days of purchase. Please
+          include your order number and a screenshot or the exact error message.
+          We will send a working replacement key, or, if we cannot replace it,
+          refund that item in full.
+        </p>
+      </section>
+
+      <section>
+        <h2>Wrong product or changed your mind</h2>
+        <p>
+          A delivered key cannot be returned, because it could already have been
+          used. For that reason we cannot refund delivered keys for a change of
+          mind or for buying the wrong edition or region. Please check the
+          product details before you pay. If you contact us before you have
+          used the key, we will look at it case by case.
+        </p>
+      </section>
+
+      <section>
+        <h2>Duplicate payments</h2>
+        <p>
+          If you were charged twice for the same order, we refund the extra
+          payment in full.
+        </p>
+      </section>
+
+      <section>
+        <h2>How refunds are paid</h2>
+        <p>
+          Approved refunds go back to the card or account you paid with, through
+          PayHere. Depending on your bank, the money usually appears within 5 to
+          10 business days. The refunded key is deactivated or withdrawn.
+        </p>
+      </section>
+
+      <section>
+        <h2>How to ask for a refund</h2>
+        <p>
+          Email <SupportEmail email={b.email} />
+          {b.phone ? ` or call ${b.phone}` : ""} with your order number (you&apos;ll find
+          it in your confirmation email). We reply within 1 business
+          day.
+        </p>
+      </section>
+    </LegalPage>
   );
 }

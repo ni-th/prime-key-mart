@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getOrderByNumber, canViewOrder } from "@/lib/orders";
 import { fulfillOrder, releaseOrderReservation } from "@/lib/inventory";
-import { isPayHereConfigured } from "@/lib/payhere";
+import { allowMockPayments } from "@/lib/payhere";
 
 export const runtime = "nodejs";
 
@@ -14,7 +14,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  if (isPayHereConfigured) {
+  if (!allowMockPayments) {
     return NextResponse.json({ error: "Not available." }, { status: 404 });
   }
 

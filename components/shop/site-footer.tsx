@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
+import { BUSINESS } from "@/lib/business";
 
 export function SiteFooter() {
   return (
@@ -33,6 +34,9 @@ export function SiteFooter() {
 
         <nav className="space-y-2 text-sm">
           <div className="font-medium">Support</div>
+          <Link href="/contact" className="block text-muted-foreground hover:text-foreground">
+            Contact us
+          </Link>
           <Link href="/order-lookup" className="block text-muted-foreground hover:text-foreground">
             Find my order
           </Link>
@@ -41,6 +45,9 @@ export function SiteFooter() {
           </Link>
           <Link href="/legal/terms" className="block text-muted-foreground hover:text-foreground">
             Terms of service
+          </Link>
+          <Link href="/legal/privacy" className="block text-muted-foreground hover:text-foreground">
+            Privacy policy
           </Link>
         </nav>
 
@@ -59,9 +66,12 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t py-4">
-        <p className="mx-auto max-w-6xl px-4 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Keysby. Demo project - not a real store.
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {new Date().getFullYear()} {BUSINESS.legalName}. All rights reserved.
+          </p>
+          <p>Secure payments by PayHere. Product names are trademarks of their owners.</p>
+        </div>
       </div>
     </footer>
   );
