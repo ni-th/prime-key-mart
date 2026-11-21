@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ImageUpload } from "@/components/admin/image-upload";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
@@ -76,9 +77,12 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
 export function ProductForm({
   categories,
   product,
+  uploadsEnabled = false,
 }: {
   categories: Category[];
   product?: ProductFormValues;
+  /** Cloudinary configured: show the image uploader instead of a URL box. */
+  uploadsEnabled?: boolean;
 }) {
   const initial: FormResult = { ok: false, error: "" };
   const [state, formAction] = useActionState(saveProduct, initial);
@@ -186,13 +190,13 @@ export function ProductForm({
           label="Image URL"
           htmlFor="imageUrl"
           error={fe.imageUrl}
-          hint="Optional. Leave blank for a generated placeholder."
+          hint="Optional. Best: 1600 x 1000 px (16:10), product centered - the cart shows a square crop from the middle. Without an image a colored placeholder is shown."
         >
-          <Input
-            id="imageUrl"
+          <ImageUpload
             name="imageUrl"
-            type="url"
-            defaultValue={product?.imageUrl ?? ""}
+            defaultValue={product?.imageUrl}
+            enabled={uploadsEnabled}
+            invalid={Boolean(fe.imageUrl)}
           />
         </Field>
       </Card>

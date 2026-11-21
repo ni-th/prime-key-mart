@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { ProductForm } from "@/components/admin/product-form";
+import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
 
 export const metadata: Metadata = { title: "Edit product · Admin" };
@@ -40,6 +41,7 @@ export default async function EditProductPage({
       </div>
 
       <ProductForm
+        uploadsEnabled={isCloudinaryConfigured}
         categories={categories}
         product={{
           id: product.id,

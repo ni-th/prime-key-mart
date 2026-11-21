@@ -1,5 +1,6 @@
 import { KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { optimizedImageUrl } from "@/lib/image-url";
 
 const BRAND_GRADIENTS: Record<string, string> = {
   Microsoft: "from-sky-500/25 to-blue-600/10",
@@ -20,11 +21,14 @@ export function ProductThumb({
   brand,
   imageUrl,
   className,
+  width = 800,
 }: {
   name: string;
   brand: string;
   imageUrl?: string | null;
   className?: string;
+  /** Pixel width to request from Cloudinary (covers 2x screens at card size). */
+  width?: number;
 }) {
   if (imageUrl) {
     return (
@@ -32,8 +36,11 @@ export function ProductThumb({
       // per-host remotePatterns config, so a plain img is intentional here.
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={imageUrl}
+        // Cloudinary images are served resized + as WebP/AVIF; others as-is.
+        src={optimizedImageUrl(imageUrl, width)}
         alt={name}
+        loading="lazy"
+        decoding="async"
         className={cn("h-full w-full object-cover", className)}
       />
     );

@@ -60,6 +60,7 @@ export default async function ProductPage({
               name={product.name}
               brand={product.brand}
               imageUrl={product.imageUrl}
+              width={1200}
             />
           </div>
         </div>
