@@ -64,7 +64,7 @@ export function OrderActions({
   );
 
   const cancelRef = useRef<HTMLFormElement>(null);
-  const refundRef = useRef<HTMLFormElement>(null);
+  const fulfillRef = useRef<HTMLFormElement>(null);
 
   return (
     <div className="space-y-4">
