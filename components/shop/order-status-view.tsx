@@ -109,7 +109,7 @@ export function OrderStatusView({
   if (data?.status === "PAID") {
     return (
       <Card className="flex items-center gap-3 p-6">
-        <Check className="size-5 text-emerald-600 dark:text-emerald-400" />
+        <Check className="size-5 text-success" />
         <div className="text-sm">
           <p className="font-medium">Payment received</p>
           <p className="text-muted-foreground">
@@ -158,7 +158,7 @@ export function OrderStatusView({
     <div className="space-y-5">
       <Card className="p-6">
         <div className="flex items-center gap-2">
-          <Check className="size-5 text-emerald-600 dark:text-emerald-400" />
+          <Check className="size-5 text-success" />
           <span className="font-medium">Order {data.orderNumber} complete</span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">

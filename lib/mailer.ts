@@ -184,7 +184,7 @@ export async function sendPasswordResetEmail(
     <h2>Reset your password</h2>
     <p>Someone (hopefully you) asked to reset the password for your Keysby account.</p>
     <p style="margin:24px 0">
-      <a href="${resetUrl}" style="background:#111;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">Choose a new password</a>
+      <a href="${resetUrl}" style="background:#594cf4;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">Choose a new password</a>
     </p>
     <p style="color:#666;font-size:13px">This link works once and expires in ${ttlMinutes} minutes.
     If you didn't ask for this, ignore this email - your password won't change.</p>

@@ -39,7 +39,7 @@ export function ResetPasswordForm({ token, email }: { token: string; email: stri
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2 className="size-5 text-success" />
             Password updated
           </CardTitle>
           <CardDescription>

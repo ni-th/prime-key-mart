@@ -30,7 +30,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           <span
             className={cn(
               "text-xs",
-              inStock ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+              inStock ? "text-success" : "text-muted-foreground",
             )}
           >
             {inStock ? "In stock" : "Out of stock"}

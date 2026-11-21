@@ -7,7 +7,7 @@ const MAP: Record<
   PENDING: { label: "Pending payment", variant: "outline" },
   // Paid, but not delivered yet (ran out of stock) - needs an admin.
   PAID: { label: "Paid · awaiting keys", variant: "destructive" },
-  FULFILLED: { label: "Delivered", variant: "default" },
+  FULFILLED: { label: "Delivered", variant: "success" },
   FAILED: { label: "Failed", variant: "destructive" },
   EXPIRED: { label: "Cancelled", variant: "outline" },
   REFUNDED: { label: "Refunded", variant: "destructive" },

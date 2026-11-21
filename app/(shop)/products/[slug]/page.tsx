@@ -85,7 +85,7 @@ export default async function ProductPage({
             <span
               className={
                 inStock
-                  ? "text-sm text-emerald-600 dark:text-emerald-400"
+                  ? "text-sm text-success"
                   : "text-sm text-muted-foreground"
               }
             >
