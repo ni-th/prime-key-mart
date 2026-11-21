@@ -15,6 +15,8 @@ export const authConfig = {
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role?: "USER" | "ADMIN" }).role ?? "USER";
+        // True only when this sign-in passed the authenticator-code check.
+        token.mfa = (user as { mfa?: boolean }).mfa === true;
       }
       return token;
     },
@@ -22,6 +24,7 @@ export const authConfig = {
       if (session.user) {
         session.user.id = (token.id as string) ?? token.sub ?? "";
         session.user.role = (token.role as "USER" | "ADMIN") ?? "USER";
+        session.user.mfa = token.mfa === true;
       }
       return session;
     },

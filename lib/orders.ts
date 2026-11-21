@@ -59,7 +59,8 @@ export function canViewOrder(
   opts: { session?: Session | null; token?: string | null; orderNumber: string },
 ): boolean {
   const { session, token, orderNumber } = opts;
-  if (session?.user?.role === "ADMIN") return true;
+  // Admins can view any order — but only after passing 2FA this session.
+  if (session?.user?.role === "ADMIN" && session.user.mfa) return true;
   if (order.userId && session?.user?.id === order.userId) return true;
   if (verifyOrderToken(orderNumber, token ?? null)) return true;
   return false;

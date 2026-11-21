@@ -7,11 +7,14 @@ declare module "next-auth" {
     user: {
       id: string;
       role: UserRole;
+      /** This sign-in passed the authenticator-code (2FA) check. */
+      mfa: boolean;
     } & DefaultSession["user"];
   }
 
   interface User {
     role?: UserRole;
+    mfa?: boolean;
   }
 }
 
@@ -19,5 +22,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: UserRole;
+    mfa?: boolean;
   }
 }

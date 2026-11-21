@@ -22,6 +22,11 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
+  // Admins must have passed the authenticator-code check in this session.
+  if (pathname.startsWith("/admin") && !session?.user?.mfa) {
+    return NextResponse.redirect(new URL("/two-factor", req.url));
+  }
+
   return NextResponse.next();
 });
 

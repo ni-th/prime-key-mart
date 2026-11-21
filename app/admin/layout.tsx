@@ -8,6 +8,7 @@ import {
   Store,
   Users,
 } from "lucide-react";
+import { auth } from "@/lib/auth";
 import { getAdminSession } from "@/lib/admin";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,12 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const admin = await getAdminSession();
-  if (!admin) redirect("/login?callbackUrl=/admin");
+  if (!admin) {
+    // An admin who hasn't passed 2FA in this session: set it up or re-sign-in.
+    const session = await auth();
+    if (session?.user?.role === "ADMIN") redirect("/two-factor");
+    redirect("/login?callbackUrl=/admin");
+  }
 
   return (
     <div className="flex min-h-full flex-col">

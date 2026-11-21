@@ -38,6 +38,11 @@ model User {
   suspended      Boolean   @default(false)
   suspendedAt    DateTime?
   suspensionNote String?
+  // Two-factor auth (authenticator app). Required for ADMIN users.
+  // totpSecret is a JSON-encoded EncryptedSecret (AES-256-GCM, see lib/crypto.ts).
+  totpSecret     String?
+  totpEnabled    Boolean   @default(false)
+  totpLastStep   Int? // last accepted 30s time-step; blocks code replay
   orders         Order[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

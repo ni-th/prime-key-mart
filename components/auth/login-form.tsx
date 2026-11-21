@@ -22,8 +22,13 @@ export function LoginForm() {
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/account";
 
+  const justEnabled = params.get("twofa") === "enabled";
+
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Second step for admins with an authenticator app. Email and password stay
+  // in the (hidden) inputs so they're sent again together with the code.
+  const [needsCode, setNeedsCode] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,12 +39,21 @@ export function LoginForm() {
     const res = await signIn("credentials", {
       email: String(data.get("email") ?? ""),
       password: String(data.get("password") ?? ""),
+      code: needsCode ? String(data.get("code") ?? "") : "",
       redirect: false,
     });
 
     setPending(false);
     if (!res || res.error) {
-      setError("Wrong email or password.");
+      if (res?.code === "totp_required") {
+        setNeedsCode(true);
+      } else if (res?.code === "totp_invalid") {
+        setNeedsCode(true);
+        setError("That code didn't work. Wait for a new code and try again.");
+      } else {
+        setNeedsCode(false);
+        setError("Wrong email or password.");
+      }
       return;
     }
     router.push(callbackUrl);
@@ -54,12 +68,39 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
+          {justEnabled && !error && !needsCode && (
+            <Alert>
+              <AlertDescription>
+                Two-factor is on. Sign in again with your authenticator code.
+              </AlertDescription>
+            </Alert>
+          )}
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <div className="space-y-1.5">
+          {needsCode && (
+            <div className="space-y-1.5">
+              <Label htmlFor="code">Authenticator code</Label>
+              <Input
+                id="code"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder="123456"
+                required
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Open your authenticator app and enter the 6-digit code for
+                KeyMart.
+              </p>
+            </div>
+          )}
+          <div className={needsCode ? "hidden" : "space-y-1.5"}>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -69,7 +110,7 @@ export function LoginForm() {
               required
             />
           </div>
-          <div className="space-y-1.5">
+          <div className={needsCode ? "hidden" : "space-y-1.5"}>
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
@@ -81,8 +122,20 @@ export function LoginForm() {
           </div>
           <Button type="submit" className="w-full" disabled={pending}>
             {pending && <Loader2 className="size-4 animate-spin" />}
-            Sign in
+            {needsCode ? "Verify" : "Sign in"}
           </Button>
+          {needsCode && (
+            <button
+              type="button"
+              onClick={() => {
+                setNeedsCode(false);
+                setError(null);
+              }}
+              className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
+            >
+              Use a different account
+            </button>
+          )}
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">

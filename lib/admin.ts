@@ -4,9 +4,15 @@ import { availableStockByProduct } from "@/lib/products";
 
 export const LOW_STOCK_THRESHOLD = 3;
 
+/**
+ * The current session, only if it is an admin who signed in with their
+ * authenticator code. Every admin page and server action goes through this,
+ * so a password alone (or a session from before 2FA was set up) is never
+ * enough to act as an admin.
+ */
 export async function getAdminSession() {
   const session = await auth();
-  return session?.user?.role === "ADMIN" ? session : null;
+  return session?.user?.role === "ADMIN" && session.user.mfa ? session : null;
 }
 
 export async function getAdminStats() {
