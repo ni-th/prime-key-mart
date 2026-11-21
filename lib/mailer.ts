@@ -108,6 +108,36 @@ function renderEmail(order: OrderForEmail) {
   return { text, html };
 }
 
+/**
+ * Plain-text alert to the store owner (ADMIN_EMAIL, falling back to SMTP_USER).
+ * Used when something needs a human, e.g. an order was paid but is out of stock.
+ */
+export async function sendAdminAlertEmail(alert: {
+  subject: string;
+  lines: string[];
+}): Promise<void> {
+  const to = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+  const text = alert.lines.join("\n");
+  const transport = to ? await getTransport() : null;
+
+  if (!to || !transport) {
+    console.warn(`[mailer] (no admin recipient) ${alert.subject}\n${text}`);
+    return;
+  }
+
+  const info = await transport.sendMail({
+    from: process.env.SMTP_FROM || "KeyMart <no-reply@keymart.test>",
+    to,
+    subject: `[KeyMart] ${alert.subject}`,
+    text,
+  });
+
+  if (cachedIsEthereal) {
+    const preview = nodemailer.getTestMessageUrl(info);
+    if (preview) console.log(`[mailer] Preview admin alert: ${preview}`);
+  }
+}
+
 /** Sends the license keys for a fulfilled order. Safe to call more than once. */
 export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
   const order = await prisma.order.findUnique({

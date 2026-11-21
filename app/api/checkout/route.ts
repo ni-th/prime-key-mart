@@ -7,6 +7,7 @@ import { signOrderToken } from "@/lib/order-token";
 import { convertUsdCentsToCurrency } from "@/lib/payhere";
 import {
   InsufficientStockError,
+  expireStaleReservations,
   releaseOrderReservation,
   reserveKeysForOrder,
 } from "@/lib/inventory";
@@ -66,6 +67,12 @@ export async function POST(req: Request) {
   const currency = parsed.data.currency;
   const paymentSubtotalCents = convertUsdCentsToCurrency(subtotalCents, currency);
 
+  // Return keys held by abandoned checkouts to stock before we try to reserve.
+  // Never let housekeeping block a sale.
+  await expireStaleReservations().catch((err) =>
+    console.error("[checkout] expiring stale reservations failed", err),
+  );
+
   const orderNumber = generateOrderNumber();
   const order = await prisma.order.create({
     data: {
@@ -123,7 +130,7 @@ export async function POST(req: Request) {
       fields: {
         merchant_id: process.env.PAYHERE_MERCHANT_ID,
         return_url: `${SITE_URL}/checkout/success?order=${orderNumber}&t=${token}`,
-        cancel_url: `${SITE_URL}/checkout/cancel?order=${orderNumber}`,
+        cancel_url: `${SITE_URL}/checkout/cancel?order=${orderNumber}&t=${token}`,
         notify_url: `${SITE_URL}/api/webhooks/payhere`,
         order_id: orderNumber,
         items: lines.map((l) => `${l.product.name} x ${l.quantity}`).join(", "),

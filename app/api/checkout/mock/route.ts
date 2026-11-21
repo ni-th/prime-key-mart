@@ -39,8 +39,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, status: "EXPIRED" });
   }
 
-  if (order.status === "PENDING" || order.status === "PAID") {
-    await fulfillOrder(order.id);
-  }
-  return NextResponse.json({ ok: true, status: "FULFILLED" });
+  // Behaves like a real (possibly late) payment confirmation.
+  const result = await fulfillOrder(order.id);
+  return NextResponse.json({ ok: true, status: result.status });
 }

@@ -258,7 +258,14 @@ export async function updateOrderStatus(
     if (order.status !== "PENDING" && order.status !== "PAID") {
       return { ok: false, error: "Only pending or paid orders can be delivered manually." };
     }
-    await fulfillOrder(order.id);
+    const result = await fulfillOrder(order.id);
+    if (result.status === "PAID") {
+      revalidatePath(`/admin/orders/${orderNumber}`);
+      return {
+        ok: false,
+        error: `Not enough stock to deliver: ${result.missing.join(", ")}. Add keys, then try again.`,
+      };
+    }
   } else {
     return { ok: false, error: "Unknown action." };
   }

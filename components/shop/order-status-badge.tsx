@@ -5,7 +5,8 @@ const MAP: Record<
   { label: string; variant: React.ComponentProps<typeof Badge>["variant"] }
 > = {
   PENDING: { label: "Pending payment", variant: "outline" },
-  PAID: { label: "Paid", variant: "secondary" },
+  // Paid, but not delivered yet (ran out of stock) — needs an admin.
+  PAID: { label: "Paid · awaiting keys", variant: "destructive" },
   FULFILLED: { label: "Delivered", variant: "default" },
   FAILED: { label: "Failed", variant: "destructive" },
   EXPIRED: { label: "Cancelled", variant: "outline" },

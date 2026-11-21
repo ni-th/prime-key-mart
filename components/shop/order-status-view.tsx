@@ -104,7 +104,24 @@ export function OrderStatusView({
     );
   }
 
-  if (!data || data.status === "PENDING" || data.status === "PAID") {
+  // Payment confirmed but we ran out of keys — an admin has been alerted.
+  // Keep polling (PAID isn't in DONE) so the keys appear once delivered.
+  if (data?.status === "PAID") {
+    return (
+      <Card className="flex items-center gap-3 p-6">
+        <Check className="size-5 text-emerald-600 dark:text-emerald-400" />
+        <div className="text-sm">
+          <p className="font-medium">Payment received</p>
+          <p className="text-muted-foreground">
+            Your keys are being prepared and will be emailed to {data.email}{" "}
+            shortly. You can safely close this page.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!data || data.status === "PENDING") {
     return (
       <Card className="flex items-center gap-3 p-6">
         <Loader2 className="size-5 animate-spin text-primary" />

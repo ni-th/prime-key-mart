@@ -18,6 +18,7 @@ export const metadata: Metadata = { title: "Orders · Admin" };
 
 const FILTERS = [
   { value: "", label: "All" },
+  { value: "PAID", label: "Needs action" },
   { value: "PENDING", label: "Pending" },
   { value: "FULFILLED", label: "Delivered" },
   { value: "EXPIRED", label: "Cancelled" },

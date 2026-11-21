@@ -34,8 +34,13 @@ export async function POST(req: Request) {
   if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
 
   if (fields.status_code === "2") {
-    await fulfillOrder(order.id);
+    // Handles late payments too: re-reserves keys if the hold had expired, or
+    // parks the order as PAID and alerts an admin when stock has run out.
+    await fulfillOrder(order.id, {
+      paymentRef: String(form.get("payment_id") ?? "") || null,
+    });
   } else if (["-1", "-2", "-3"].includes(fields.status_code)) {
+    // Only affects PENDING orders — never undoes a confirmed payment.
     await releaseOrderReservation(order.id, "FAILED");
   }
 
