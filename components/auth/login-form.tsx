@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { OtpInput } from "@/components/ui/otp-input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -30,6 +31,10 @@ export function LoginForm() {
   // Second step for admins with an authenticator app. Email and password stay
   // in the (hidden) inputs so they're sent again together with the code.
   const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState("");
+  // Bumped after a wrong code to remount (clear) the digit boxes.
+  const [codeAttempt, setCodeAttempt] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,6 +55,8 @@ export function LoginForm() {
         setNeedsCode(true);
       } else if (res?.code === "totp_invalid") {
         setNeedsCode(true);
+        setCode("");
+        setCodeAttempt((n) => n + 1);
         setError("That code didn't work. Wait for a new code and try again.");
       } else {
         setNeedsCode(false);
@@ -68,7 +75,7 @@ export function LoginForm() {
         <CardDescription>Access your orders and license keys.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
           {justEnabled && !error && !needsCode && (
             <Alert>
               <AlertDescription>
@@ -84,16 +91,17 @@ export function LoginForm() {
           {needsCode && (
             <div className="space-y-1.5">
               <Label htmlFor="code">Authenticator code</Label>
-              <Input
+              <OtpInput
+                key={codeAttempt}
+                className="justify-center"
                 id="code"
                 name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="123456"
-                required
                 autoFocus
+                disabled={pending}
+                invalid={error !== null}
+                onChange={setCode}
+                // Submit as soon as the 6th digit is entered.
+                onComplete={() => formRef.current?.requestSubmit()}
               />
               <p className="text-xs text-muted-foreground">
                 Open your authenticator app and enter the 6-digit code for
@@ -120,7 +128,11 @@ export function LoginForm() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={pending || (needsCode && code.length < 6)}
+          >
             {pending && <Loader2 className="size-4 animate-spin" />}
             {needsCode ? "Verify" : "Sign in"}
           </Button>
