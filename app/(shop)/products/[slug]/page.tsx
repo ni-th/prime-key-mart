@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Mail, ShieldCheck, Zap } from "lucide-react";
 import { getProductBySlug } from "@/lib/products";
-import { formatUsd } from "@/lib/money";
+import { formatMoney, formatUsd } from "@/lib/money";
+import { getPricingSettings, priceOf } from "@/lib/pricing";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ProductThumb } from "@/components/shop/product-thumb";
@@ -33,6 +34,7 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
+  const price = priceOf(product, await getPricingSettings());
 
   const inStock = product.stock > 0;
 
@@ -55,7 +57,7 @@ export default async function ProductPage({
 
       <div className="grid gap-10 md:grid-cols-2">
         <div className="overflow-hidden rounded-xl border ring-1 ring-foreground/10">
-          <div className="aspect-[16/10]">
+          <div className="aspect-16/10">
             <ProductThumb
               name={product.name}
               brand={product.brand}
@@ -79,9 +81,12 @@ export default async function ProductPage({
             <p className="text-muted-foreground">{product.shortDescription}</p>
           </div>
 
-          <div className="flex items-baseline gap-3">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="text-3xl font-semibold">
-              {formatUsd(product.priceCents)}
+              {formatUsd(price.usdCents)}
+            </span>
+            <span className="text-base text-muted-foreground tabular-nums">
+              {formatMoney(price.lkrCents, "LKR")}
             </span>
             <span
               className={

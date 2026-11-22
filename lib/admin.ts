@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { ADMIN_COST_FIELDS, prisma } from "@/lib/db";
+import { orderProfit } from "@/lib/profit";
 import { availableStockByProduct } from "@/lib/products";
 import { clampPage } from "@/lib/list-params";
 
@@ -20,12 +21,24 @@ export async function getAdminSession() {
   return session?.user?.role === "ADMIN" && session.user.mfa ? session : null;
 }
 
+export type CurrencyTotals = {
+  currency: string;
+  revenueCents: number;
+  profitCents: number;
+  /** Fulfilled orders with at least one line that had no cost price set. */
+  ordersMissingCost: number;
+};
+
 export async function getAdminStats() {
-  const [agg, statusCounts, keysSold, productCount] = await Promise.all([
-    prisma.order.aggregate({
+  const [fulfilled, statusCounts, keysSold, productCount] = await Promise.all([
+    prisma.order.findMany({
       where: { status: "FULFILLED" },
-      _sum: { totalCents: true },
-      _count: true,
+      select: {
+        currency: true,
+        totalCents: true,
+        feeCents: true,
+        items: { select: { unitCostCents: true, quantity: true } },
+      },
     }),
     prisma.order.groupBy({ by: ["status"], _count: true }),
     prisma.licenseKey.count({ where: { status: "SOLD" } }),
@@ -36,9 +49,21 @@ export async function getAdminStats() {
     statusCounts.map((s) => [s.status, s._count]),
   );
 
+  // Orders are charged in LKR or USD; never add the two together.
+  const totals = new Map<string, CurrencyTotals>();
+  for (const o of fulfilled) {
+    const currency = o.currency.toUpperCase();
+    const t = totals.get(currency) ?? { currency, revenueCents: 0, profitCents: 0, ordersMissingCost: 0 };
+    const p = orderProfit(o);
+    t.revenueCents += o.totalCents;
+    t.profitCents += p.profitCents;
+    if (!p.costKnown) t.ordersMissingCost++;
+    totals.set(currency, t);
+  }
+
   return {
-    revenueCents: agg._sum.totalCents ?? 0,
-    fulfilledOrders: agg._count,
+    byCurrency: [...totals.values()].sort((a, b) => a.currency.localeCompare(b.currency)),
+    fulfilledOrders: fulfilled.length,
     pendingOrders: byStatus.PENDING ?? 0,
     totalOrders: statusCounts.reduce((n, s) => n + s._count, 0),
     keysSold,
@@ -90,6 +115,7 @@ export async function getAdminProducts(filters: AdminProductFilters = {}) {
             ? { priceCents: "desc" }
             : { createdAt: "desc" },
     include: { category: true },
+    omit: ADMIN_COST_FIELDS.product,
   });
   const [available, sold] = await Promise.all([
     availableStockByProduct(products.map((p) => p.id)),
@@ -180,6 +206,23 @@ export async function getAdminOrders(status?: string) {
     take: 100,
     include: { items: { select: { quantity: true } } },
   });
+}
+
+/** Saved fee + per-line costs of one order, for the admin order page. */
+export async function getOrderProfit(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      totalCents: true,
+      feeCents: true,
+      items: { select: { id: true, unitCostCents: true, quantity: true } },
+    },
+  });
+  if (!order) return null;
+  return {
+    ...orderProfit(order),
+    costByItem: new Map(order.items.map((i) => [i.id, i.unitCostCents])),
+  };
 }
 
 // --- Users ---------------------------------------------------------------------

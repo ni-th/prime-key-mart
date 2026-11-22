@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { ImageUpload } from "@/components/admin/image-upload";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { formatMoney } from "@/lib/money";
+import { unitProfit, type Currency } from "@/lib/profit";
+
+/** Matches LKR_DRIFT_WARN_PERCENT in lib/pricing.ts (not imported: server-only module). */
+const LKR_DRIFT_WARN_PERCENT = 10;
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -33,6 +38,10 @@ export type ProductFormValues = {
   platform: string;
   region: string;
   priceCents: number;
+  priceLkrCents: number | null;
+  /** Admin only: purchase cost per key. */
+  costCents: number | null;
+  costCurrency: Currency;
   categoryId: string;
   imageUrl: string | null;
   published: boolean;
@@ -74,15 +83,244 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
   );
 }
 
+type Pricing = { rate: number; marginPercent: number; gatewayFeePercent: number };
+
+/** Profit breakdown for one sale in `currency`. */
+function ProfitColumn({
+  label,
+  currency,
+  priceCents,
+  costCents,
+  costCurrency,
+  pricing,
+}: {
+  label: string;
+  currency: Currency;
+  priceCents: number;
+  costCents: number;
+  costCurrency: Currency;
+  pricing: Pricing;
+}) {
+  const p = unitProfit({
+    priceCents,
+    currency,
+    costCents,
+    costCurrency,
+    feePercent: pricing.gatewayFeePercent,
+    rate: pricing.rate,
+  });
+  const loss = p.profitCents < 0;
+  return (
+    <div className="space-y-1 tabular-nums">
+      <div className="font-medium">{label}</div>
+      <div className="flex justify-between gap-3 text-muted-foreground">
+        <span>Customer pays</span>
+        <span>{formatMoney(p.priceCents, currency)}</span>
+      </div>
+      <div className="flex justify-between gap-3 text-muted-foreground">
+        <span>Gateway fee ({pricing.gatewayFeePercent}%)</span>
+        <span>-{formatMoney(p.feeCents, currency)}</span>
+      </div>
+      <div className="flex justify-between gap-3 text-muted-foreground">
+        <span>Your cost</span>
+        <span>-{formatMoney(p.costCents, currency)}</span>
+      </div>
+      <div
+        className={cn(
+          "flex justify-between gap-3 border-t pt-1 font-medium",
+          loss ? "text-destructive" : "text-emerald-600 dark:text-emerald-400",
+        )}
+      >
+        <span>{loss ? "Loss" : "Profit"}</span>
+        <span>
+          {formatMoney(p.profitCents, currency)}
+          {p.marginPercent !== null && (
+            <span className="ml-1 text-xs font-normal">({p.marginPercent.toFixed(1)}%)</span>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * USD price + optional fixed LKR price (calculated LKR shown live), plus the
+ * admin-only purchase cost and the resulting profit per sale.
+ */
+function PriceFields({
+  priceCents,
+  priceLkrCents,
+  costCents,
+  costCurrency: initialCostCurrency,
+  pricing,
+  usdError,
+  lkrError,
+  costError,
+}: {
+  priceCents?: number;
+  priceLkrCents: number | null;
+  costCents: number | null;
+  costCurrency: Currency;
+  pricing: Pricing;
+  usdError?: string;
+  lkrError?: string;
+  costError?: string;
+}) {
+  const [usd, setUsd] = useState(priceCents !== undefined ? (priceCents / 100).toFixed(2) : "");
+  const [lkr, setLkr] = useState(priceLkrCents !== null ? String(priceLkrCents / 100) : "");
+  const [cost, setCost] = useState(costCents !== null ? (costCents / 100).toFixed(2) : "");
+  const [costCurrency, setCostCurrency] = useState<Currency>(initialCostCurrency);
+  const costNum = Number.parseFloat(cost);
+  const costValid = cost.trim() !== "" && Number.isFinite(costNum) && costNum >= 0;
+
+  const usdNum = Number.parseFloat(usd);
+  const effective = pricing.rate * (1 + pricing.marginPercent / 100);
+  // Same rounding as lib/pricing.ts (whole rupees).
+  const calculated = Number.isFinite(usdNum) && usdNum >= 0 ? Math.round(usdNum * effective) : null;
+  const lkrNum = Number.parseFloat(lkr);
+  const fixed = lkr.trim() !== "" && Number.isFinite(lkrNum) ? lkrNum : null;
+  const drift =
+    fixed !== null && calculated ? Math.round(((fixed - calculated) / calculated) * 100) : null;
+
+  return (
+    <>
+      <Field label="Price (USD)" htmlFor="price" error={usdError}>
+        <Input
+          id="price"
+          name="price"
+          type="number"
+          step="0.01"
+          min="0"
+          value={usd}
+          onChange={(e) => setUsd(e.target.value)}
+          required
+        />
+      </Field>
+      <div className="space-y-1.5">
+        <Label htmlFor="priceLkr">Fixed price in LKR (optional)</Label>
+        <Input
+          id="priceLkr"
+          name="priceLkr"
+          type="number"
+          step="1"
+          min="0"
+          placeholder={calculated !== null ? String(calculated) : "Calculated from USD"}
+          value={lkr}
+          onChange={(e) => setLkr(e.target.value)}
+          aria-invalid={lkrError ? true : undefined}
+        />
+        {lkrError ? (
+          <p className="text-xs text-destructive">{lkrError}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {calculated !== null ? (
+              <>
+                At today&apos;s rate: {formatMoney(calculated * 100, "LKR")}.{" "}
+                {fixed === null
+                  ? "Leave empty to use that."
+                  : "Clear the field to use it instead."}
+              </>
+            ) : (
+              "Leave empty to calculate it from the USD price."
+            )}
+          </p>
+        )}
+        {drift !== null && Math.abs(drift) >= LKR_DRIFT_WARN_PERCENT && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            This is {Math.abs(drift)}% {drift > 0 ? "above" : "below"} the USD price at
+            today&apos;s rate, so customers paying in {drift > 0 ? "USD" : "LKR"} get a
+            better deal.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="cost">Your cost per key (private)</Label>
+        <div className="flex gap-2">
+          <Input
+            id="cost"
+            name="cost"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="What you paid"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
+            aria-invalid={costError ? true : undefined}
+          />
+          <input type="hidden" name="costCurrency" value={costCurrency} />
+          <div className="flex shrink-0 rounded-lg border p-0.5" role="group" aria-label="Cost currency">
+            {(["USD", "LKR"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCostCurrency(c)}
+                aria-pressed={costCurrency === c}
+                className={cn(
+                  "rounded-md px-2.5 text-xs font-medium transition-colors",
+                  costCurrency === c
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className={costError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+          {costError ?? "Only admins see this. Used to show your real profit after gateway fees."}
+        </p>
+      </div>
+
+      <div className="rounded-lg border bg-muted/40 p-4 text-sm sm:col-span-2">
+        {costValid && calculated !== null ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ProfitColumn
+              label="When paid in USD"
+              currency="USD"
+              priceCents={Math.round(usdNum * 100)}
+              costCents={Math.round(costNum * 100)}
+              costCurrency={costCurrency}
+              pricing={pricing}
+            />
+            <ProfitColumn
+              label="When paid in LKR"
+              currency="LKR"
+              priceCents={Math.round(fixed ?? calculated) * 100}
+              costCents={Math.round(costNum * 100)}
+              costCurrency={costCurrency}
+              pricing={pricing}
+            />
+          </div>
+        ) : (
+          <p className="text-muted-foreground">
+            Enter the price and your cost to see the profit per sale.
+          </p>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          {pricing.gatewayFeePercent === 0
+            ? "No gateway fee is set yet - add it in Settings for accurate profit. "
+            : ""}
+          Costs are converted at the market rate ({pricing.rate} LKR per USD).
+        </p>
+      </div>
+    </>
+  );
+}
+
 export function ProductForm({
   categories,
   product,
   uploadsEnabled = false,
+  pricing,
 }: {
   categories: Category[];
   product?: ProductFormValues;
   /** Cloudinary configured: show the image uploader instead of a URL box. */
   uploadsEnabled?: boolean;
+  /** Current exchange rate, margin and gateway fee, for the price/profit previews. */
+  pricing: Pricing;
 }) {
   const initial: FormResult = { ok: false, error: "" };
   const [state, formAction] = useActionState(saveProduct, initial);
@@ -153,19 +391,16 @@ export function ProductForm({
             defaultValue={product?.region ?? "Global"}
           />
         </Field>
-        <Field label="Price (USD)" htmlFor="price" error={fe.priceCents}>
-          <Input
-            id="price"
-            name="price"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={
-              product ? (product.priceCents / 100).toFixed(2) : undefined
-            }
-            required
-          />
-        </Field>
+        <PriceFields
+          priceCents={product?.priceCents}
+          priceLkrCents={product?.priceLkrCents ?? null}
+          costCents={product?.costCents ?? null}
+          costCurrency={product?.costCurrency ?? "USD"}
+          pricing={pricing}
+          usdError={fe.priceCents}
+          lkrError={fe.priceLkrCents}
+          costError={fe.costCents}
+        />
         <Field label="Category" htmlFor="categoryId" error={fe.categoryId}>
           {/* `items` lets the trigger show the name before the popup has opened
               (otherwise Base UI shows the raw value, i.e. the category id). */}

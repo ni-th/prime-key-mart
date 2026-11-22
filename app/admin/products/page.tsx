@@ -13,7 +13,9 @@ import { getCategories } from "@/lib/products";
 import { oneOf, pageParam, paginate, param, type RawParams } from "@/lib/list-params";
 import { ListClear, ListSearch, ListSelect } from "@/components/admin/list-controls";
 import { ListPagination } from "@/components/admin/list-pagination";
-import { formatUsd } from "@/lib/money";
+import { formatMoney, formatUsd } from "@/lib/money";
+import { getPricingSettings, priceOf } from "@/lib/pricing";
+import { asCurrency, unitProfit } from "@/lib/profit";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,7 +42,7 @@ export default async function AdminProductsPage({
   const stock = param(sp, "stock");
   const sort = oneOf(param(sp, "sort"), PRODUCT_SORTS, "newest");
 
-  const [products, categories] = await Promise.all([
+  const [products, categories, pricing] = await Promise.all([
     getAdminProducts({
       q: q || undefined,
       category: category || undefined,
@@ -49,6 +51,7 @@ export default async function AdminProductsPage({
       sort,
     }),
     getCategories(),
+    getPricingSettings(),
   ]);
   const filtered = Boolean(q || category || status || stock);
   const { page, items, total } = paginate(products, pageParam(sp), ADMIN_PAGE_SIZE);
@@ -132,6 +135,7 @@ export default async function AdminProductsPage({
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead className="text-right">Price</TableHead>
+              <TableHead className="text-right">Profit / sale</TableHead>
               <TableHead className="text-right">Stock</TableHead>
               <TableHead className="text-right">Sold</TableHead>
               <TableHead>Status</TableHead>
@@ -140,7 +144,7 @@ export default async function AdminProductsPage({
           <TableBody>
             {total === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   {filtered ? "No products match these filters." : "No products yet."}
                 </TableCell>
               </TableRow>
@@ -161,6 +165,49 @@ export default async function AdminProductsPage({
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {formatUsd(p.priceCents)}
+                  <div className="text-xs text-muted-foreground">
+                    {formatMoney(priceOf(p, pricing).lkrCents, "LKR")}
+                    {p.priceLkrCents !== null && (
+                      <span className="ml-1 font-medium text-primary">fixed</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {p.costCents === null ? (
+                    <Link
+                      href={`/admin/products/${p.id}`}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      Set cost
+                    </Link>
+                  ) : (
+                    (["USD", "LKR"] as const).map((currency, i) => {
+                      const price = priceOf(p, pricing);
+                      const profit = unitProfit({
+                        priceCents: currency === "USD" ? price.usdCents : price.lkrCents,
+                        currency,
+                        costCents: p.costCents!,
+                        costCurrency: asCurrency(p.costCurrency),
+                        feePercent: pricing.gatewayFeePercent,
+                        rate: pricing.rate,
+                      });
+                      return (
+                        <div
+                          key={currency}
+                          className={cn(
+                            i > 0 && "text-xs",
+                            profit.profitCents < 0
+                              ? "text-destructive"
+                              : i === 0
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-muted-foreground",
+                          )}
+                        >
+                          {formatMoney(profit.profitCents, currency)}
+                        </div>
+                      );
+                    })
+                  )}
                 </TableCell>
                 <TableCell
                   className={cn(

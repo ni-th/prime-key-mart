@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { ADMIN_COST_FIELDS, prisma } from "@/lib/db";
+import { asCurrency, convertCost, gatewayFeeCents } from "@/lib/profit";
 import { checkoutSchema } from "@/lib/validation";
 import { generateOrderNumber } from "@/lib/orders";
 import { signOrderToken } from "@/lib/order-token";
-import { convertUsdCentsToCurrency } from "@/lib/payhere";
+import { getPricingSettings, priceOf, unitPriceIn } from "@/lib/pricing";
 import {
   InsufficientStockError,
   expireStaleReservations,
@@ -60,6 +61,8 @@ export async function POST(req: Request) {
   const ids = [...new Set(parsed.data.items.map((i) => i.productId))];
   const products = await prisma.product.findMany({
     where: { id: { in: ids }, published: true },
+    // Cost is snapshotted on the order for admin profit reports (never sent back).
+    omit: ADMIN_COST_FIELDS.product,
   });
   const byId = new Map(products.map((p) => [p.id, p]));
 
@@ -70,17 +73,24 @@ export async function POST(req: Request) {
     );
   }
 
-  const lines = parsed.data.items.map((i) => ({
-    product: byId.get(i.productId)!,
-    quantity: i.quantity,
-  }));
-
-  const subtotalCents = lines.reduce(
-    (sum, l) => sum + l.product.priceCents * l.quantity,
-    0,
-  );
+  // Price every line on the server in the chosen currency (fixed LKR price if
+  // set, else USD x admin exchange rate + margin). The total is the sum of the
+  // line prices, so it always matches what the customer was shown.
   const currency = parsed.data.currency;
-  const paymentSubtotalCents = convertUsdCentsToCurrency(subtotalCents, currency);
+  const settings = await getPricingSettings();
+  const lines = parsed.data.items.map((i) => {
+    const product = byId.get(i.productId)!;
+    return {
+      product,
+      quantity: i.quantity,
+      unitCents: unitPriceIn(priceOf(product, settings), currency),
+      unitCostCents:
+        product.costCents === null
+          ? null
+          : convertCost(product.costCents, asCurrency(product.costCurrency), currency, settings.rate),
+    };
+  });
+  const paymentSubtotalCents = lines.reduce((sum, l) => sum + l.unitCents * l.quantity, 0);
 
   // Return keys held by abandoned checkouts to stock before we try to reserve.
   // Never let housekeeping block a sale.
@@ -97,12 +107,14 @@ export async function POST(req: Request) {
       status: "PENDING",
       subtotalCents: paymentSubtotalCents,
       totalCents: paymentSubtotalCents,
+      feeCents: gatewayFeeCents(paymentSubtotalCents, settings.gatewayFeePercent),
       currency: currency.toLowerCase(),
       items: {
         create: lines.map((l) => ({
           productId: l.product.id,
           productName: l.product.name,
-          unitPriceCents: convertUsdCentsToCurrency(l.product.priceCents, currency),
+          unitPriceCents: l.unitCents,
+          unitCostCents: l.unitCostCents,
           quantity: l.quantity,
         })),
       },

@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KeyRound } from "lucide-react";
-import { prisma } from "@/lib/db";
+import { ADMIN_COST_FIELDS, prisma } from "@/lib/db";
 import { getCategories, availableStockByProduct } from "@/lib/products";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { ProductForm } from "@/components/admin/product-form";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
+import { getPricingSettings } from "@/lib/pricing";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
 
 export const metadata: Metadata = { title: "Edit product · Admin" };
@@ -19,9 +20,10 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [product, categories] = await Promise.all([
-    prisma.product.findUnique({ where: { id } }),
+  const [product, categories, pricing] = await Promise.all([
+    prisma.product.findUnique({ where: { id }, omit: ADMIN_COST_FIELDS.product }),
     getCategories(),
+    getPricingSettings(),
   ]);
   if (!product) notFound();
 
@@ -42,6 +44,11 @@ export default async function EditProductPage({
 
       <ProductForm
         uploadsEnabled={isCloudinaryConfigured}
+        pricing={{
+          rate: pricing.rate,
+          marginPercent: pricing.marginPercent,
+          gatewayFeePercent: pricing.gatewayFeePercent,
+        }}
         categories={categories}
         product={{
           id: product.id,
@@ -53,6 +60,9 @@ export default async function EditProductPage({
           platform: product.platform,
           region: product.region,
           priceCents: product.priceCents,
+          priceLkrCents: product.priceLkrCents,
+          costCents: product.costCents,
+          costCurrency: product.costCurrency === "LKR" ? "LKR" : "USD",
           categoryId: product.categoryId,
           imageUrl: product.imageUrl,
           published: product.published,

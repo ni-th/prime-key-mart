@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Receipt, Users } from "lucide-react";
+import { LayoutDashboard, Package, Receipt, Settings, Users } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: Receipt },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 /** Dashboard only matches exactly; sections also match their sub-pages. */
@@ -33,7 +34,7 @@ export function AdminNav({ orientation }: { orientation: "vertical" | "horizonta
       aria-label="Admin"
       className={cn(
         "flex gap-1",
-        vertical ? "flex-col" : "-mx-4 overflow-x-auto px-4 [scrollbar-width:none]",
+        vertical ? "flex-col" : "-mx-4 overflow-x-auto px-4 scrollbar-none",
       )}
     >
       {NAV.map(({ href, label, icon: Icon }) => {

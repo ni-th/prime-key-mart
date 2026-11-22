@@ -73,6 +73,21 @@ export const productSchema = z.object({
     .int()
     .min(0, "Price cannot be negative")
     .max(10_000_00, "That price looks too high"),
+  /** Optional fixed LKR price in cents; null = calculate from USD. */
+  priceLkrCents: z
+    .number()
+    .int()
+    .min(100, "Enter at least LKR 1, or leave it empty")
+    .max(5_000_000_00, "That LKR price looks too high")
+    .nullable(),
+  /** ADMIN ONLY: what the store pays per key, in costCurrency. null = not set. */
+  costCents: z
+    .number({ error: "Enter a valid cost, or leave it empty" })
+    .int()
+    .min(0, "Cost cannot be negative")
+    .max(5_000_000_00, "That cost looks too high")
+    .nullable(),
+  costCurrency: z.enum(["USD", "LKR"]).default("USD"),
   categoryId: z.string().min(1, "Pick a category"),
   imageUrl: z.union([z.url(), z.literal("")]).optional(),
   published: z.boolean().default(true),

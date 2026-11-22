@@ -13,7 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
-import { selectCartSubtotal, useCart } from "@/lib/cart-store";
+import { useCart } from "@/lib/cart-store";
+import { useCartQuote } from "@/lib/use-cart-quote";
 import { useHydrated } from "@/lib/use-hydrated";
 
 export function CheckoutForm({
@@ -28,15 +29,20 @@ export function CheckoutForm({
   const router = useRouter();
   const hydrated = useHydrated();
   const lines = useCart((s) => s.lines);
-  const subtotal = useCart(selectCartSubtotal);
+  // Live prices from the server (fixed LKR prices / admin exchange rate).
+  const { quote, byId, loading } = useCartQuote(lines);
 
   const [email, setEmail] = useState(defaultEmail ?? "");
   const [currency, setCurrency] = useState<"LKR" | "USD">("LKR");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const displayRate = 300;
-  const displayAmount =
-    currency === "LKR" ? Math.round(subtotal * displayRate) : subtotal;
+  const lineTotal = (productId: string, qty: number) => {
+    const q = byId.get(productId);
+    if (!q) return null;
+    return (currency === "LKR" ? q.lkrCents : q.usdCents) * qty;
+  };
+  const total = quote ? quote.totals[currency] : null;
+  const unavailable = quote?.lines.some((l) => !l.available) ?? false;
 
   if (!hydrated) {
     return <Skeleton className="h-72 w-full" />;
@@ -156,7 +162,7 @@ export function CheckoutForm({
             ))}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Sandbox rate: 1 USD = {displayRate} LKR.
+            You pay exactly the total shown in the order summary.
           </p>
         </Card>
 
@@ -181,11 +187,12 @@ export function CheckoutForm({
                   {l.quantity > 1 ? ` × ${l.quantity}` : ""}
                 </span>
                 <span className="tabular-nums">
-                  {formatMoney(
-                    currency === "LKR"
-                      ? Math.round(l.priceCents * l.quantity * displayRate)
-                      : l.priceCents * l.quantity,
-                    currency,
+                  {!quote ? (
+                    <Skeleton className="inline-block h-4 w-16 align-middle" />
+                  ) : byId.get(l.productId)?.available ? (
+                    formatMoney(lineTotal(l.productId, l.quantity) ?? 0, currency)
+                  ) : (
+                    <span className="text-destructive">Unavailable</span>
                   )}
                 </span>
               </li>
@@ -194,8 +201,19 @@ export function CheckoutForm({
           <Separator className="my-4" />
           <div className="flex justify-between font-medium">
             <span>Total</span>
-            <span className="tabular-nums">{formatMoney(displayAmount, currency)}</span>
+            <span className={cn("tabular-nums", loading && "opacity-60")}>
+              {total === null ? (
+                <Skeleton className="inline-block h-5 w-24 align-middle" />
+              ) : (
+                formatMoney(total, currency)
+              )}
+            </span>
           </div>
+          {unavailable && (
+            <p className="mt-2 text-xs text-destructive">
+              Some items are no longer available. Remove them from your cart to continue.
+            </p>
+          )}
 
           {error && (
             <Alert variant="destructive" className="mt-4">
@@ -206,7 +224,9 @@ export function CheckoutForm({
           <Button
             className="mt-4 w-full"
             size="lg"
-            disabled={pending || (!emailLocked && !email.trim())}
+            disabled={
+              pending || total === null || unavailable || (!emailLocked && !email.trim())
+            }
             onClick={pay}
           >
             {pending && <Loader2 className="size-4 animate-spin" />}

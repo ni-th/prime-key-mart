@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { getAdminOrders, getAdminProducts, getAdminStats, LOW_STOCK_THRESHOLD } from "@/lib/admin";
-import { formatMoney, formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,8 +20,28 @@ export default async function AdminDashboardPage() {
   const lowStock = products.filter((p) => p.stock < LOW_STOCK_THRESHOLD);
   const recentOrders = orders.slice(0, 6);
 
-  const tiles = [
-    { label: "Revenue", value: formatUsd(stats.revenueCents) },
+  const perCurrency = (pick: (t: (typeof stats.byCurrency)[number]) => number) =>
+    stats.byCurrency.length === 0 ? (
+      formatMoney(0, "USD")
+    ) : (
+      <div className="space-y-0.5">
+        {stats.byCurrency.map((t) => (
+          <div key={t.currency}>{formatMoney(pick(t), t.currency)}</div>
+        ))}
+      </div>
+    );
+  const missingCost = stats.byCurrency.reduce((n, t) => n + t.ordersMissingCost, 0);
+
+  const tiles: { label: string; value: React.ReactNode; note?: string }[] = [
+    { label: "Revenue", value: perCurrency((t) => t.revenueCents) },
+    {
+      label: "Profit (after fees and cost)",
+      value: perCurrency((t) => t.profitCents),
+      note:
+        missingCost > 0
+          ? `${missingCost} order${missingCost === 1 ? "" : "s"} had no cost price, so profit is overstated.`
+          : undefined,
+    },
     { label: "Orders fulfilled", value: stats.fulfilledOrders },
     { label: "Pending", value: stats.pendingOrders },
     { label: "Keys sold", value: stats.keysSold },
@@ -31,11 +51,14 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {tiles.map((t) => (
           <Card key={t.label} className="p-5">
             <div className="text-2xl font-semibold tabular-nums">{t.value}</div>
             <div className="text-sm text-muted-foreground">{t.label}</div>
+            {t.note && (
+              <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">{t.note}</div>
+            )}
           </Card>
         ))}
       </div>

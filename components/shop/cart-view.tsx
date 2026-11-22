@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatUsd } from "@/lib/money";
+import { formatMoney, formatUsd } from "@/lib/money";
+import { useCartQuote } from "@/lib/use-cart-quote";
 import {
   selectCartSubtotal,
   useCart,
@@ -93,7 +94,11 @@ export function CartView() {
   const hydrated = useHydrated();
   const lines = useCart((s) => s.lines);
   const clear = useCart((s) => s.clear);
-  const subtotal = useCart(selectCartSubtotal);
+  const snapshotSubtotal = useCart(selectCartSubtotal);
+  // Live prices from the server; the stored snapshot is only a placeholder.
+  const { quote } = useCartQuote(lines);
+  const usdTotal = quote?.totals.USD ?? snapshotSubtotal;
+  const lkrTotal = quote?.totals.LKR ?? null;
 
   if (!hydrated) {
     return (
@@ -143,19 +148,24 @@ export function CartView() {
       <div className="lg:sticky lg:top-20 lg:self-start">
         <Card className="p-5">
           <h2 className="font-medium">Order summary</h2>
-          <div className="mt-4 flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="tabular-nums">{formatUsd(subtotal)}</span>
+          <div className="mt-4 flex justify-between font-medium">
+            <span>Total</span>
+            <span className="tabular-nums">{formatUsd(usdTotal)}</span>
           </div>
           <div className="mt-1 flex justify-between text-sm">
-            <span className="text-muted-foreground">Taxes</span>
-            <span className="text-muted-foreground">Calculated at checkout</span>
+            <span className="text-muted-foreground">In Sri Lankan rupees</span>
+            <span className="tabular-nums text-muted-foreground">
+              {lkrTotal === null ? (
+                <Skeleton className="inline-block h-4 w-20 align-middle" />
+              ) : (
+                formatMoney(lkrTotal, "LKR")
+              )}
+            </span>
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Choose LKR or USD at checkout. No extra fees or taxes are added.
+          </p>
           <Separator className="my-4" />
-          <div className="flex justify-between font-medium">
-            <span>Total</span>
-            <span className="tabular-nums">{formatUsd(subtotal)}</span>
-          </div>
           <Link
             href="/checkout"
             className={cn(buttonVariants({ size: "lg" }), "mt-4 w-full")}

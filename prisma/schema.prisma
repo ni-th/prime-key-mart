@@ -30,23 +30,23 @@ enum OrderStatus {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
+  id             String               @id @default(cuid())
+  email          String               @unique
   name           String?
   passwordHash   String?
-  role           Role      @default(USER)
-  suspended      Boolean   @default(false)
+  role           Role                 @default(USER)
+  suspended      Boolean              @default(false)
   suspendedAt    DateTime?
   suspensionNote String?
   // Two-factor auth (authenticator app). Required for ADMIN users.
   // totpSecret is a JSON-encoded EncryptedSecret (AES-256-GCM, see lib/crypto.ts).
   totpSecret     String?
-  totpEnabled    Boolean   @default(false)
+  totpEnabled    Boolean              @default(false)
   totpLastStep   Int? // last accepted 30s time-step; blocks code replay
   orders         Order[]
   passwordResets PasswordResetToken[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 }
 
 /// One-time "forgot password" link. Only a SHA-256 of the token is stored, so a
@@ -61,6 +61,19 @@ model PasswordResetToken {
   createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// Store-wide settings editable in the admin panel. A single row, id "default".
+model StoreSettings {
+  id                String   @id @default("default")
+  /// LKR per 1 USD (market rate). Null = fall back to PAYHERE_USD_TO_LKR_RATE.
+  usdToLkrRate      Float?
+  /// Added on top of the market rate for calculated LKR prices (e.g. 2.5 = +2.5%).
+  lkrMarginPercent  Float    @default(0)
+  /// Payment gateway (PayHere) fee as a percent of each payment, for profit reports.
+  gatewayFeePercent Float    @default(0)
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
 }
 
 model BlockedEmail {
@@ -88,7 +101,14 @@ model Product {
   brand            String
   platform         String
   region           String       @default("Global")
-  priceCents       Int
+  priceCents       Int // USD cents: the main price, required
+  /// Optional fixed LKR price (cents). When null, LKR is calculated from
+  /// priceCents with the exchange rate + margin in StoreSettings.
+  priceLkrCents    Int?
+  /// ADMIN ONLY. What the store pays per key (cents, in costCurrency). Hidden
+  /// from every query by default (global omit in lib/db.ts).
+  costCents        Int?
+  costCurrency     String       @default("USD")
   imageUrl         String?
   categoryId       String
   category         Category     @relation(fields: [categoryId], references: [id])
@@ -132,6 +152,8 @@ model Order {
   status                OrderStatus @default(PENDING)
   subtotalCents         Int
   totalCents            Int
+  /// ADMIN ONLY. Gateway fee estimated at checkout (order currency, cents).
+  feeCents              Int?
   currency              String      @default("usd")
   stripeSessionId       String?     @unique
   stripePaymentIntentId String?
@@ -154,6 +176,9 @@ model OrderItem {
   product        Product      @relation(fields: [productId], references: [id])
   productName    String
   unitPriceCents Int
+  /// ADMIN ONLY. Cost per key at checkout, converted to the order currency.
+  /// Null when the product had no cost price set.
+  unitCostCents  Int?
   quantity       Int
   licenseKeys    LicenseKey[]
 

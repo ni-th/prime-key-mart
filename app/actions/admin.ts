@@ -45,6 +45,12 @@ export async function saveProduct(
   const name = ((formData.get("name") as string) ?? "").trim();
   const rawSlug = ((formData.get("slug") as string) ?? "").trim();
   const priceInput = parseFloat((formData.get("price") as string) ?? "");
+  // Empty = no fixed LKR price (calculated from USD). Whole rupees only.
+  const lkrRaw = ((formData.get("priceLkr") as string) ?? "").trim();
+  const lkrInput = lkrRaw === "" ? null : parseFloat(lkrRaw);
+  // Empty = cost not tracked for this product.
+  const costRaw = ((formData.get("cost") as string) ?? "").trim();
+  const costInput = costRaw === "" ? null : parseFloat(costRaw);
 
   const candidate = {
     name,
@@ -55,6 +61,11 @@ export async function saveProduct(
     platform: ((formData.get("platform") as string) ?? "").trim(),
     region: ((formData.get("region") as string) ?? "Global").trim() || "Global",
     priceCents: Number.isFinite(priceInput) ? Math.round(priceInput * 100) : NaN,
+    priceLkrCents:
+      lkrInput === null ? null : Number.isFinite(lkrInput) ? Math.round(lkrInput) * 100 : NaN,
+    costCents:
+      costInput === null ? null : Number.isFinite(costInput) ? Math.round(costInput * 100) : NaN,
+    costCurrency: formData.get("costCurrency") === "LKR" ? "LKR" : "USD",
     categoryId: (formData.get("categoryId") as string) ?? "",
     imageUrl: ((formData.get("imageUrl") as string) ?? "").trim(),
     published: formData.get("published") === "on",
@@ -92,6 +103,9 @@ export async function saveProduct(
     platform: data.platform,
     region: data.region,
     priceCents: data.priceCents,
+    priceLkrCents: data.priceLkrCents,
+    costCents: data.costCents,
+    costCurrency: data.costCurrency,
     categoryId: data.categoryId,
     imageUrl: data.imageUrl ? data.imageUrl : null,
     published: data.published,

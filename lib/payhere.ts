@@ -2,11 +2,7 @@ import { createHash } from "node:crypto";
 
 const merchantId = process.env.PAYHERE_MERCHANT_ID ?? "";
 const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET ?? "";
-export const usdToLkrRate = Number(process.env.PAYHERE_USD_TO_LKR_RATE ?? "300");
-
-export function convertUsdCentsToCurrency(cents: number, currency: "LKR" | "USD") {
-  return currency === "LKR" ? Math.round(cents * usdToLkrRate) : cents;
-}
+// Currency conversion lives in lib/pricing.ts (admin-set rate, fixed LKR prices).
 
 export const isPayHereConfigured =
   merchantId.length > 0 &&

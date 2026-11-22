@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
 import { KeyList } from "@/components/shop/key-list";
 import { OrderActions } from "@/components/admin/order-actions";
+import { getOrderProfit } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Order · Admin" };
 
@@ -20,6 +21,9 @@ export default async function AdminOrderDetailPage({
   const { orderNumber } = await params;
   const order = await getOrderByNumber(orderNumber);
   if (!order) notFound();
+
+  const profit = await getOrderProfit(order.id);
+  const cur = order.currency.toUpperCase();
 
   const keyGroups = ["FULFILLED", "REFUNDED"].includes(order.status)
     ? decryptOrderKeys(order).map((g) => ({
@@ -87,6 +91,50 @@ export default async function AdminOrderDetailPage({
           <span className="tabular-nums">{formatMoney(order.totalCents, order.currency.toUpperCase())}</span>
         </div>
       </Card>
+
+      {profit && (
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="font-medium">Profit</h2>
+            <span className="text-xs text-muted-foreground">Admin only · saved at checkout</span>
+          </div>
+          <div className="space-y-1.5 text-sm tabular-nums">
+            <div className="flex justify-between gap-3 text-muted-foreground">
+              <span>Customer paid</span>
+              <span>{formatMoney(order.totalCents, cur)}</span>
+            </div>
+            <div className="flex justify-between gap-3 text-muted-foreground">
+              <span>Gateway fee</span>
+              <span>-{formatMoney(profit.feeCents, cur)}</span>
+            </div>
+            <div className="flex justify-between gap-3 text-muted-foreground">
+              <span>Cost of keys</span>
+              <span>-{formatMoney(profit.costCents, cur)}</span>
+            </div>
+            <Separator className="my-2" />
+            <div
+              className={
+                profit.profitCents < 0
+                  ? "flex justify-between gap-3 font-medium text-destructive"
+                  : "flex justify-between gap-3 font-medium text-emerald-600 dark:text-emerald-400"
+              }
+            >
+              <span>{profit.profitCents < 0 ? "Loss" : "Profit"}</span>
+              <span>{formatMoney(profit.profitCents, cur)}</span>
+            </div>
+          </div>
+          {!profit.costKnown && (
+            <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+              Some items had no cost price when this order was placed, so the real profit is lower.
+            </p>
+          )}
+          {order.status !== "FULFILLED" && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Only fulfilled orders count towards the dashboard profit.
+            </p>
+          )}
+        </Card>
+      )}
 
       {order.status === "REFUNDED" && (
         <Card className="border-destructive/30 p-5">
