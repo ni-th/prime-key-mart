@@ -12,6 +12,14 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateRangePicker, type DateRange } from "@/components/ui/date-range-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
 import { asCurrency, unitProfit } from "@/lib/profit";
 import {
@@ -57,19 +65,74 @@ const SCOPES: { value: DiscountScope; label: string; hint: string }[] = [
   { value: "PRODUCTS", label: "Chosen products", hint: "Only the products you tick." },
 ];
 
-/** ISO -> "YYYY-MM-DDTHH:mm" in the browser's time zone (for datetime-local). */
-function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Every 30 minutes, plus 23:59 so a sale can run to the end of a day. */
+const TIME_SLOTS = [
+  ...Array.from({ length: 48 }, (_, i) => `${pad(Math.floor(i / 2))}:${i % 2 ? "30" : "00"}`),
+  "23:59",
+];
+
+/** "13:30" -> "1:30 PM" */
+function timeLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${h % 12 || 12}:${pad(m)} ${h < 12 ? "AM" : "PM"}`;
 }
 
-/** datetime-local value (browser time zone) -> ISO, or "" when empty/invalid. */
-function toIso(local: string): string {
-  if (!local) return "";
-  const d = new Date(local);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+/** Local "HH:mm" of an ISO time (browser time zone). */
+function localTime(iso: string | null, fallback: string): string {
+  if (!iso) return fallback;
+  const d = new Date(iso);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Local midnight of an ISO time's day (browser time zone). */
+function localDay(iso: string | null): Date | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** A day + "HH:mm" in the browser time zone -> ISO ("" when no day). */
+function combine(day: Date | undefined, hhmm: string): string {
+  if (!day) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m).toISOString();
+}
+
+function TimeSelect({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  // Keep an existing odd time (e.g. 12:27) selectable.
+  const slots = TIME_SLOTS.includes(value) ? TIME_SLOTS : [...TIME_SLOTS, value].sort();
+  const items = slots.map((t) => ({ value: t, label: timeLabel(t) }));
+  return (
+    <Select
+      value={value}
+      items={items}
+      disabled={disabled}
+      onValueChange={(v) => v && onChange(v as string)}
+    >
+      <SelectTrigger id={id} className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-64">
+        {items.map((t) => (
+          <SelectItem key={t.value} value={t.value}>
+            {t.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 function Hint({ error, children }: { error?: string; children?: React.ReactNode }) {
@@ -112,8 +175,18 @@ export function DiscountForm({
   const [categoryIds, setCategoryIds] = useState<string[]>(discount?.categoryIds ?? []);
   const [productIds, setProductIds] = useState<string[]>(discount?.productIds ?? []);
   const [productQuery, setProductQuery] = useState("");
-  const [startsLocal, setStartsLocal] = useState(() => toLocalInput(discount?.startsAt ?? null));
-  const [endsLocal, setEndsLocal] = useState(() => toLocalInput(discount?.endsAt ?? null));
+  // Dates/times live in the admin's time zone in the browser and are sent as
+  // ISO (UTC) strings, so the server's time zone never matters.
+  const [range, setRange] = useState<DateRange | undefined>(() => {
+    const from = localDay(discount?.startsAt ?? null);
+    const to = localDay(discount?.endsAt ?? null);
+    return from || to ? { from: from ?? to, to } : undefined;
+  });
+  const [startTime, setStartTime] = useState(() => localTime(discount?.startsAt ?? null, "00:00"));
+  const [endTime, setEndTime] = useState(() => localTime(discount?.endsAt ?? null, "23:59"));
+  // A start date only = runs from then with no end; no dates = starts now.
+  const startsIso = combine(range?.from, startTime);
+  const endsIso = combine(range?.to, endTime);
 
   const percent = Number.parseFloat(percentInput);
   const percentValid =
@@ -166,8 +239,12 @@ export function DiscountForm({
         categoryIds.map((id) => <input key={id} type="hidden" name="categoryIds" value={id} />)}
       {scope === "PRODUCTS" &&
         productIds.map((id) => <input key={id} type="hidden" name="productIds" value={id} />)}
-      <input type="hidden" name="startsAt" value={toIso(startsLocal)} />
-      <input type="hidden" name="endsAt" value={toIso(endsLocal)} />
+      {hydrated && (
+        <>
+          <input type="hidden" name="startsAt" value={startsIso} />
+          <input type="hidden" name="endsAt" value={endsIso} />
+        </>
+      )}
 
       {!state.ok && state.error && (
         <Alert variant="destructive">
@@ -334,29 +411,42 @@ export function DiscountForm({
           </p>
         </div>
         {hydrated ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="startsLocal">Starts</Label>
-              <Input
-                id="startsLocal"
-                type="datetime-local"
-                value={startsLocal}
-                onChange={(e) => setStartsLocal(e.target.value)}
-                aria-invalid={fe.startsAt ? true : undefined}
+              <Label htmlFor="saleDates">Dates</Label>
+              <DateRangePicker
+                id="saleDates"
+                className="w-full sm:w-80"
+                placeholder="Starts now, no end date"
+                value={range}
+                onChange={setRange}
+                invalid={Boolean(fe.startsAt || fe.endsAt)}
               />
-              <Hint error={fe.startsAt}>Empty = straight away.</Hint>
+              <Hint error={fe.startsAt ?? fe.endsAt}>
+                {!range?.from
+                  ? "No dates: the sale starts as soon as you save and runs until you pause it."
+                  : !range.to
+                    ? "Start date only: runs from then with no end date. Pick a second day to set an end."
+                    : "Customers see a countdown such as \"Ends in 2 days\"."}
+              </Hint>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="endsLocal">Ends</Label>
-              <Input
-                id="endsLocal"
-                type="datetime-local"
-                value={endsLocal}
-                onChange={(e) => setEndsLocal(e.target.value)}
-                aria-invalid={fe.endsAt ? true : undefined}
-              />
-              <Hint error={fe.endsAt}>Empty = no end date. Customers see &quot;Ends in 2 days&quot;.</Hint>
-            </div>
+            {range?.from && (
+              <div className="grid gap-4 sm:max-w-80 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="startTime">Start time</Label>
+                  <TimeSelect id="startTime" value={startTime} onChange={setStartTime} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="endTime">End time</Label>
+                  <TimeSelect
+                    id="endTime"
+                    value={endTime}
+                    onChange={setEndTime}
+                    disabled={!range.to}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <Skeleton className="h-16 w-full" />

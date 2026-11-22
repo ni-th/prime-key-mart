@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { DateRangePicker, parseYmd, toYmd } from "@/components/ui/date-range-picker";
 
 /** Update URL params in place (replace, no scroll), resetting to page 1. */
 function useParamUpdater() {
@@ -150,33 +151,20 @@ export function ListSelect({
   );
 }
 
-/** From/to date inputs bound to `?from=` and `?to=` (yyyy-mm-dd). */
+/** Date range picker bound to `?from=` and `?to=` (yyyy-mm-dd, inclusive). */
 export function ListDateRange() {
   const { params, update } = useParamUpdater();
-  const from = params.get("from") ?? "";
-  const to = params.get("to") ?? "";
-  const cls =
-    "h-8 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 [color-scheme:light] dark:[color-scheme:dark]";
+  const from = parseYmd(params.get("from"));
+  const to = parseYmd(params.get("to"));
   return (
-    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-      <input
-        type="date"
-        aria-label="From date"
-        value={from}
-        max={to || undefined}
-        onChange={(e) => update({ from: e.target.value || null })}
-        className={cls}
-      />
-      <span>to</span>
-      <input
-        type="date"
-        aria-label="To date"
-        value={to}
-        min={from || undefined}
-        onChange={(e) => update({ to: e.target.value || null })}
-        className={cls}
-      />
-    </div>
+    <DateRangePicker
+      size="sm"
+      className="w-64"
+      aria-label="Order date range"
+      placeholder="Any date"
+      value={from || to ? { from: from ?? to, to } : undefined}
+      onChange={(range) => update({ from: toYmd(range?.from), to: toYmd(range?.to) })}
+    />
   );
 }
 
