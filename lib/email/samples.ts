@@ -6,6 +6,8 @@ import {
   paymentReportClosedEmail,
   paymentReportReceivedEmail,
   orderStatusEmail,
+  warrantyClaimReceivedEmail,
+  warrantyClaimResolvedEmail,
   type EmailContent,
 } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/email/render";
@@ -37,6 +39,27 @@ export const EMAIL_SAMPLES: {
     name: "Order status (Find my order)",
     when: "Find my order, for an order that isn't delivered (e.g. expired).",
     render: () => orderStatusEmail({ orderNumber: "KM-8F3K2Q", status: "EXPIRED", totalCents: 1199700, currency: "lkr" }),
+  },
+  {
+    id: "warranty-claim-received",
+    name: "Warranty claim received",
+    when: "When a customer reports a key that stopped working.",
+    render: () =>
+      warrantyClaimReceivedEmail({ orderNumber: "KM-8F3K2Q", productName: "Windows 11 Pro", reasonLabel: "Was working, now deactivated" }),
+  },
+  {
+    id: "warranty-claim-replaced",
+    name: "Warranty replacement",
+    when: "When you send a replacement key for a claim.",
+    render: () =>
+      warrantyClaimResolvedEmail({
+        orderNumber: "KM-8F3K2Q",
+        productName: "Windows 11 Pro",
+        outcome: "REPLACED",
+        newKey: "W269N-WFGWX-YVC9B-4J6C9-T83GX",
+        warrantyNote: "Plus (3 months), until 20 Feb 2027",
+        note: "Sorry about that! Here's a fresh key.",
+      }),
   },
   {
     id: "password-reset",

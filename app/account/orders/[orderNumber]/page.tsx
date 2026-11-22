@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
 import { KeyList } from "@/components/shop/key-list";
+import { WarrantyClaims } from "@/components/shop/warranty-claims";
+import { warrantyViewForOrder } from "@/lib/warranty-claims";
 import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
 import { canReportPaymentIssue, reportView } from "@/lib/payment-issue";
 
@@ -84,6 +86,11 @@ export default async function AccountOrderDetailPage({
         <div className="space-y-3">
           <h2 className="font-medium">Your license keys</h2>
           <KeyList groups={keyGroups} />
+          <WarrantyClaims
+            orderNumber={order.orderNumber}
+            token={null}
+            items={await warrantyViewForOrder(order.id)}
+          />
         </div>
       ) : (
         <Card className="space-y-4 p-5 text-sm text-muted-foreground">

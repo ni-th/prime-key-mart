@@ -60,8 +60,23 @@ export async function saveWarrantyPlan(_prev: FormResult, formData: FormData): P
   }
   const d = parsed.data;
 
+  // Plan names must be unique (ignoring case and extra spaces), otherwise
+  // customers would see two identical options.
+  const name = d.name.replace(/\s+/g, " ");
+  const clash = await prisma.warrantyPlan.findFirst({
+    where: { name: { equals: name, mode: "insensitive" }, ...(id && { id: { not: id } }) },
+    select: { name: true },
+  });
+  if (clash) {
+    return {
+      ok: false,
+      error: "Please fix the highlighted fields.",
+      fieldErrors: { name: `There's already a plan called "${clash.name}". Use a different name.` },
+    };
+  }
+
   const values = {
-    name: d.name,
+    name,
     description: d.description || null,
     days: d.lifetime ? null : d.days,
     // The included plan is free by definition.

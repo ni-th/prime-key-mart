@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/lib/cart-store";
 import { KeyList } from "@/components/shop/key-list";
 import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
+import { WarrantyClaims } from "@/components/shop/warranty-claims";
+import type { WarrantyItemView } from "@/lib/warranty-claim-shared";
 
 /** After this long without a payment confirmation, offer the report form. */
 const SLOW_AFTER_MS = 45_000;
@@ -22,6 +24,7 @@ type StatusResponse = {
   reported: boolean;
   closedMessage: string | null;
   canFollowUp: boolean;
+  warranty: WarrantyItemView[];
   keys: KeyGroup[] | null;
 };
 
@@ -248,6 +251,8 @@ export function OrderStatusView({
           keys: g.keys,
         }))}
       />
+
+      <WarrantyClaims orderNumber={data.orderNumber} token={token} items={data.warranty ?? []} />
 
       <div className="flex gap-3">
         <Link

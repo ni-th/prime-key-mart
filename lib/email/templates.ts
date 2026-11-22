@@ -128,6 +128,62 @@ export function paymentReportClosedEmail(o: { orderNumber: string; message: stri
   });
 }
 
+export function warrantyClaimReceivedEmail(o: {
+  orderNumber: string;
+  productName: string;
+  reasonLabel: string;
+}): EmailContent {
+  return renderEmail(
+    "warranty-claim-received",
+    {
+      ...o,
+      detailRows: [
+        { label: "Order", value: o.orderNumber },
+        { label: "Product", value: o.productName },
+        { label: "Problem", value: o.reasonLabel },
+      ],
+      viewUrl: orderViewUrl(o.orderNumber),
+    },
+    {
+      subject: `We got your warranty claim for order ${o.orderNumber}`,
+      preheader: "We'll check your key and send a replacement if it's covered.",
+    },
+  );
+}
+
+const CLAIM_OUTCOME = {
+  REPLACED: { headline: "Here's your replacement key", tone: "success" as Tone },
+  REFUNDED: { headline: "Your warranty claim was refunded", tone: "info" as Tone },
+  REJECTED: { headline: "About your warranty claim", tone: "warning" as Tone },
+};
+
+export function warrantyClaimResolvedEmail(o: {
+  orderNumber: string;
+  productName: string;
+  outcome: keyof typeof CLAIM_OUTCOME;
+  newKey?: string | null;
+  warrantyNote?: string | null;
+  note?: string | null;
+}): EmailContent {
+  const copy = CLAIM_OUTCOME[o.outcome];
+  return renderEmail(
+    "warranty-claim-resolved",
+    {
+      ...o,
+      ...copy,
+      newKeys: o.newKey ? [o.newKey] : [],
+      viewUrl: orderViewUrl(o.orderNumber),
+    },
+    {
+      subject: `${copy.headline} (order ${o.orderNumber})`,
+      preheader:
+        o.outcome === "REPLACED"
+          ? `Your new ${o.productName} key is inside.`
+          : `An update on your warranty claim for order ${o.orderNumber}.`,
+    },
+  );
+}
+
 // --- Admin alerts ----------------------------------------------------------------------
 
 const ALERT_STYLE: Record<string, { tone: Tone; label: string }> = {
@@ -135,6 +191,7 @@ const ALERT_STYLE: Record<string, { tone: Tone; label: string }> = {
   PAYMENT_PROBLEM: { tone: "danger", label: "Payment problem" },
   CUSTOMER_REPORT: { tone: "warning", label: "Customer report" },
   SECURITY: { tone: "warning", label: "Security" },
+  WARRANTY_CLAIM: { tone: "warning", label: "Warranty claim" },
   OUT_OF_STOCK: { tone: "danger", label: "Out of stock" },
   LOW_STOCK: { tone: "warning", label: "Low stock" },
   NEW_ORDER: { tone: "success", label: "New order" },

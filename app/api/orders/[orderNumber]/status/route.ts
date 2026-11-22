@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { reportView } from "@/lib/payment-issue";
+import { warrantyViewForOrder } from "@/lib/warranty-claims";
 import {
   canViewOrder,
   decryptOrderKeys,
@@ -40,5 +41,7 @@ export async function GET(
       unitPriceCents: i.unitPriceCents,
     })),
     keys: fulfilled ? decryptOrderKeys(order) : null,
+    /** Warranty status + claims per delivered item (owner only). */
+    warranty: fulfilled ? await warrantyViewForOrder(order.id) : [],
   });
 }

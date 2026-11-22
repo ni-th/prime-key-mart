@@ -1,0 +1,22 @@
+{{headline}}
+
+About your {{productName}} key from order {{orderNumber}}:
+{{#if newKey}}
+
+Your replacement key:
+  {{newKey}}
+
+Use the new key to activate; the old one no longer applies.
+{{/if}}
+{{#if note}}
+
+{{note}}
+{{/if}}
+{{#if (eq outcome "REFUNDED")}}
+
+Refunds usually reach your account within 5-10 working days, depending on your bank.
+{{/if}}
+
+View your order: {{viewUrl}}
+
+Questions? Just reply to this email.

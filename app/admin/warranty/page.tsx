@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = { title: "Warranty · Admin" };
 
 export default async function AdminWarrantyPage() {
-  const [plans, customCount, storeCount, productCount] = await Promise.all([
+  const [plans, customCount, storeCount, productCount, openClaims] = await Promise.all([
     prisma.warrantyPlan.findMany({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       include: { _count: { select: { products: true } } },
@@ -17,6 +17,7 @@ export default async function AdminWarrantyPage() {
     prisma.product.count({ where: { warrantyMode: "CUSTOM" } }),
     prisma.product.count({ where: { warrantyMode: "STORE" } }),
     prisma.product.count(),
+    prisma.warrantyClaim.count({ where: { status: "OPEN" } }),
   ]);
   const withWarranty = customCount + storeCount;
 
@@ -40,10 +41,18 @@ export default async function AdminWarrantyPage() {
             </span>
           </p>
         </div>
-        <Link href="/admin/warranty/new" className={cn(buttonVariants({ size: "sm" }))}>
-          <Plus className="size-4" />
-          New plan
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/warranty/claims"
+            className={cn(buttonVariants({ variant: openClaims > 0 ? "default" : "outline", size: "sm" }))}
+          >
+            Claims{openClaims > 0 ? ` (${openClaims} open)` : ""}
+          </Link>
+          <Link href="/admin/warranty/new" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            <Plus className="size-4" />
+            New plan
+          </Link>
+        </div>
       </div>
 
       <WarrantyPlanList

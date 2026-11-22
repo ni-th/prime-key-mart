@@ -9,6 +9,8 @@ import {
   paymentReportClosedEmail,
   paymentReportReceivedEmail,
   orderStatusEmail,
+  warrantyClaimReceivedEmail,
+  warrantyClaimResolvedEmail,
   type EmailContent,
 } from "@/lib/email/templates";
 import { EMAIL_LOGO } from "@/lib/email/render";
@@ -147,6 +149,20 @@ export async function sendOrderStatusEmail(order: {
   await send(order.email, orderStatusEmail(order));
 }
 
+export async function sendWarrantyClaimReceivedEmail(
+  to: string,
+  data: Parameters<typeof warrantyClaimReceivedEmail>[0],
+): Promise<void> {
+  await send(to, warrantyClaimReceivedEmail(data));
+}
+
+export async function sendWarrantyClaimResolvedEmail(
+  to: string,
+  data: Parameters<typeof warrantyClaimResolvedEmail>[0],
+): Promise<void> {
+  await send(to, warrantyClaimResolvedEmail(data));
+}
+
 /** Sends the license keys for a fulfilled order. Safe to call more than once. */
 export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
   const order = await prisma.order.findUnique({
@@ -159,7 +175,7 @@ export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
     name: item.productName,
     warranty: warrantySummary(item),
     keys: item.licenseKeys
-      .filter((k) => k.status === "SOLD")
+      .filter((k) => k.status === "SOLD" && !k.replacedAt)
       .map((k) =>
         decryptSecret({ ciphertext: k.secretCiphertext, iv: k.secretIv, authTag: k.secretAuthTag }),
       ),

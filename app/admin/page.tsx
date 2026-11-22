@@ -51,7 +51,7 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-      {(stats.openReports > 0 || stats.paidUndelivered > 0) && (
+      {(stats.openReports > 0 || stats.paidUndelivered > 0 || stats.openClaims > 0) && (
         <Card className="border-amber-500/50 bg-amber-500/5 p-4">
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle className="size-4 text-amber-500" />
@@ -65,6 +65,14 @@ export default async function AdminDashboardPage() {
                   but got no keys
                 </Link>
                 <span className="text-muted-foreground"> - check PayHere, then deliver or close.</span>
+              </li>
+            )}
+            {stats.openClaims > 0 && (
+              <li>
+                <Link href="/admin/warranty/claims" className="underline underline-offset-4">
+                  {stats.openClaims} warranty claim{stats.openClaims === 1 ? "" : "s"} to review
+                </Link>
+                <span className="text-muted-foreground"> - replace, refund or reply.</span>
               </li>
             )}
             {stats.paidUndelivered > 0 && (

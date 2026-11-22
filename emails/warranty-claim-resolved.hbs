@@ -1,0 +1,20 @@
+{{!-- Admin resolved a warranty claim. Data: orderNumber, productName, outcome (REPLACED|REFUNDED|REJECTED), headline, tone, newKey?, note?, viewUrl --}}
+{{> heading text=headline}}
+{{#> para}}About your <strong>{{productName}}</strong> key from order <strong>{{orderNumber}}</strong>:{{/para}}
+
+{{#if newKey}}
+  {{> keyGroup name=productName keys=newKeys warranty=warrantyNote theme=theme}}
+  {{#> callout tone="success"}}Your old key has been replaced by this one. Use the new key to activate; the old one no longer applies.{{/callout}}
+{{/if}}
+
+{{#if note}}
+  {{> quote text=note}}
+{{/if}}
+
+{{#if (eq outcome "REFUNDED")}}
+  {{#> callout tone="info"}}Refunds usually reach your account within 5-10 working days, depending on your bank.{{/callout}}
+{{/if}}
+
+{{> button url=viewUrl label="View your order"}}
+
+{{#> para small=true}}Questions? Just reply to this email.{{/para}}

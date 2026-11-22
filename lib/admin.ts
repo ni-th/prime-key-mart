@@ -30,7 +30,7 @@ export type CurrencyTotals = {
 };
 
 export async function getAdminStats() {
-  const [fulfilled, statusCounts, keysSold, productCount, openReports] = await Promise.all([
+  const [fulfilled, statusCounts, keysSold, productCount, openReports, openClaims, claimCosts] = await Promise.all([
     prisma.order.findMany({
       where: { status: "FULFILLED" },
       select: {
@@ -44,6 +44,12 @@ export async function getAdminStats() {
     prisma.licenseKey.count({ where: { status: "SOLD" } }),
     prisma.product.count(),
     prisma.order.count({ where: { issueReportedAt: { not: null }, issueResolvedAt: null } }),
+    prisma.warrantyClaim.count({ where: { status: "OPEN" } }),
+    // Replacement keys sent under warranty cost money too.
+    prisma.warrantyClaim.findMany({
+      where: { status: "REPLACED", replacementCostCents: { not: null }, orderItem: { order: { status: "FULFILLED" } } },
+      select: { replacementCostCents: true, orderItem: { select: { order: { select: { currency: true } } } } },
+    }),
   ]);
 
   const byStatus = Object.fromEntries(
@@ -62,6 +68,11 @@ export async function getAdminStats() {
     totals.set(currency, t);
   }
 
+  for (const c of claimCosts) {
+    const t = totals.get(c.orderItem.order.currency.toUpperCase());
+    if (t) t.profitCents -= c.replacementCostCents ?? 0;
+  }
+
   return {
     byCurrency: [...totals.values()].sort((a, b) => a.currency.localeCompare(b.currency)),
     fulfilledOrders: fulfilled.length,
@@ -70,6 +81,8 @@ export async function getAdminStats() {
     paidUndelivered: byStatus.PAID ?? 0,
     /** Customers saying "I paid but got no keys". */
     openReports,
+    /** Warranty claims waiting for a decision. */
+    openClaims,
     totalOrders: statusCounts.reduce((n, s) => n + s._count, 0),
     keysSold,
     productCount,

@@ -10,6 +10,7 @@ const omit = {
   product: { costCents: true, costCurrency: true },
   orderItem: { unitCostCents: true },
   order: { feeCents: true },
+  warrantyClaim: { replacementCostCents: true },
 } as const;
 
 /** Pass as `omit` in admin queries to include the hidden cost fields. */
@@ -17,6 +18,7 @@ export const ADMIN_COST_FIELDS = {
   product: { costCents: false, costCurrency: false },
   orderItem: { unitCostCents: false },
   order: { feeCents: false },
+  warrantyClaim: { replacementCostCents: false },
 } as const;
 
 function createClient() {

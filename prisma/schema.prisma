@@ -187,6 +187,35 @@ model ProductWarranty {
   @@index([planId])
 }
 
+/// "My key stopped working" during the warranty. Handled by an admin:
+/// REPLACED (new key sent), REFUNDED, or REJECTED (with a message).
+model WarrantyClaim {
+  id                   String      @id @default(cuid())
+  orderItemId          String
+  orderItem            OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  /// The key that stopped working.
+  keyId                String
+  key                  LicenseKey  @relation("ClaimedKey", fields: [keyId], references: [id])
+  /// NOT_ACTIVATING, DEACTIVATED, ALREADY_USED or OTHER.
+  reason               String
+  message              String?
+  /// OPEN, REPLACED, REFUNDED or REJECTED.
+  status               String      @default("OPEN")
+  /// Admin's note to the customer when closing the claim.
+  resolutionNote       String?
+  replacementKeyId     String?
+  replacementKey       LicenseKey? @relation("ReplacementKey", fields: [replacementKeyId], references: [id])
+  /// ADMIN ONLY. Cost of the replacement key (order currency, cents).
+  replacementCostCents Int?
+  resolvedAt           DateTime?
+  resolvedBy           String?
+  createdAt            DateTime    @default(now())
+
+  @@index([status, createdAt])
+  @@index([orderItemId])
+  @@index([keyId])
+}
+
 model BlockedEmail {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -261,19 +290,24 @@ model Product {
 
 model LicenseKey {
   // The license key itself is encrypted at rest with AES-256-GCM (see lib/crypto.ts).
-  id               String     @id @default(cuid())
+  id               String          @id @default(cuid())
   productId        String
-  product          Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   secretCiphertext String
   secretIv         String
   secretAuthTag    String
-  fingerprint      String     @unique // sha256 of the normalized plaintext, used to dedupe uploads
-  status           KeyStatus  @default(AVAILABLE)
+  fingerprint      String          @unique // sha256 of the normalized plaintext, used to dedupe uploads
+  status           KeyStatus       @default(AVAILABLE)
   orderItemId      String?
-  orderItem        OrderItem? @relation(fields: [orderItemId], references: [id])
+  orderItem        OrderItem?      @relation(fields: [orderItemId], references: [id])
   reservedAt       DateTime?
   soldAt           DateTime?
-  createdAt        DateTime   @default(now())
+  /// Set when a warranty claim replaced this key (it no longer counts as
+  /// delivered; the customer sees the replacement instead).
+  replacedAt       DateTime?
+  claims           WarrantyClaim[] @relation("ClaimedKey")
+  replacementFor   WarrantyClaim[] @relation("ReplacementKey")
+  createdAt        DateTime        @default(now())
 
   @@index([productId, status])
   @@index([orderItemId])
@@ -314,11 +348,11 @@ model Order {
 }
 
 model OrderItem {
-  id                String       @id @default(cuid())
+  id                String          @id @default(cuid())
   orderId           String
-  order             Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order             Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId         String
-  product           Product      @relation(fields: [productId], references: [id])
+  product           Product         @relation(fields: [productId], references: [id])
   productName       String
   unitPriceCents    Int
   /// Price before any sale (order currency). Null on orders from before sales existed.
@@ -335,6 +369,7 @@ model OrderItem {
   warrantyCents     Int?
   /// Set when the keys are delivered.
   warrantyExpiresAt DateTime?
+  warrantyClaims    WarrantyClaim[]
   /// ADMIN ONLY. Cost per key at checkout, converted to the order currency.
   /// Null when the product had no cost price set.
   unitCostCents     Int?

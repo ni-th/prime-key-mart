@@ -11,6 +11,8 @@ import { OrderStatusBadge } from "@/components/shop/order-status-badge";
 import { KeyList } from "@/components/shop/key-list";
 import { OrderActions } from "@/components/admin/order-actions";
 import { getOrderProfit } from "@/lib/admin";
+import { prisma } from "@/lib/db";
+import { CLAIM_REASONS, CLAIM_STATUS, type ClaimReason, type ClaimStatus } from "@/lib/warranty-claim-shared";
 import { RESOLVED_DELIVERED } from "@/lib/payment-issue";
 
 export const metadata: Metadata = { title: "Order · Admin" };
@@ -24,7 +26,14 @@ export default async function AdminOrderDetailPage({
   const order = await getOrderByNumber(orderNumber);
   if (!order) notFound();
 
-  const profit = await getOrderProfit(order.id);
+  const [profit, claims] = await Promise.all([
+    getOrderProfit(order.id),
+    prisma.warrantyClaim.findMany({
+      where: { orderItem: { orderId: order.id } },
+      orderBy: { createdAt: "desc" },
+      include: { orderItem: { select: { productName: true } } },
+    }),
+  ]);
   const cur = order.currency.toUpperCase();
 
   const keyGroups = ["FULFILLED", "REFUNDED"].includes(order.status)
@@ -209,6 +218,35 @@ export default async function AdminOrderDetailPage({
           <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
             {order.refundNote || "No note was added."}
           </p>
+        </Card>
+      )}
+
+      {claims.length > 0 && (
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="font-medium">Warranty claims</h2>
+            <Link href="/admin/warranty/claims?status=ALL" className="text-xs text-muted-foreground hover:underline">
+              All claims
+            </Link>
+          </div>
+          <ul className="space-y-2 text-sm">
+            {claims.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  {c.orderItem.productName}{" "}
+                  <span className="text-muted-foreground">
+                    · {CLAIM_REASONS[c.reason as ClaimReason] ?? c.reason} · {c.createdAt.toLocaleDateString()}
+                  </span>
+                </span>
+                <Link
+                  href={c.status === "OPEN" ? "/admin/warranty/claims" : "/admin/warranty/claims?status=ALL"}
+                  className="text-xs font-medium hover:underline"
+                >
+                  {CLAIM_STATUS[c.status as ClaimStatus] ?? c.status}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

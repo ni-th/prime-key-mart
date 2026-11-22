@@ -1,0 +1,11 @@
+{{!-- Customer opened a warranty claim. Data: orderNumber, productName, reasonLabel, viewUrl --}}
+{{> heading text="We got your warranty claim"}}
+{{#> para}}Thanks for letting us know about your <strong>{{productName}}</strong> key from order <strong>{{orderNumber}}</strong>.{{/para}}
+
+{{> details rows=detailRows}}
+
+{{#> callout tone="info"}}We'll check the key and, if it's covered, send you a replacement by email, usually within 24 hours. You don't need to do anything else.{{/callout}}
+
+{{> button url=viewUrl label="View your order"}}
+
+{{#> para small=true}}Anything to add? Just reply to this email.{{/para}}

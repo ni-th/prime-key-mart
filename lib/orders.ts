@@ -72,7 +72,8 @@ export function decryptOrderKeys(order: OrderWithDetail) {
     productName: item.productName,
     quantity: item.quantity,
     keys: item.licenseKeys
-      .filter((k) => k.status === "SOLD")
+      // Keys replaced under warranty no longer count; the replacement does.
+      .filter((k) => k.status === "SOLD" && !k.replacedAt)
       .map((k) =>
         decryptSecret({
           ciphertext: k.secretCiphertext,
