@@ -83,6 +83,13 @@ function ClaimForm({
           placeholder="e.g. The exact error message, and when it stopped working."
         />
       </div>
+      <p className="text-xs text-muted-foreground">
+        Lost account access or a forgotten password, sharing the key, or buying the wrong edition
+        isn&apos;t covered.{" "}
+        <Link href="/legal/refund-policy" target="_blank" className="underline underline-offset-4">
+          What&apos;s covered
+        </Link>
+      </p>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>
           {pending && <Loader2 className="size-4 animate-spin" />}

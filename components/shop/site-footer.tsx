@@ -44,7 +44,7 @@ export async function SiteFooter() {
             Find my order
           </Link>
           <Link href="/legal/refund-policy" className="block text-muted-foreground hover:text-foreground">
-            Refund policy
+            Refunds &amp; warranty
           </Link>
           <Link href="/legal/terms" className="block text-muted-foreground hover:text-foreground">
             Terms of service

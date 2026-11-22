@@ -33,6 +33,7 @@ export const EMAIL_SAMPLES: {
           { name: "Windows 11 Pro", keys: ["VK7JG-NPHTM-C97JM-9MPGT-3V66T"], warranty: "Premium (1 year), until 22 Nov 2027" },
           { name: "Microsoft Office 2021 Pro Plus", keys: ["XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99", "NMMKJ-6RK4F-KMJVX-8D9MJ-6MWKP"] },
         ],
+        freeCheck: "24 hours",
       }),
   },
   {

@@ -88,6 +88,7 @@ export function CheckoutForm({
   const [customerErrors, setCustomerErrors] = useState<CustomerDetailsErrors>({});
   const [currency, setCurrency] = useState<"LKR" | "USD">("LKR");
   const [pending, setPending] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lineTotal = (productId: string, qty: number) => {
     const q = byId.get(productId);
@@ -140,6 +141,10 @@ export function CheckoutForm({
       return;
     }
     setCustomerErrors({});
+    if (!agreed) {
+      setError("Please tick the box to accept the terms and refund policy.");
+      return;
+    }
     try {
       window.localStorage.setItem(DETAILS_KEY, JSON.stringify(details.data));
     } catch {
@@ -159,6 +164,7 @@ export function CheckoutForm({
         body: JSON.stringify({
           email: emailLocked ? undefined : email.trim() || undefined,
           customer: details.data,
+          acceptTerms: true,
           items: lines.map((l) => ({
             productId: l.productId,
             quantity: l.quantity,
@@ -341,6 +347,29 @@ export function CheckoutForm({
               Some items are out of stock or no longer available.
             </p>
           )}
+
+          <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => {
+                setAgreed(e.target.checked);
+                if (e.target.checked) setError(null);
+              }}
+              className="mt-0.5 size-4 shrink-0 accent-primary"
+            />
+            <span>
+              I agree to the{" "}
+              <Link href="/legal/terms" target="_blank" className="text-foreground underline underline-offset-4">
+                terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/legal/refund-policy" target="_blank" className="text-foreground underline underline-offset-4">
+                refund and warranty policy
+              </Link>
+              . I understand keys are delivered instantly and should be activated straight away.
+            </span>
+          </label>
 
           {error && (
             <Alert variant="destructive" className="mt-4">

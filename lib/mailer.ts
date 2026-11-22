@@ -16,6 +16,7 @@ import {
 } from "@/lib/email/templates";
 import { EMAIL_LOGO } from "@/lib/email/render";
 import { warrantySummary } from "@/lib/warranty";
+import { checkPeriod } from "@/lib/warranty-claim-shared";
 
 let cached: Transporter | null = null;
 let cachedIsEthereal = false;
@@ -192,6 +193,13 @@ export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
       ),
   }));
 
+  // Read directly (not via lib/warranty-claims, which imports this file).
+  const settings = await prisma.storeSettings.findUnique({
+    where: { id: "default" },
+    select: { freeCheckHours: true },
+  });
+  const freeCheckHours = settings?.freeCheckHours ?? 24;
+
   await send(
     order.email,
     orderKeysEmail({
@@ -199,6 +207,7 @@ export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
       totalCents: order.totalCents,
       currency: order.currency,
       groups,
+      freeCheck: freeCheckHours > 0 ? checkPeriod(freeCheckHours) : null,
     }),
   );
 }

@@ -17,6 +17,8 @@ export function orderKeysEmail(o: {
   totalCents: number;
   currency: string;
   groups: { name: string; keys: string[]; warranty?: string | null }[];
+  /** Free check period, e.g. "24 hours"; null when it's turned off. */
+  freeCheck?: string | null;
 }): EmailContent {
   const total = formatMoney(o.totalCents, o.currency.toUpperCase());
   const keyCount = o.groups.reduce((n, g) => n + g.keys.length, 0);
@@ -32,6 +34,8 @@ export function orderKeysEmail(o: {
         { label: "Total paid", value: total },
       ],
       viewUrl: orderViewUrl(o.orderNumber),
+      freeCheck: o.freeCheck ?? null,
+      policyUrl: `${SITE_URL}/legal/refund-policy`,
     },
     {
       subject: `Your ${BRAND.name} keys for order ${o.orderNumber}`,

@@ -65,6 +65,8 @@ export type CustomerDetails = z.infer<typeof customerDetailsSchema>;
 export const checkoutSchema = z.object({
   email: z.email("Enter a valid email address").optional(),
   customer: customerDetailsSchema,
+  /** The buyer ticked "I agree to the terms and refund policy". */
+  acceptTerms: z.literal(true, { error: "Please accept the terms and refund policy" }),
   currency: z.enum(["LKR", "USD"]),
   items: z
     .array(

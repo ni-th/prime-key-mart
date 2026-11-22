@@ -9,6 +9,9 @@ Order {{orderNumber}} - {{total}}
 {{/each}}
 
 {{/each}}
+Activate your {{#if (eq keyCount 1)}}key{{else}}keys{{/if}} now. {{#if freeCheck}}If a key doesn't work, report it within {{freeCheck}} using "Key not working?" on your order page. Keys with a warranty can be reported until the warranty ends.{{else}}If a key doesn't work, report it straight away using "Key not working?" on your order page.{{/if}}
+What's covered: {{policyUrl}}
+
 Keep this email safe: anyone with a key can activate it.
 See them again any time on your order page (private link, don't share it):
 {{viewUrl}}
