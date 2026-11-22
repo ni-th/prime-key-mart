@@ -17,13 +17,15 @@ export const CLAIM_STATUS = {
 export type ClaimStatus = keyof typeof CLAIM_STATUS;
 
 /** One delivered item with a warranty, as the customer sees it on their order. */
-export type WarrantyItemView = {
+/** One delivered product line on the customer's order page: its keys, warranty and claims. */
+export type OrderKeyItem = {
   itemId: string;
   productName: string;
-  warrantyName: string;
-  /** "Premium (1 year), until 22 Nov 2027" */
-  summary: string;
-  /** Still covered right now. */
+  /** Null when the line was bought without a warranty. */
+  warrantyName: string | null;
+  /** "Premium (1 year), until 22 Nov 2027"; null without a warranty. */
+  summary: string | null;
+  /** Covered right now (claims allowed). */
   active: boolean;
   keys: {
     id: string;

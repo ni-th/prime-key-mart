@@ -14,7 +14,7 @@ import {
   CLAIM_REASONS,
   CLAIM_STATUS,
   type ClaimReason,
-  type WarrantyItemView,
+  type OrderKeyItem,
 } from "@/lib/warranty-claim-shared";
 import { cn } from "@/lib/utils";
 
@@ -92,72 +92,104 @@ function ClaimForm({
   );
 }
 
+/** Small line under a key: the claim link, or where its claim stands. */
+function KeyStatus({
+  item,
+  k,
+  done,
+  open,
+  onOpen,
+}: {
+  item: OrderKeyItem;
+  k: OrderKeyItem["keys"][number];
+  done: string | undefined;
+  open: boolean;
+  onOpen: () => void;
+}) {
+  if (done) return <p className="text-xs text-success">{done}</p>;
+  if (k.claim?.status === "OPEN") {
+    return (
+      <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+        Claim {CLAIM_STATUS.OPEN.toLowerCase()}
+      </p>
+    );
+  }
+  const lastClaim =
+    k.claim && k.claim.status !== "REPLACED" ? (
+      <p className="flex gap-1.5 text-xs text-muted-foreground">
+        <ShieldX className="mt-px size-3.5 shrink-0" />
+        <span>
+          Last claim: {CLAIM_STATUS[k.claim.status]}
+          {k.claim.note ? ` - ${k.claim.note}` : ""}
+        </span>
+      </p>
+    ) : null;
+  const claimLink =
+    item.active && !open ? (
+      <button type="button" onClick={onOpen} className="text-xs font-medium text-primary hover:underline">
+        Key stopped working?
+      </button>
+    ) : null;
+  if (!lastClaim && !claimLink) return null;
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+      {lastClaim ?? <span />}
+      {claimLink}
+    </div>
+  );
+}
+
 /**
- * Warranty status for each delivered item, with "Key stopped working?" on
- * keys that are still covered. Shown on the customer's order page.
+ * The customer's delivered keys, one card per product. Keys are hidden until
+ * the eye is tapped. Products with a warranty show it in the heading and a
+ * "Key stopped working?" link under each covered key.
  */
-export function WarrantyClaims({
+export function OrderKeys({
   orderNumber,
   token,
   items,
 }: {
   orderNumber: string;
   token: string | null;
-  items: WarrantyItemView[];
+  items: OrderKeyItem[];
 }) {
   const router = useRouter();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, string>>({});
-  if (items.length === 0) return null;
+  const delivered = items.filter((i) => i.keys.length > 0);
+  if (delivered.length === 0) return null;
+  const anyWarranty = delivered.some((i) => i.warrantyName);
 
   return (
-    <Card className="space-y-4 p-5">
-      <div className="flex items-center gap-2 font-medium">
-        <ShieldCheck className="size-5 text-primary" />
-        Warranty
-      </div>
-      {items.map((item) => (
-        <div key={item.itemId} className="space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+    <div className="space-y-4">
+      {delivered.map((item) => (
+        <Card key={item.itemId} className="space-y-3 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
             <span className="font-medium">{item.productName}</span>
-            <span className={cn("text-xs", item.active ? "text-success" : "text-muted-foreground")}>
-              {item.active ? item.summary : `Warranty ended (${item.summary})`}
-            </span>
+            {item.summary && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs",
+                  item.active ? "text-success" : "text-muted-foreground",
+                )}
+              >
+                {item.active ? <ShieldCheck className="size-3.5" /> : <ShieldX className="size-3.5" />}
+                {item.active ? item.summary : `Warranty ended (${item.summary})`}
+              </span>
+            )}
           </div>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {item.keys.map((k) => (
-              <li key={k.id} className="rounded-lg border p-3 text-sm">
-                {k.isReplacement && (
-                  <div className="mb-1.5 text-xs text-muted-foreground">Replacement key</div>
-                )}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-56 flex-1">
-                    <CopyKey value={k.value} size="sm" />
-                  </div>
-                  {done[k.id] ? null : k.claim?.status === "OPEN" ? (
-                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                      Claim {CLAIM_STATUS.OPEN.toLowerCase()}
-                    </span>
-                  ) : item.active && openKey !== k.id ? (
-                    <button
-                      type="button"
-                      onClick={() => setOpenKey(k.id)}
-                      className="text-xs font-medium text-primary hover:underline"
-                    >
-                      Key stopped working?
-                    </button>
-                  ) : null}
-                </div>
-                {k.claim && k.claim.status !== "OPEN" && k.claim.status !== "REPLACED" && (
-                  <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
-                    <ShieldX className="size-3.5 shrink-0" />
-                    <span>
-                      Last claim: {CLAIM_STATUS[k.claim.status]}
-                      {k.claim.note ? ` - ${k.claim.note}` : ""}
-                    </span>
-                  </div>
-                )}
-                {done[k.id] && <p className="mt-2 text-xs text-success">{done[k.id]}</p>}
+              <li key={k.id} className="space-y-1.5">
+                {k.isReplacement && <div className="text-xs text-muted-foreground">Replacement key</div>}
+                <CopyKey value={k.value} />
+                <KeyStatus
+                  item={item}
+                  k={k}
+                  done={done[k.id]}
+                  open={openKey === k.id}
+                  onOpen={() => setOpenKey(k.id)}
+                />
                 {openKey === k.id && (
                   <ClaimForm
                     orderNumber={orderNumber}
@@ -174,12 +206,14 @@ export function WarrantyClaims({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       ))}
-      <p className="text-xs text-muted-foreground">
-        A warranty covers keys that stop working through no fault of yours. We check each claim and
-        send a replacement (or a refund) by email.
-      </p>
-    </Card>
+      {anyWarranty && (
+        <p className="text-xs text-muted-foreground">
+          A warranty covers keys that stop working through no fault of yours. We check each claim and
+          send a replacement (or a refund) by email.
+        </p>
+      )}
+    </div>
   );
 }

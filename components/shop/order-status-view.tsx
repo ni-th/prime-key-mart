@@ -7,15 +7,13 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/lib/cart-store";
-import { KeyList } from "@/components/shop/key-list";
 import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
-import { WarrantyClaims } from "@/components/shop/warranty-claims";
-import type { WarrantyItemView } from "@/lib/warranty-claim-shared";
+import { OrderKeys } from "@/components/shop/order-keys";
+import type { OrderKeyItem } from "@/lib/warranty-claim-shared";
 
 /** After this long without a payment confirmation, offer the report form. */
 const SLOW_AFTER_MS = 45_000;
 
-type KeyGroup = { productName: string; quantity: number; keys: string[] };
 type StatusResponse = {
   orderNumber: string;
   status: string;
@@ -24,8 +22,7 @@ type StatusResponse = {
   reported: boolean;
   closedMessage: string | null;
   canFollowUp: boolean;
-  warranty: WarrantyItemView[];
-  keys: KeyGroup[] | null;
+  keys: OrderKeyItem[] | null;
 };
 
 const DONE = new Set(["FULFILLED", "EXPIRED", "FAILED", "REFUNDED"]);
@@ -245,14 +242,7 @@ export function OrderStatusView({
         </p>
       </Card>
 
-      <KeyList
-        groups={(data.keys ?? []).map((g) => ({
-          productName: g.productName,
-          keys: g.keys,
-        }))}
-      />
-
-      <WarrantyClaims orderNumber={data.orderNumber} token={token} items={data.warranty ?? []} />
+      <OrderKeys orderNumber={data.orderNumber} token={token} items={data.keys ?? []} />
 
       <div className="flex gap-3">
         <Link

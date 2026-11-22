@@ -4,14 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { decryptOrderKeys, getUserOrderDetail } from "@/lib/orders";
+import { getUserOrderDetail } from "@/lib/orders";
 import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
-import { KeyList } from "@/components/shop/key-list";
-import { WarrantyClaims } from "@/components/shop/warranty-claims";
-import { warrantyViewForOrder } from "@/lib/warranty-claims";
+import { OrderKeys } from "@/components/shop/order-keys";
+import { orderKeysForOwner } from "@/lib/warranty-claims";
 import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
 import { canReportPaymentIssue, reportView } from "@/lib/payment-issue";
 
@@ -26,14 +25,6 @@ export default async function AccountOrderDetailPage({
   const session = await auth();
   const order = await getUserOrderDetail(session!.user.id, orderNumber);
   if (!order) notFound();
-
-  const keyGroups =
-    order.status === "FULFILLED"
-      ? decryptOrderKeys(order).map((g) => ({
-          productName: g.productName,
-          keys: g.keys,
-        }))
-      : [];
 
   return (
     <div className="space-y-6">
@@ -85,12 +76,7 @@ export default async function AccountOrderDetailPage({
       {order.status === "FULFILLED" ? (
         <div className="space-y-3">
           <h2 className="font-medium">Your license keys</h2>
-          <KeyList groups={keyGroups} />
-          <WarrantyClaims
-            orderNumber={order.orderNumber}
-            token={null}
-            items={await warrantyViewForOrder(order.id)}
-          />
+          <OrderKeys orderNumber={order.orderNumber} token={null} items={await orderKeysForOwner(order.id)} />
         </div>
       ) : (
         <Card className="space-y-4 p-5 text-sm text-muted-foreground">

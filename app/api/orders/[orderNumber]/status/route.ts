@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { reportView } from "@/lib/payment-issue";
-import { warrantyViewForOrder } from "@/lib/warranty-claims";
-import {
-  canViewOrder,
-  decryptOrderKeys,
-  getOrderByNumber,
-} from "@/lib/orders";
+import { orderKeysForOwner } from "@/lib/warranty-claims";
+import { canViewOrder, getOrderByNumber } from "@/lib/orders";
 
 export const runtime = "nodejs";
 
@@ -40,8 +36,7 @@ export async function GET(
       quantity: i.quantity,
       unitPriceCents: i.unitPriceCents,
     })),
-    keys: fulfilled ? decryptOrderKeys(order) : null,
-    /** Warranty status + claims per delivered item (owner only). */
-    warranty: fulfilled ? await warrantyViewForOrder(order.id) : [],
+    /** Delivered keys per product, with warranty and claims (owner only). */
+    keys: fulfilled ? await orderKeysForOwner(order.id) : null,
   });
 }

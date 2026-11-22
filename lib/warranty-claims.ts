@@ -5,7 +5,7 @@ import { sendWarrantyClaimResolvedEmail } from "@/lib/mailer";
 import { getPricingSettings } from "@/lib/pricing";
 import { asCurrency, convertCost } from "@/lib/profit";
 import { warrantySummary } from "@/lib/warranty";
-import type { ClaimStatus, WarrantyItemView } from "@/lib/warranty-claim-shared";
+import type { ClaimStatus, OrderKeyItem } from "@/lib/warranty-claim-shared";
 
 /** Covered right now: lifetime (no end) or not yet expired. */
 export function warrantyActive(item: {
@@ -19,14 +19,14 @@ export function warrantyActive(item: {
 }
 
 /**
- * The warranty section of an order for its owner: every delivered item that
- * came with a warranty, its keys (identified by their last characters) and
- * the latest claim on each key. Replaced keys are left out (the customer sees
- * the replacement instead).
+ * The delivered keys of an order for its owner, one entry per product line,
+ * with its warranty (if bought) and the latest claim on each key. Replaced
+ * keys are left out (the customer sees the replacement instead). Only call
+ * after checking the viewer may see the order: it contains the full keys.
  */
-export async function warrantyViewForOrder(orderId: string): Promise<WarrantyItemView[]> {
+export async function orderKeysForOwner(orderId: string): Promise<OrderKeyItem[]> {
   const items = await prisma.orderItem.findMany({
-    where: { orderId, warrantyName: { not: null } },
+    where: { orderId },
     include: {
       licenseKeys: {
         where: { status: "SOLD", replacedAt: null },
@@ -39,8 +39,8 @@ export async function warrantyViewForOrder(orderId: string): Promise<WarrantyIte
   return items.map((item) => ({
     itemId: item.id,
     productName: item.productName,
-    warrantyName: item.warrantyName!,
-    summary: warrantySummary(item) ?? item.warrantyName!,
+    warrantyName: item.warrantyName,
+    summary: item.warrantyName ? (warrantySummary(item) ?? item.warrantyName) : null,
     active: warrantyActive(item),
     keys: item.licenseKeys.map((k) => {
       const plain = decryptSecret({ ciphertext: k.secretCiphertext, iv: k.secretIv, authTag: k.secretAuthTag });
