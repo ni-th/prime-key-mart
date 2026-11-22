@@ -18,6 +18,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerUser } from "@/app/actions/auth";
+import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -27,9 +28,16 @@ export function RegisterForm() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const waitingForCaptcha = useTurnstileOn() && !captcha;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (waitingForCaptcha) {
+      setError("Please wait for the security check below to finish.");
+      return;
+    }
     setError(null);
     setFieldErrors({});
     setPending(true);
@@ -41,8 +49,9 @@ export function RegisterForm() {
       password: String(data.get("password") ?? ""),
     };
 
-    const result = await registerUser(payload);
+    const result = await registerUser(payload, captcha);
     if (!result.ok) {
+      setCaptchaReset((n) => n + 1);
       setPending(false);
       setError(result.error);
       setFieldErrors(result.fieldErrors ?? {});
@@ -52,6 +61,7 @@ export function RegisterForm() {
     const res = await signIn("credentials", {
       email: payload.email,
       password: payload.password,
+      ticket: result.ticket,
       redirect: false,
     });
     setPending(false);
@@ -113,7 +123,8 @@ export function RegisterForm() {
               <p className="text-xs text-destructive">{fieldErrors.password}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
+          <Button type="submit" className="w-full" disabled={pending || waitingForCaptcha}>
             {pending && <Loader2 className="size-4 animate-spin" />}
             Sign up
           </Button>

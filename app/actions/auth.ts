@@ -4,12 +4,23 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { registerSchema } from "@/lib/validation";
 import { isEmailBlocked } from "@/lib/moderation";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { signSignupTicket, verifyTurnstile } from "@/lib/turnstile";
 
 export type RegisterResult =
-  | { ok: true }
+  | { ok: true; ticket: string }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
-export async function registerUser(input: unknown): Promise<RegisterResult> {
+export async function registerUser(input: unknown, turnstile?: string | null): Promise<RegisterResult> {
+  const ip = await clientIp();
+  if (!(await verifyTurnstile(turnstile, ip))) {
+    return { ok: false, error: "The security check failed. Please try again." };
+  }
+  // A few sign-ups per network per hour is plenty for real people.
+  if (!(await rateLimit(`register-ip:${ip}`, 5, 3600))) {
+    return { ok: false, error: "Too many sign-ups from your network. Please try again in an hour." };
+  }
+
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -50,5 +61,5 @@ export async function registerUser(input: unknown): Promise<RegisterResult> {
     },
   });
 
-  return { ok: true };
+  return { ok: true, ticket: signSignupTicket(email) };
 }

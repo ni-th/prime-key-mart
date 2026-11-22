@@ -324,6 +324,10 @@ model Order {
   userId                String?
   user                  User?       @relation(fields: [userId], references: [id])
   email                 String
+  /// Billing details sent to PayHere (required by the gateway). Null on older orders.
+  customerName          String?
+  customerPhone         String?
+  customerCountry       String?
   status                OrderStatus @default(PENDING)
   subtotalCents         Int
   totalCents            Int

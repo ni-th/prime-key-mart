@@ -43,8 +43,13 @@ export async function POST(req: Request) {
 
   const parsed = checkoutSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid checkout request." }, { status: 400 });
+    const detail = parsed.error.issues.find((i) => i.path[0] === "customer");
+    return NextResponse.json(
+      { error: detail ? detail.message : "Invalid checkout request." },
+      { status: 400 },
+    );
   }
+  const customer = parsed.data.customer;
 
   const email = (session?.user?.email ?? parsed.data.email)?.toLowerCase();
   if (!email) {
@@ -127,6 +132,9 @@ export async function POST(req: Request) {
     data: {
       orderNumber,
       email,
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      customerPhone: customer.phone,
+      customerCountry: customer.country,
       userId: session?.user?.id ?? null,
       status: "PENDING",
       subtotalCents: paymentSubtotalCents,
@@ -179,8 +187,8 @@ export async function POST(req: Request) {
     });
   }
 
-  // PayHere requires customer details that this temporary checkout does not
-  // collect yet. Replace these values when phone/address fields are added.
+  // PayHere requires billing details. Keys are delivered by email, so there's
+  // no postal address: the address/city fields say so.
   try {
     const amount = (paymentSubtotalCents / 100).toFixed(2);
     return NextResponse.json({
@@ -196,13 +204,13 @@ export async function POST(req: Request) {
           .join(", "),
         currency,
         amount,
-        first_name: "Keysby",
-        last_name: "Customer",
+        first_name: customer.firstName,
+        last_name: customer.lastName,
         email,
-        phone: "0000000000",
+        phone: customer.phone,
         address: "Digital delivery",
-        city: "Colombo",
-        country: "Sri Lanka",
+        city: "Online",
+        country: customer.country,
         hash: createPayHereHash({ orderId: orderNumber, amount, currency }),
       },
     });

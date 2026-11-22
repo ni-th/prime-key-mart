@@ -20,14 +20,43 @@ import { cartIssues, issueLabel, type CartIssue } from "@/lib/cart-issues";
 import type { CartQuote, CartQuoteLine } from "@/app/actions/pricing";
 import { StockIssueDialog } from "@/components/shop/stock-issue-dialog";
 import { warrantyLength } from "@/lib/warranty";
+import { customerDetailsSchema, type CustomerDetails } from "@/lib/validation";
+import { CustomerDetailsFields, type CustomerDetailsErrors } from "@/components/shop/customer-details-fields";
+
+/** Guests' details are remembered on this device only, for their next order. */
+const DETAILS_KEY = "keysby-checkout-details";
+const EMPTY_DETAILS: CustomerDetails = { firstName: "", lastName: "", phone: "", country: "Sri Lanka" };
+
+function loadSavedDetails(): Partial<CustomerDetails> {
+  try {
+    const raw = window.localStorage.getItem(DETAILS_KEY);
+    return raw ? (JSON.parse(raw) as Partial<CustomerDetails>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function withDefaults(...parts: (Partial<CustomerDetails> | null | undefined)[]): CustomerDetails {
+  const out = { ...EMPTY_DETAILS };
+  for (const p of parts) {
+    if (!p) continue;
+    for (const k of Object.keys(out) as (keyof CustomerDetails)[]) {
+      if (typeof p[k] === "string" && p[k]) out[k] = p[k];
+    }
+  }
+  return out;
+}
 
 export function CheckoutForm({
   defaultEmail,
   emailLocked,
+  defaultCustomer,
   mockMode,
 }: {
   defaultEmail?: string | null;
   emailLocked: boolean;
+  /** Prefill for signed-in customers (account name, last order's phone). */
+  defaultCustomer?: Partial<CustomerDetails> | null;
   mockMode: boolean;
 }) {
   const router = useRouter();
@@ -52,6 +81,11 @@ export function CheckoutForm({
   }
 
   const [email, setEmail] = useState(defaultEmail ?? "");
+  // Lazy init runs on the client after hydration (this form renders a skeleton until then).
+  const [customer, setCustomer] = useState<CustomerDetails>(() =>
+    withDefaults(typeof window === "undefined" ? null : loadSavedDetails(), defaultCustomer),
+  );
+  const [customerErrors, setCustomerErrors] = useState<CustomerDetailsErrors>({});
   const [currency, setCurrency] = useState<"LKR" | "USD">("LKR");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +128,23 @@ export function CheckoutForm({
 
   async function pay() {
     setError(null);
+    const details = customerDetailsSchema.safeParse(customer);
+    if (!details.success) {
+      const errs: CustomerDetailsErrors = {};
+      for (const issue of details.error.issues) {
+        const key = issue.path[0] as keyof CustomerDetails;
+        if (!errs[key]) errs[key] = issue.message;
+      }
+      setCustomerErrors(errs);
+      setError("Please fill in your details above.");
+      return;
+    }
+    setCustomerErrors({});
+    try {
+      window.localStorage.setItem(DETAILS_KEY, JSON.stringify(details.data));
+    } catch {
+      // Private mode etc.: just don't remember.
+    }
     setPending(true);
     // Stock changes all the time: check right before paying, not with the
     // numbers from when the page loaded.
@@ -107,6 +158,7 @@ export function CheckoutForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           email: emailLocked ? undefined : email.trim() || undefined,
+          customer: details.data,
           items: lines.map((l) => ({
             productId: l.productId,
             quantity: l.quantity,
@@ -179,6 +231,24 @@ export function CheckoutForm({
                 Using your account email.
               </p>
             )}
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="font-medium">Your details</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Our payment provider (PayHere) needs these to process your card. We only use them for this order.
+          </p>
+          <div className="mt-4">
+            <CustomerDetailsFields
+              value={customer}
+              onChange={(next) => {
+                setCustomer(next);
+                if (Object.keys(customerErrors).length) setCustomerErrors({});
+              }}
+              errors={customerErrors}
+              disabled={pending}
+            />
           </div>
         </Card>
 

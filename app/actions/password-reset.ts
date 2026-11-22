@@ -11,6 +11,8 @@ import {
 } from "@/lib/password-reset";
 import { sendPasswordChangedEmail, sendPasswordResetEmail } from "@/lib/mailer";
 import { forgotPasswordSchema, resetPasswordSchema } from "@/lib/validation";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 
 const SITE_URL = process.env.SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
 
@@ -34,6 +36,15 @@ export async function requestPasswordReset(
     return { status: "error", error: "Enter a valid email address." };
   }
   const email = parsed.data.email.toLowerCase();
+
+  const ip = await clientIp();
+  if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD) as string | null, ip))) {
+    return { status: "error", error: "The security check failed. Please try again." };
+  }
+  // Stops one network from spamming reset emails to many addresses.
+  if (!(await rateLimit(`reset-ip:${ip}`, 10, 3600))) {
+    return { status: "error", error: "Too many requests from your network. Please try again in an hour." };
+  }
 
   after(async () => {
     try {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, MailCheck } from "lucide-react";
 import {
@@ -19,11 +19,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
 
-function Submit() {
+function Submit({ blocked }: { blocked: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
+    <Button type="submit" className="w-full" disabled={pending || blocked}>
       {pending && <Loader2 className="size-4 animate-spin" />}
       Send reset link
     </Button>
@@ -35,6 +36,15 @@ export function ForgotPasswordForm() {
     requestPasswordReset,
     { status: "idle" },
   );
+  const turnstileOn = useTurnstileOn();
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  // Each new result means the token was used: the widget gets a fresh one.
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const [seen, setSeen] = useState(state);
+  if (seen !== state) {
+    setSeen(state);
+    setCaptchaReset((n) => n + 1);
+  }
 
   if (state.status === "sent") {
     return (
@@ -86,7 +96,9 @@ export function ForgotPasswordForm() {
               autoFocus
             />
           </div>
-          <Submit />
+          {/* Puts its token in the form as cf-turnstile-response. */}
+          <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
+          <Submit blocked={turnstileOn && !captcha} />
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           Remembered it?{" "}

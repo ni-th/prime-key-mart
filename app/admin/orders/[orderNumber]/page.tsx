@@ -62,6 +62,20 @@ export default async function AdminOrderDetailPage({
             {order.email}
             {order.userId ? " · registered customer" : " · guest"}
           </p>
+          {order.customerName && (
+            <p className="text-sm text-muted-foreground">
+              {order.customerName}
+              {order.customerPhone && (
+                <>
+                  {" · "}
+                  <a href={`tel:${order.customerPhone.replace(/[^\d+]/g, "")}`} className="hover:underline">
+                    {order.customerPhone}
+                  </a>
+                </>
+              )}
+              {order.customerCountry && ` · ${order.customerCountry}`}
+            </p>
+          )}
         </div>
         <OrderStatusBadge status={order.status} />
       </div>

@@ -18,6 +18,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { OtpInput } from "@/components/ui/otp-input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
 
 export function LoginForm() {
   const router = useRouter();
@@ -35,9 +36,17 @@ export function LoginForm() {
   // Bumped after a wrong code to remount (clear) the digit boxes.
   const [codeAttempt, setCodeAttempt] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
+  // Bot check: a token is needed for every attempt (each works once).
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const waitingForCaptcha = useTurnstileOn() && !captcha;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (waitingForCaptcha) {
+      setError("Please wait for the security check below to finish.");
+      return;
+    }
     setError(null);
     setPending(true);
 
@@ -46,12 +55,19 @@ export function LoginForm() {
       email: String(data.get("email") ?? ""),
       password: String(data.get("password") ?? ""),
       code: needsCode ? String(data.get("code") ?? "") : "",
+      turnstile: captcha ?? "",
       redirect: false,
     });
 
     setPending(false);
     if (!res || res.error) {
-      if (res?.code === "totp_required") {
+      // The token was used up: get a fresh one for the next try.
+      setCaptchaReset((n) => n + 1);
+      if (res?.code === "rate_limited") {
+        setError("Too many failed attempts. Wait 15 minutes and try again, or reset your password.");
+      } else if (res?.code === "captcha") {
+        setError("The security check failed. Please try again.");
+      } else if (res?.code === "totp_required") {
         setNeedsCode(true);
       } else if (res?.code === "totp_invalid") {
         setNeedsCode(true);
@@ -136,10 +152,11 @@ export function LoginForm() {
               required
             />
           </div>
+          <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
           <Button
             type="submit"
             className="w-full"
-            disabled={pending || (needsCode && code.length < 6)}
+            disabled={pending || waitingForCaptcha || (needsCode && code.length < 6)}
           >
             {pending && <Loader2 className="size-4 animate-spin" />}
             {needsCode ? "Verify" : "Sign in"}

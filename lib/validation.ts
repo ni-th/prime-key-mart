@@ -12,6 +12,10 @@ export const loginSchema = z.object({
     .max(16)
     .optional()
     .transform((v) => v || undefined),
+  /** Cloudflare Turnstile token (see lib/turnstile.ts). */
+  turnstile: z.string().max(2048).optional(),
+  /** Short-lived ticket from sign-up, for the automatic sign-in after it. */
+  ticket: z.string().max(200).optional(),
 });
 
 export const registerSchema = z.object({
@@ -38,8 +42,29 @@ export const resetPasswordSchema = z
     message: "Passwords don't match",
   });
 
+/**
+ * Billing details PayHere requires for every payment. Names and phone are
+ * checked loosely (customers worldwide), but must look real.
+ */
+export const customerDetailsSchema = z.object({
+  firstName: z.string().trim().min(1, "Enter your first name").max(50),
+  lastName: z.string().trim().min(1, "Enter your last name").max(50),
+  phone: z
+    .string()
+    .trim()
+    .max(25)
+    .regex(/^\+?[0-9][0-9 ()-]*$/, "Use digits only, e.g. 077 123 4567 or +94 77 123 4567")
+    .refine((v) => {
+      const digits = v.replace(/\D/g, "").length;
+      return digits >= 7 && digits <= 15;
+    }, "Enter a full phone number"),
+  country: z.string().trim().min(2, "Enter your country").max(56),
+});
+export type CustomerDetails = z.infer<typeof customerDetailsSchema>;
+
 export const checkoutSchema = z.object({
   email: z.email("Enter a valid email address").optional(),
+  customer: customerDetailsSchema,
   currency: z.enum(["LKR", "USD"]),
   items: z
     .array(
