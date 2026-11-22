@@ -5,8 +5,25 @@ export type ProductSort = "featured" | "price-asc" | "price-desc" | "newest";
 
 export type ProductListItem = Awaited<ReturnType<typeof getProducts>>[number];
 
+const categoryOrder: Prisma.CategoryOrderByWithRelationInput[] = [
+  { sortOrder: "asc" },
+  { name: "asc" },
+];
+
+/** Categories shown in the shop (visible ones only), in display order. */
 export async function getCategories() {
-  return prisma.category.findMany({ orderBy: { sortOrder: "asc" } });
+  return prisma.category.findMany({ where: { visible: true }, orderBy: categoryOrder });
+}
+
+/** Every category, hidden ones included. For admin dropdowns and filters. */
+export async function getAllCategories() {
+  return prisma.category.findMany({ orderBy: categoryOrder });
+}
+
+/** A visible category by slug, for its page (banner, description). */
+export async function getCategoryBySlug(slug: string) {
+  const category = await prisma.category.findUnique({ where: { slug } });
+  return category?.visible ? category : null;
 }
 
 export async function getBrands(): Promise<string[]> {
@@ -48,7 +65,7 @@ export async function getProducts(
   } = {},
 ) {
   const where: Prisma.ProductWhereInput = { published: true };
-  if (opts.category) where.category = { slug: opts.category };
+  if (opts.category) where.category = { slug: opts.category, visible: true };
   if (opts.brand) where.brand = opts.brand;
   if (opts.q) {
     where.OR = [

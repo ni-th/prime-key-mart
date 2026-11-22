@@ -84,12 +84,23 @@ model BlockedEmail {
 }
 
 model Category {
-  id        String    @id @default(cuid())
-  slug      String    @unique
-  name      String
-  sortOrder Int       @default(0)
-  products  Product[]
-  createdAt DateTime  @default(now())
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  name            String
+  /// Shown under the heading on the category page and used as its meta description.
+  description     String?
+  /// Wide banner on the category page (4:1, e.g. 1920 x 480).
+  bannerUrl       String?
+  /// Optional phone version of the banner (2:1, e.g. 1200 x 600). Falls back to bannerUrl.
+  bannerMobileUrl String?
+  /// Hidden categories disappear from the shop (navigation, home, category page).
+  visible         Boolean   @default(true)
+  /// Listed in the header menu (keep it to a handful).
+  showInHeader    Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  products        Product[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
 }
 
 model Product {

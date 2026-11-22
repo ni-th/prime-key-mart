@@ -3,6 +3,7 @@ import { BadgeCheck, Mail, ShieldCheck, Zap } from "lucide-react";
 import { getCategories, getFeaturedProducts } from "@/lib/products";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { optimizedImageUrl } from "@/lib/image-url";
 import { ProductCard } from "@/components/shop/product-card";
 
 export default async function HomePage() {
@@ -10,6 +11,8 @@ export default async function HomePage() {
     getFeaturedProducts(4),
     getCategories(),
   ]);
+  // The hero's second button points at the first category (admin-ordered).
+  const heroCategory = categories[0];
 
   return (
     <div className="mx-auto max-w-6xl px-4">
@@ -30,12 +33,14 @@ export default async function HomePage() {
           <Link href="/products" className={cn(buttonVariants({ size: "lg" }))}>
             Browse all keys
           </Link>
-          <Link
-            href="/products?category=operating-systems"
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
-          >
-            Shop Windows
-          </Link>
+          {heroCategory && (
+            <Link
+              href={`/products?category=${heroCategory.slug}`}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+            >
+              Shop {heroCategory.name}
+            </Link>
+          )}
         </div>
       </section>
 
@@ -85,10 +90,19 @@ export default async function HomePage() {
             <Link
               key={category.id}
               href={`/products?category=${category.slug}`}
-              className="rounded-xl border bg-card p-5 ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
+              className="overflow-hidden rounded-xl border bg-card ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
             >
-              <div className="font-medium">{category.name}</div>
-              <div className="mt-1 text-sm text-muted-foreground">Browse →</div>
+              {(category.bannerMobileUrl ?? category.bannerUrl) && (
+                // eslint-disable-next-line @next/next/no-img-element -- Cloudinary handles sizing
+                <img
+                  src={optimizedImageUrl((category.bannerMobileUrl ?? category.bannerUrl)!, 600)}
+                  alt=""
+                  loading="lazy"
+                  className="aspect-2/1 w-full border-b object-cover"
+                />
+              )}
+              <div className="p-5 pb-0 font-medium">{category.name}</div>
+              <div className="mt-1 px-5 pb-5 text-sm text-muted-foreground">Browse →</div>
             </Link>
           ))}
         </div>

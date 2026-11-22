@@ -111,3 +111,26 @@ export function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+const imageUrlField = z.union([z.url("Enter a valid image URL"), z.literal("")]);
+
+export const categorySchema = z.object({
+  name: z.string().trim().min(2, "Name is required").max(60),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(2, "Slug is required")
+    .max(60)
+    .regex(slugPattern, "Use lowercase letters, numbers and hyphens only"),
+  description: z.string().trim().max(300, "Keep it under 300 characters"),
+  bannerUrl: imageUrlField,
+  bannerMobileUrl: imageUrlField,
+  visible: z.boolean(),
+  showInHeader: z.boolean(),
+  sortOrder: z
+    .number({ error: "Enter a number" })
+    .int("Use a whole number")
+    .min(0, "Use 0 or more")
+    .max(999),
+});

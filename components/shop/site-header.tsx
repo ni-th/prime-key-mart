@@ -15,7 +15,7 @@ export async function SiteHeader() {
 
   const navLinks = [
     { href: "/products", label: "All products" },
-    ...categories.map((c) => ({
+    ...categories.filter((c) => c.showInHeader).map((c) => ({
       href: `/products?category=${c.slug}`,
       label: c.name,
     })),

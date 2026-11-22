@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import { ADMIN_COST_FIELDS, prisma } from "@/lib/db";
-import { getCategories, availableStockByProduct } from "@/lib/products";
+import { getAllCategories, availableStockByProduct } from "@/lib/products";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ export default async function EditProductPage({
   const { id } = await params;
   const [product, categories, pricing] = await Promise.all([
     prisma.product.findUnique({ where: { id }, omit: ADMIN_COST_FIELDS.product }),
-    getCategories(),
+    getAllCategories(),
     getPricingSettings(),
   ]);
   if (!product) notFound();

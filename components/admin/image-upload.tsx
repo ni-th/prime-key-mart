@@ -5,6 +5,7 @@ import { ImagePlus, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { getProductImageUploadSignature } from "@/app/actions/uploads";
 import { ImageCropDialog } from "@/components/admin/image-crop-dialog";
 import { optimizedImageUrl } from "@/lib/image-url";
+import { IMAGE_PRESETS, type ImagePreset } from "@/lib/image-presets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -26,8 +27,11 @@ export function ImageUpload({
   defaultValue,
   enabled,
   invalid,
+  preset = "product",
 }: {
   name: string;
+  /** Crop shape, export size and upload folder. */
+  preset?: ImagePreset;
   defaultValue?: string | null;
   /** Whether Cloudinary keys are set on the server. */
   enabled: boolean;
@@ -41,6 +45,7 @@ export function ImageUpload({
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploading = progress !== null;
+  const p = IMAGE_PRESETS[preset];
 
   if (!enabled) {
     return (
@@ -63,7 +68,7 @@ export function ImageUpload({
     }
 
     setProgress(0);
-    const res = await getProductImageUploadSignature();
+    const res = await getProductImageUploadSignature(preset);
     if (!res.ok) {
       setProgress(null);
       setError(res.error);
@@ -130,6 +135,7 @@ export function ImageUpload({
     <div className="space-y-2">
       <ImageCropDialog
         src={cropSrc}
+        preset={preset}
         onCancel={closeCrop}
         onConfirm={(blob) => {
           closeCrop();
@@ -146,12 +152,12 @@ export function ImageUpload({
       />
 
       {url ? (
-        <div className="flex items-start gap-4">
-          <div className="relative aspect-16/10 w-48 overflow-hidden rounded-lg border bg-muted">
+        <div className="flex flex-wrap items-start gap-4">
+          <div className={cn("relative overflow-hidden rounded-lg border bg-muted", p.previewClass)}>
             {/* eslint-disable-next-line @next/next/no-img-element -- preview of an arbitrary uploaded URL */}
             <img
-              src={optimizedImageUrl(url, 400)}
-              alt="Product image preview"
+              src={optimizedImageUrl(url, 800)}
+              alt="Image preview"
               className="h-full w-full object-cover"
             />
             {uploading && (
@@ -218,7 +224,7 @@ export function ImageUpload({
                 or drag an image here
               </span>
               <span className="text-xs">
-                JPG, PNG or WebP, up to 20 MB. You&apos;ll crop it to 16:10 next.
+                JPG, PNG or WebP, up to 20 MB. You&apos;ll crop it to {p.aspectLabel} next.
               </span>
             </>
           )}

@@ -29,7 +29,7 @@ export type UploadSignature = {
 };
 
 /** Sign an upload. Valid for about an hour (Cloudinary checks the timestamp). */
-export function signProductImageUpload(): UploadSignature {
+export function signProductImageUpload(folder: string = PRODUCT_IMAGE_FOLDER): UploadSignature {
   if (!isCloudinaryConfigured) throw new Error("Cloudinary is not configured");
 
   const timestamp = Math.floor(Date.now() / 1000);
@@ -37,7 +37,7 @@ export function signProductImageUpload(): UploadSignature {
   // signed, in alphabetical order.
   const params: Record<string, string | number> = {
     allowed_formats: ALLOWED_IMAGE_FORMATS,
-    folder: PRODUCT_IMAGE_FOLDER,
+    folder,
     timestamp,
   };
   const toSign = Object.keys(params)
@@ -54,7 +54,7 @@ export function signProductImageUpload(): UploadSignature {
     apiKey,
     timestamp,
     signature,
-    folder: PRODUCT_IMAGE_FOLDER,
+    folder,
     allowedFormats: ALLOWED_IMAGE_FORMATS,
   };
 }

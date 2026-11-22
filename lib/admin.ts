@@ -208,6 +208,14 @@ export async function getAdminOrders(status?: string) {
   });
 }
 
+/** Every category with its product count, for the admin Categories page. */
+export async function getAdminCategories() {
+  return prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: { _count: { select: { products: true } } },
+  });
+}
+
 /** Saved fee + per-line costs of one order, for the admin order page. */
 export async function getOrderProfit(orderId: string) {
   const order = await prisma.order.findUnique({

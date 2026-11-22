@@ -9,7 +9,7 @@ import {
   PRODUCT_STATUS_FILTERS,
   PRODUCT_STOCK_FILTERS,
 } from "@/lib/admin";
-import { getCategories } from "@/lib/products";
+import { getAllCategories } from "@/lib/products";
 import { oneOf, pageParam, paginate, param, type RawParams } from "@/lib/list-params";
 import { ListClear, ListSearch, ListSelect } from "@/components/admin/list-controls";
 import { ListPagination } from "@/components/admin/list-pagination";
@@ -50,7 +50,7 @@ export default async function AdminProductsPage({
       stock: PRODUCT_STOCK_FILTERS.find((s) => s === stock),
       sort,
     }),
-    getCategories(),
+    getAllCategories(),
     getPricingSettings(),
   ]);
   const filtered = Boolean(q || category || status || stock);

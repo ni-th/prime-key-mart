@@ -1,12 +1,38 @@
 import type { Metadata } from "next";
-import { getBrands, getCategories, getProducts, type ProductSort } from "@/lib/products";
+import {
+  getBrands,
+  getCategories,
+  getCategoryBySlug,
+  getProducts,
+  type ProductSort,
+} from "@/lib/products";
 import { ProductCard } from "@/components/shop/product-card";
 import { CatalogFilters } from "@/components/shop/catalog-filters";
+import { CategoryBanner } from "@/components/shop/category-banner";
 
-export const metadata: Metadata = {
-  title: "All products",
-  description: "Browse every Windows, Office and antivirus license we sell.",
-};
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const raw = (await searchParams).category;
+  const slug = Array.isArray(raw) ? raw[0] : raw;
+  const category = slug ? await getCategoryBySlug(slug) : null;
+  if (category) {
+    return {
+      title: category.name,
+      description:
+        category.description ?? `Genuine ${category.name} license keys, delivered instantly.`,
+      openGraph: category.bannerUrl ? { images: [category.bannerUrl] } : undefined,
+    };
+  }
+  return {
+    title: "All products",
+    description: "Browse every Windows, Office and antivirus license we sell.",
+  };
+}
 
 const VALID_SORTS: ProductSort[] = [
   "featured",
@@ -18,7 +44,7 @@ const VALID_SORTS: ProductSort[] = [
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: SearchParams;
 }) {
   const sp = await searchParams;
   const first = (v: string | string[] | undefined) =>
@@ -43,8 +69,18 @@ export default async function ProductsPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      {activeCategory && (
+        <CategoryBanner
+          name={activeCategory.name}
+          bannerUrl={activeCategory.bannerUrl}
+          bannerMobileUrl={activeCategory.bannerMobileUrl}
+        />
+      )}
       <div className="mb-6 space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
+        {activeCategory?.description && (
+          <p className="max-w-2xl text-muted-foreground">{activeCategory.description}</p>
+        )}
         <p className="text-sm text-muted-foreground">
           {q ? (
             <>

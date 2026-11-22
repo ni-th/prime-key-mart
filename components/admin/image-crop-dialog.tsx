@@ -13,15 +13,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-/** Every product image is shown at 16:10 (cards and product page). */
-const ASPECT = 16 / 10;
-/** Exported size: sharp on 2x screens, small enough to upload quickly. */
-const OUTPUT_WIDTH = 1600;
-/** Below this crop width the image will look soft on the product page. */
-const MIN_SHARP_WIDTH = 1200;
+import { IMAGE_PRESETS, type ImagePreset } from "@/lib/image-presets";
 
 /** Draw the selected area onto a canvas and export it (WebP, else PNG). */
-async function exportCrop(src: string, area: Area): Promise<Blob> {
+async function exportCrop(
+  src: string,
+  area: Area,
+  aspect: number,
+  outputWidth: number,
+): Promise<Blob> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const el = new Image();
     el.onload = () => resolve(el);
@@ -30,8 +30,8 @@ async function exportCrop(src: string, area: Area): Promise<Blob> {
   });
 
   // Never upscale: a small source stays its own size (just cropped).
-  const width = Math.min(OUTPUT_WIDTH, Math.round(area.width));
-  const height = Math.round(width / ASPECT);
+  const width = Math.min(outputWidth, Math.round(area.width));
+  const height = Math.round(width / aspect);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -50,19 +50,22 @@ async function exportCrop(src: string, area: Area): Promise<Blob> {
 }
 
 /**
- * Crop step before upload: a fixed 16:10 frame the admin can drag and zoom.
- * Returns the cropped image (max 1600 x 1000) via `onConfirm`.
+ * Crop step before upload: a fixed frame (shape from the preset) the admin can
+ * drag and zoom. Returns the cropped image via `onConfirm`.
  */
 export function ImageCropDialog({
   src,
+  preset = "product",
   onCancel,
   onConfirm,
 }: {
+  preset?: ImagePreset;
   /** Object URL of the picked file; dialog is open while this is set. */
   src: string | null;
   onCancel: () => void;
   onConfirm: (blob: Blob) => void;
 }) {
+  const p = IMAGE_PRESETS[preset];
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<Area | null>(null);
@@ -84,7 +87,7 @@ export function ImageCropDialog({
     setBusy(true);
     setError(null);
     try {
-      const blob = await exportCrop(src, area);
+      const blob = await exportCrop(src, area, p.aspect, p.outputWidth);
       reset();
       onConfirm(blob);
     } catch (e) {
@@ -93,7 +96,7 @@ export function ImageCropDialog({
     }
   }
 
-  const lowRes = area !== null && area.width < MIN_SHARP_WIDTH;
+  const lowRes = area !== null && area.width < p.minSharpWidth;
 
   return (
     <Dialog
@@ -109,8 +112,7 @@ export function ImageCropDialog({
         <DialogHeader>
           <DialogTitle>Crop image</DialogTitle>
           <DialogDescription>
-            Drag to position and zoom to fit. Products are shown at 16:10; keep
-            the product near the middle (the cart shows a square from the center).
+            Drag to position and zoom to fit. {p.cropHint}
           </DialogDescription>
         </DialogHeader>
 
@@ -120,7 +122,7 @@ export function ImageCropDialog({
               image={src}
               crop={crop}
               zoom={zoom}
-              aspect={ASPECT}
+              aspect={p.aspect}
               minZoom={1}
               maxZoom={4}
               zoomSpeed={0.2}
@@ -150,8 +152,8 @@ export function ImageCropDialog({
         {lowRes && (
           <p className="text-xs text-amber-600 dark:text-amber-400">
             This crop is only {Math.round(area.width)} px wide, so the image may look
-            soft on the product page. Zoom out or use a larger image (1600 px wide or
-            more) if you can.
+            soft. Zoom out or use a larger image ({p.outputWidth} px wide or more) if
+            you can.
           </p>
         )}
         {error && <p className="text-xs text-destructive">{error}</p>}

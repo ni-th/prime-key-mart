@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Receipt, Settings, Users } from "lucide-react";
+import { FolderTree, LayoutDashboard, Package, Receipt, Settings, Users } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/orders", label: "Orders", icon: Receipt },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
