@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { RefundOrderDialog } from "@/components/admin/refund-order-dialog";
+import { CloseReportDialog } from "@/components/admin/close-report-dialog";
 import {
   resendOrderEmail,
   updateOrderStatus,
@@ -50,9 +51,14 @@ function Result({ state }: { state: FormResult }) {
 export function OrderActions({
   orderNumber,
   status,
+  openReport = false,
+  customerEmail,
 }: {
   orderNumber: string;
   status: string;
+  customerEmail: string;
+  /** Customer reported "paid but no keys" and it isn't handled yet. */
+  openReport?: boolean;
 }) {
   const [resendState, resendAction] = useActionState<FormResult, FormData>(
     (_p, fd) => resendOrderEmail(fd),
@@ -65,6 +71,7 @@ export function OrderActions({
 
   const cancelRef = useRef<HTMLFormElement>(null);
   const fulfillRef = useRef<HTMLFormElement>(null);
+  const lapsed = status === "EXPIRED" || status === "FAILED";
 
   return (
     <div className="space-y-4">
@@ -76,7 +83,7 @@ export function OrderActions({
         </form>
       )}
 
-      {(status === "PENDING" || status === "PAID") && (
+      {(status === "PENDING" || status === "PAID" || lapsed) && (
         <div>
           <form ref={fulfillRef} action={statusAction} className="hidden">
             <input type="hidden" name="orderNumber" value={orderNumber} />
@@ -85,11 +92,19 @@ export function OrderActions({
           <ConfirmDialog
             triggerText="Mark as paid & deliver keys"
             title="Deliver keys for this order?"
-            description="Use this only if you've confirmed the payment succeeded with the payment provider but the order is stuck (e.g. a missed webhook). This sells the reserved keys, marks the order fulfilled, and emails the keys to the customer immediately."
+            description={`First find order ${orderNumber} in your PayHere merchant dashboard and check the payment succeeded for the full amount. This then ${lapsed ? "reserves keys from stock" : "uses the reserved keys"}, marks the order delivered and emails the keys to the customer immediately.`}
             confirmText="Deliver keys"
             onConfirm={() => fulfillRef.current?.requestSubmit()}
           />
         </div>
+      )}
+
+      {openReport && (
+        <CloseReportDialog
+          orderNumber={orderNumber}
+          customerEmail={customerEmail}
+          formAction={statusAction}
+        />
       )}
 
       {status === "PENDING" && (

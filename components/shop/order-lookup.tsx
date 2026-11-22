@@ -11,6 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatMoney } from "@/lib/money";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
+import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
+import { canReportPaymentIssue } from "@/lib/payment-issue";
 import { KeyList } from "@/components/shop/key-list";
 import { lookupOrderAction, type LookupState } from "@/app/actions/order-lookup";
 
@@ -100,9 +102,21 @@ export function OrderLookup() {
               <KeyList groups={state.order.keyGroups} />
             </div>
           ) : (
-            <Card className="p-5 text-sm text-muted-foreground">
-              This order hasn&rsquo;t been completed, so there are no keys to
-              show yet.
+            <Card className="space-y-4 p-5 text-sm text-muted-foreground">
+              <p>
+                {state.order.status === "PAID"
+                  ? "Your payment was received and your keys are being prepared. We'll email them shortly."
+                  : "We haven't received a payment for this order, so there are no keys to show yet."}
+              </p>
+              {canReportPaymentIssue(state.order.status) && (
+                <ReportPaymentIssue
+                  orderNumber={state.order.orderNumber}
+                  email={state.order.email}
+                  alreadyReported={state.order.reported}
+                  closedMessage={state.order.closedMessage}
+                  canFollowUp={state.order.canFollowUp}
+                />
+              )}
             </Card>
           )}
         </div>

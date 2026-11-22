@@ -9,6 +9,7 @@ import {
   sendAlert,
 } from "@/lib/alerts";
 import { formatMoney } from "@/lib/money";
+import { RESOLVED_DELIVERED } from "@/lib/payment-issue";
 
 const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
@@ -142,7 +143,17 @@ export async function fulfillOrder(
     });
     await tx.order.update({
       where: { id: orderId },
-      data: { status: "FULFILLED", paidAt, stripePaymentIntentId: paymentRef },
+      data: {
+        status: "FULFILLED",
+        paidAt,
+        stripePaymentIntentId: paymentRef,
+        // A customer's "I paid but got nothing" report is now handled.
+        ...(order.issueReportedAt &&
+          !order.issueResolvedAt && {
+            issueResolvedAt: new Date(),
+            issueResolution: RESOLVED_DELIVERED,
+          }),
+      },
     });
     return { status: "FULFILLED", orderNumber: order.orderNumber, alreadyFulfilled: false };
   });

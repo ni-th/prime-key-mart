@@ -8,6 +8,10 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/lib/cart-store";
 import { KeyList } from "@/components/shop/key-list";
+import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
+
+/** After this long without a payment confirmation, offer the report form. */
+const SLOW_AFTER_MS = 45_000;
 
 type KeyGroup = { productName: string; quantity: number; keys: string[] };
 type StatusResponse = {
@@ -15,6 +19,9 @@ type StatusResponse = {
   status: string;
   email: string;
   totalCents: number;
+  reported: boolean;
+  closedMessage: string | null;
+  canFollowUp: boolean;
   keys: KeyGroup[] | null;
 };
 
@@ -33,6 +40,12 @@ export function OrderStatusView({
   const [error, setError] = useState<string | null>(null);
   const clearCart = useCart((s) => s.clear);
   const clearedRef = useRef(false);
+  const [slow, setSlow] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   const poll = useCallback(async () => {
     const qs = token ? `?t=${encodeURIComponent(token)}` : "";
@@ -123,30 +136,55 @@ export function OrderStatusView({
 
   if (!data || data.status === "PENDING") {
     return (
-      <Card className="flex items-center gap-3 p-6">
-        <Loader2 className="size-5 animate-spin text-primary" />
-        <div className="text-sm">
-          <p className="font-medium">Payment received</p>
-          <p className="text-muted-foreground">Preparing your license keys…</p>
+      <Card className="space-y-4 p-6">
+        <div className="flex items-center gap-3">
+          <Loader2 className="size-5 shrink-0 animate-spin text-primary" />
+          <div className="text-sm">
+            <p className="font-medium">
+              {slow ? "Still waiting for payment confirmation" : "Confirming your payment..."}
+            </p>
+            <p className="text-muted-foreground">
+              {slow
+                ? `This is taking longer than usual. If you completed the payment, your keys will be emailed to ${data?.email ?? "you"} as soon as it's confirmed. You can safely close this page.`
+                : "This usually takes a few seconds. Please keep this page open."}
+            </p>
+          </div>
         </div>
+        {slow && data && (
+          <ReportPaymentIssue
+            orderNumber={orderNumber}
+            token={token}
+            alreadyReported={data.reported}
+            closedMessage={data.closedMessage}
+            canFollowUp={data.canFollowUp}
+          />
+        )}
       </Card>
     );
   }
 
   if (data.status === "EXPIRED" || data.status === "FAILED") {
     return (
-      <Card className="p-6">
-        <div className="flex items-center gap-2 font-medium">
-          <XCircle className="size-5 text-muted-foreground" />
-          This order was cancelled
+      <Card className="space-y-4 p-6">
+        <div>
+          <div className="flex items-center gap-2 font-medium">
+            <XCircle className="size-5 text-muted-foreground" />
+            We didn&apos;t receive a payment for this order
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The checkout timed out or the payment didn&apos;t go through. If you weren&apos;t
+            charged, there&apos;s nothing more to do. If you were charged, let us know and
+            we&apos;ll send your keys.
+          </p>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          No payment was taken and the keys were released.
-        </p>
-        <Link
-          href="/products"
-          className={cn(buttonVariants({ size: "sm" }), "mt-4")}
-        >
+        <ReportPaymentIssue
+          orderNumber={orderNumber}
+          token={token}
+          alreadyReported={data.reported}
+          closedMessage={data.closedMessage}
+          canFollowUp={data.canFollowUp}
+        />
+        <Link href="/products" className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
           Back to store
         </Link>
       </Card>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MessageCircleWarning } from "lucide-react";
 import { decryptOrderKeys, getOrderByNumber } from "@/lib/orders";
 import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { OrderStatusBadge } from "@/components/shop/order-status-badge";
 import { KeyList } from "@/components/shop/key-list";
 import { OrderActions } from "@/components/admin/order-actions";
 import { getOrderProfit } from "@/lib/admin";
+import { RESOLVED_DELIVERED } from "@/lib/payment-issue";
 
 export const metadata: Metadata = { title: "Order · Admin" };
 
@@ -54,6 +55,58 @@ export default async function AdminOrderDetailPage({
         </div>
         <OrderStatusBadge status={order.status} />
       </div>
+
+      {order.issueReportedAt && (
+        <Card
+          className={
+            order.issueResolvedAt
+              ? "p-5 text-sm"
+              : "border-amber-500/50 bg-amber-500/5 p-5 text-sm"
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 font-medium">
+              <MessageCircleWarning className="size-4 text-amber-600 dark:text-amber-400" />
+              Customer says they paid
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              Reported {order.issueReportedAt.toLocaleString()}
+            </span>
+          </div>
+          <dl className="mt-3 grid gap-1.5 sm:grid-cols-[10rem_1fr]">
+            <dt className="text-muted-foreground">Payment reference</dt>
+            <dd className="font-mono">{order.issuePaymentRef ?? "Not given"}</dd>
+            <dt className="text-muted-foreground">Message</dt>
+            <dd className="whitespace-pre-line">{order.issueNote ?? "None"}</dd>
+            <dt className="text-muted-foreground">Reply to</dt>
+            <dd>
+              <a href={`mailto:${order.email}?subject=Your Keysby order ${order.orderNumber}`} className="underline">
+                {order.email}
+              </a>
+            </dd>
+          </dl>
+          {order.issueResolvedAt ? (
+            order.issueResolution === RESOLVED_DELIVERED ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Handled {order.issueResolvedAt.toLocaleString()}: keys delivered.
+              </p>
+            ) : (
+              <div className="mt-3 rounded-md border bg-muted/40 p-3 text-xs">
+                <div className="font-medium">
+                  Closed as not paid {order.issueResolvedAt.toLocaleString()}. Sent to the customer:
+                </div>
+                <p className="mt-1 whitespace-pre-line text-muted-foreground">{order.issueResolution}</p>
+              </div>
+            )
+          ) : (
+            <ol className="mt-3 list-decimal space-y-0.5 pl-5 text-xs text-muted-foreground">
+              <li>Find order {order.orderNumber} in your PayHere merchant dashboard.</li>
+              <li>If it was paid in full, use &quot;Mark as paid &amp; deliver keys&quot; below.</li>
+              <li>If not, use &quot;Not paid - close report&quot; and email the customer.</li>
+            </ol>
+          )}
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3 text-sm">
         <Card className="p-4">
@@ -164,7 +217,12 @@ export default async function AdminOrderDetailPage({
 
       <Card className="p-5">
         <h2 className="mb-3 font-medium">Actions</h2>
-        <OrderActions orderNumber={order.orderNumber} status={order.status} />
+        <OrderActions
+          orderNumber={order.orderNumber}
+          status={order.status}
+          openReport={Boolean(order.issueReportedAt && !order.issueResolvedAt)}
+          customerEmail={order.email}
+        />
       </Card>
     </div>
   );

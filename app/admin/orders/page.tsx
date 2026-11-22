@@ -33,7 +33,8 @@ export const metadata: Metadata = { title: "Orders · Admin" };
 
 const FILTERS = [
   { value: "", label: "All" },
-  { value: "PAID", label: "Needs action" },
+  { value: "REPORTED", label: "Customer reports" },
+  { value: "PAID", label: "Paid, not delivered" },
   { value: "PENDING", label: "Pending" },
   { value: "FULFILLED", label: "Delivered" },
   { value: "EXPIRED", label: "Cancelled" },
@@ -157,7 +158,14 @@ export default async function AdminOrdersPage({
                   {formatMoney(o.totalCents, o.currency.toUpperCase())}
                 </TableCell>
                 <TableCell>
-                  <OrderStatusBadge status={o.status} />
+                  <div className="flex flex-wrap items-center gap-1">
+                    <OrderStatusBadge status={o.status} />
+                    {o.issueReportedAt && !o.issueResolvedAt && (
+                      <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                        Reported
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

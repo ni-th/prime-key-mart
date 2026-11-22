@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { decryptOrderKeys, lookupGuestOrder } from "@/lib/orders";
+import { reportView } from "@/lib/payment-issue";
 
 const schema = z.object({
   orderNumber: z.string().trim().min(3),
@@ -19,6 +20,9 @@ export type LookupState =
         email: string;
         currency: string;
         totalCents: number;
+        reported: boolean;
+        closedMessage: string | null;
+        canFollowUp: boolean;
         items: { productName: string; quantity: number; unitPriceCents: number }[];
         keyGroups: { productName: string; keys: string[] }[];
       };
@@ -55,6 +59,7 @@ export async function lookupOrderAction(
       email: order.email,
       currency: order.currency,
       totalCents: order.totalCents,
+      ...reportView(order),
       items: order.items.map((i) => ({
         productName: i.productName,
         quantity: i.quantity,

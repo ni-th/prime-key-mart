@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
 import { KeyList } from "@/components/shop/key-list";
+import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
+import { canReportPaymentIssue, reportView } from "@/lib/payment-issue";
 
 export const metadata: Metadata = { title: "Order detail" };
 
@@ -80,10 +82,24 @@ export default async function AccountOrderDetailPage({
           <KeyList groups={keyGroups} />
         </div>
       ) : (
-        <Card className="p-5 text-sm text-muted-foreground">
-          {order.status === "PENDING"
-            ? "This order is awaiting payment. No keys have been assigned yet."
-            : "This order was not completed, so no keys were delivered."}
+        <Card className="space-y-4 p-5 text-sm text-muted-foreground">
+          <p>
+            {order.status === "PENDING"
+              ? "We're waiting for the payment confirmation for this order."
+              : order.status === "PAID"
+                ? "Your payment was received and your keys are being prepared. We'll email them shortly."
+                : order.status === "REFUNDED"
+                  ? "This order was refunded."
+                  : "We didn't receive a payment for this order, so no keys were delivered."}
+          </p>
+          {canReportPaymentIssue(order.status) && (
+            <ReportPaymentIssue
+              orderNumber={order.orderNumber}
+              alreadyReported={reportView(order).reported}
+              closedMessage={reportView(order).closedMessage}
+              canFollowUp={reportView(order).canFollowUp}
+            />
+          )}
         </Card>
       )}
     </div>

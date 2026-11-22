@@ -51,6 +51,34 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
+      {(stats.openReports > 0 || stats.paidUndelivered > 0) && (
+        <Card className="border-amber-500/50 bg-amber-500/5 p-4">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="size-4 text-amber-500" />
+            Needs your attention
+          </div>
+          <ul className="mt-2 space-y-1 text-sm">
+            {stats.openReports > 0 && (
+              <li>
+                <Link href="/admin/orders?status=REPORTED" className="underline underline-offset-4">
+                  {stats.openReports} customer{stats.openReports === 1 ? " says they" : "s say they"} paid
+                  but got no keys
+                </Link>
+                <span className="text-muted-foreground"> - check PayHere, then deliver or close.</span>
+              </li>
+            )}
+            {stats.paidUndelivered > 0 && (
+              <li>
+                <Link href="/admin/orders?status=PAID" className="underline underline-offset-4">
+                  {stats.paidUndelivered} paid order{stats.paidUndelivered === 1 ? "" : "s"} waiting for keys
+                </Link>
+                <span className="text-muted-foreground"> - add stock, then deliver.</span>
+              </li>
+            )}
+          </ul>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {tiles.map((t) => (
           <Card key={t.label} className="p-5">

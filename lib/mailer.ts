@@ -172,6 +172,44 @@ async function sendSimpleEmail(to: string, subject: string, text: string, html: 
 const emailShell = (body: string) =>
   `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto">${body}</div>`;
 
+/** Confirmation to a customer who reported "I paid but got no keys". */
+export async function sendPaymentReportReceivedEmail(to: string, orderNumber: string): Promise<void> {
+  const text = [
+    `We received your message about order ${orderNumber}.`,
+    ``,
+    `We're checking your payment with our payment provider. If it went through, we'll email your license keys to this address, usually within a few hours.`,
+    ``,
+    `If you were charged and don't hear from us within 24 hours, just reply to this email.`,
+    ``,
+    `Keysby`,
+  ].join("\n");
+  const html = emailShell(
+    `<p>We received your message about order <strong>${orderNumber}</strong>.</p>
+     <p>We're checking your payment with our payment provider. If it went through, we'll email your license keys to this address, usually within a few hours.</p>
+     <p>If you were charged and don't hear from us within 24 hours, just reply to this email.</p>
+     <p>Keysby</p>`,
+  );
+  await sendSimpleEmail(to, `We're checking your payment for order ${orderNumber}`, text, html);
+}
+
+/** Admin closed a "paid but no keys" report: their message to the customer. */
+export async function sendPaymentReportClosedEmail(
+  to: string,
+  orderNumber: string,
+  message: string,
+): Promise<void> {
+  const text = [`About your order ${orderNumber}:`, ``, message, ``, `Keysby`].join("\n");
+  const safe = message
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>");
+  const html = emailShell(
+    `<p>About your order <strong>${orderNumber}</strong>:</p><p>${safe}</p><p>Keysby</p>`,
+  );
+  await sendSimpleEmail(to, `About your payment for order ${orderNumber}`, text, html);
+}
+
 /** "Forgot password" email with a one-time reset link. */
 export async function sendPasswordResetEmail(
   to: string,

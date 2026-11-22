@@ -244,6 +244,14 @@ model Order {
   stripePaymentIntentId String?
   refundNote            String?
   refundedAt            DateTime?
+  /// Customer said "I paid but got no keys" (e.g. connection lost after paying).
+  issueReportedAt       DateTime?
+  issueNote             String?
+  /// Payment reference the customer gave (from their PayHere receipt), if any.
+  issuePaymentRef       String?
+  /// Set when the report is handled (keys delivered or dismissed).
+  issueResolvedAt       DateTime?
+  issueResolution       String?
   items                 OrderItem[]
   createdAt             DateTime    @default(now())
   paidAt                DateTime?
@@ -251,6 +259,7 @@ model Order {
 
   @@index([userId])
   @@index([email])
+  @@index([issueReportedAt])
 }
 
 model OrderItem {

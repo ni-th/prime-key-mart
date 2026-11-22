@@ -30,7 +30,7 @@ export type CurrencyTotals = {
 };
 
 export async function getAdminStats() {
-  const [fulfilled, statusCounts, keysSold, productCount] = await Promise.all([
+  const [fulfilled, statusCounts, keysSold, productCount, openReports] = await Promise.all([
     prisma.order.findMany({
       where: { status: "FULFILLED" },
       select: {
@@ -43,6 +43,7 @@ export async function getAdminStats() {
     prisma.order.groupBy({ by: ["status"], _count: true }),
     prisma.licenseKey.count({ where: { status: "SOLD" } }),
     prisma.product.count(),
+    prisma.order.count({ where: { issueReportedAt: { not: null }, issueResolvedAt: null } }),
   ]);
 
   const byStatus = Object.fromEntries(
@@ -65,6 +66,10 @@ export async function getAdminStats() {
     byCurrency: [...totals.values()].sort((a, b) => a.currency.localeCompare(b.currency)),
     fulfilledOrders: fulfilled.length,
     pendingOrders: byStatus.PENDING ?? 0,
+    /** Paid but not delivered (out of stock) - needs the admin. */
+    paidUndelivered: byStatus.PAID ?? 0,
+    /** Customers saying "I paid but got no keys". */
+    openReports,
     totalOrders: statusCounts.reduce((n, s) => n + s._count, 0),
     keysSold,
     productCount,
@@ -171,7 +176,10 @@ export async function searchAdminOrders(filters: AdminOrderFilters = {}) {
   const toExclusive = to ? new Date(to.getTime() + 24 * 60 * 60 * 1000) : null;
 
   const where: Prisma.OrderWhereInput = {
-    ...(status && { status: status as Prisma.OrderWhereInput["status"] }),
+    // "REPORTED" isn't an order status: open "I paid but got no keys" reports.
+    ...(status === "REPORTED"
+      ? { issueReportedAt: { not: null }, issueResolvedAt: null }
+      : status && { status: status as Prisma.OrderWhereInput["status"] }),
     ...((from || toExclusive) && {
       createdAt: { ...(from && { gte: from }), ...(toExclusive && { lt: toExclusive }) },
     }),

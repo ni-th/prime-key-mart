@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/admin";
 import { encryptSecret, keyFingerprint } from "@/lib/crypto";
-import { sendOrderKeysEmail } from "@/lib/mailer";
+import { sendOrderKeysEmail, sendPaymentReportClosedEmail } from "@/lib/mailer";
 import { fulfillOrder, releaseOrderReservation } from "@/lib/inventory";
 import { productSchema, slugify } from "@/lib/validation";
 import { queueStockCheck } from "@/lib/alerts";
@@ -279,8 +279,11 @@ export async function updateOrderStatus(
     }
     await releaseOrderReservation(order.id, "EXPIRED");
   } else if (action === "fulfill") {
-    if (order.status !== "PENDING" && order.status !== "PAID") {
-      return { ok: false, error: "Only pending or paid orders can be delivered manually." };
+    // EXPIRED/FAILED too: the payment can succeed after the checkout timed out
+    // (e.g. the confirmation from PayHere never reached us). fulfillOrder
+    // reserves fresh keys for those.
+    if (!["PENDING", "PAID", "EXPIRED", "FAILED"].includes(order.status)) {
+      return { ok: false, error: "This order can't be delivered manually." };
     }
     const result = await fulfillOrder(order.id);
     if (result.status === "PAID") {
@@ -288,6 +291,29 @@ export async function updateOrderStatus(
       return {
         ok: false,
         error: `Not enough stock to deliver: ${result.missing.join(", ")}. Add keys, then try again.`,
+      };
+    }
+  } else if (action === "dismiss-report") {
+    if (!order.issueReportedAt || order.issueResolvedAt) {
+      return { ok: false, error: "There is no open report on this order." };
+    }
+    // The message goes to the customer (email + their order page).
+    const message = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
+    if (message.length < 10) {
+      return { ok: false, error: "Write a short message to the customer explaining what you found." };
+    }
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { issueResolvedAt: new Date(), issueResolution: message },
+    });
+    try {
+      await sendPaymentReportClosedEmail(order.email, order.orderNumber, message);
+    } catch (err) {
+      console.error(`[admin] report-closed email failed for ${orderNumber}`, err);
+      revalidatePath(`/admin/orders/${orderNumber}`);
+      return {
+        ok: false,
+        error: `Report closed, but the email to ${order.email} failed. Contact them another way.`,
       };
     }
   } else {

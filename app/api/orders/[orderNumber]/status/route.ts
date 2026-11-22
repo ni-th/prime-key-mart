@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { reportView } from "@/lib/payment-issue";
 import {
   canViewOrder,
   decryptOrderKeys,
@@ -31,6 +32,8 @@ export async function GET(
     status: order.status,
     email: order.email,
     totalCents: order.totalCents,
+    /** "Paid but no keys" report state (open, or closed with the admin's message). */
+    ...reportView(order),
     items: order.items.map((i) => ({
       productName: i.productName,
       quantity: i.quantity,
