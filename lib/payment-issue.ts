@@ -1,5 +1,9 @@
-/** Order statuses where a customer can say "I paid but got no keys". Client-safe. */
-export const REPORTABLE_STATUSES = ["PENDING", "EXPIRED", "FAILED"] as const;
+/**
+ * Order statuses where a customer can say "I paid but got no keys". Client-safe.
+ * Not FAILED: those never took a payment (checkout broke before PayHere, or
+ * PayHere itself reported the payment failed/cancelled).
+ */
+export const REPORTABLE_STATUSES = ["PENDING", "EXPIRED"] as const;
 
 export function canReportPaymentIssue(status: string): boolean {
   return (REPORTABLE_STATUSES as readonly string[]).includes(status);

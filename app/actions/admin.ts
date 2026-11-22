@@ -264,25 +264,48 @@ export async function updateOrderStatus(
   if (!order) return { ok: false, error: "Order not found." };
 
   if (action === "refund") {
+    if (order.status !== "FULFILLED" && order.status !== "PAID") {
+      return { ok: false, error: "Only paid or delivered orders can be marked refunded." };
+    }
     const note = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: "REFUNDED",
-        refundedAt: new Date(),
-        refundNote: note || null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: "REFUNDED",
+          refundedAt: new Date(),
+          refundNote: note || null,
+        },
+      });
+      // A "paid, not delivered" order may hold some keys it never received:
+      // put those back in stock. Delivered (SOLD) keys stay sold - the
+      // customer has already seen them.
+      const items = await tx.orderItem.findMany({ where: { orderId: order.id }, select: { id: true } });
+      await tx.licenseKey.updateMany({
+        where: { orderItemId: { in: items.map((i) => i.id) }, status: "RESERVED" },
+        data: { status: "AVAILABLE", orderItemId: null, reservedAt: null },
+      });
     });
+    queueStockCheck(await prisma.orderItem
+      .findMany({ where: { orderId: order.id }, select: { productId: true } })
+      .then((rows) => rows.map((r) => r.productId)));
   } else if (action === "cancel") {
     if (order.status !== "PENDING") {
       return { ok: false, error: "Only pending orders can be cancelled." };
     }
     await releaseOrderReservation(order.id, "EXPIRED");
   } else if (action === "fulfill") {
-    // EXPIRED/FAILED too: the payment can succeed after the checkout timed out
-    // (e.g. the confirmation from PayHere never reached us). fulfillOrder
-    // reserves fresh keys for those.
-    if (!["PENDING", "PAID", "EXPIRED", "FAILED"].includes(order.status)) {
+    // EXPIRED too: the payment can succeed after the checkout timed out (the
+    // confirmation from PayHere never reached us); fulfillOrder reserves fresh
+    // keys. Never FAILED: no payment was made (checkout broke first, or
+    // PayHere reported it failed/cancelled).
+    if (order.status === "FAILED") {
+      return {
+        ok: false,
+        error: "This order failed, so no payment was made. If PayHere does confirm a payment later, it's delivered automatically.",
+      };
+    }
+    if (!["PENDING", "PAID", "EXPIRED"].includes(order.status)) {
       return { ok: false, error: "This order can't be delivered manually." };
     }
     const result = await fulfillOrder(order.id);

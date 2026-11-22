@@ -71,10 +71,20 @@ export function OrderActions({
 
   const cancelRef = useRef<HTMLFormElement>(null);
   const fulfillRef = useRef<HTMLFormElement>(null);
-  const lapsed = status === "EXPIRED" || status === "FAILED";
+  // EXPIRED = timed out with no word from PayHere, so a payment may still have
+  // gone through. FAILED = checkout broke before payment, or PayHere said the
+  // payment failed: never deliver those by hand (a real late payment still
+  // arrives through PayHere's confirmation and is delivered automatically).
+  const lapsed = status === "EXPIRED";
 
   return (
     <div className="space-y-4">
+      {status === "FAILED" && (
+        <p className="text-sm text-muted-foreground">
+          No actions: this order failed before or during payment, so no money was taken. If
+          PayHere ever confirms a payment for it, the keys are delivered automatically.
+        </p>
+      )}
       {status === "FULFILLED" && (
         <form action={resendAction}>
           <input type="hidden" name="orderNumber" value={orderNumber} />

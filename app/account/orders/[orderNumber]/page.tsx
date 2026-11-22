@@ -90,6 +90,8 @@ export default async function AccountOrderDetailPage({
                 ? "Your payment was received and your keys are being prepared. We'll email them shortly."
                 : order.status === "REFUNDED"
                   ? "This order was refunded."
+                  : order.status === "FAILED"
+                    ? "The payment for this order didn't go through, so no payment was taken."
                   : "We didn't receive a payment for this order, so no keys were delivered."}
           </p>
           {canReportPaymentIssue(order.status) && (

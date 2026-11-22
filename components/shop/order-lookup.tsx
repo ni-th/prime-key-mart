@@ -106,7 +106,11 @@ export function OrderLookup() {
               <p>
                 {state.order.status === "PAID"
                   ? "Your payment was received and your keys are being prepared. We'll email them shortly."
-                  : "We haven't received a payment for this order, so there are no keys to show yet."}
+                  : state.order.status === "REFUNDED"
+                    ? "This order was refunded."
+                    : state.order.status === "FAILED"
+                      ? "The payment for this order didn't go through, so no payment was taken."
+                      : "We haven't received a payment for this order, so there are no keys to show yet."}
               </p>
               {canReportPaymentIssue(state.order.status) && (
                 <ReportPaymentIssue

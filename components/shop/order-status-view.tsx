@@ -163,7 +163,45 @@ export function OrderStatusView({
     );
   }
 
-  if (data.status === "EXPIRED" || data.status === "FAILED") {
+  if (data.status === "REFUNDED") {
+    return (
+      <Card className="space-y-2 p-6">
+        <div className="flex items-center gap-2 font-medium">
+          <XCircle className="size-5 text-muted-foreground" />
+          This order was refunded
+        </div>
+        <p className="text-sm text-muted-foreground">
+          The payment for order {data.orderNumber} was refunded. Refunds usually reach your
+          account within 5-10 working days, depending on your bank.
+        </p>
+        <Link href="/products" className={cn(buttonVariants({ size: "sm", variant: "outline" }), "mt-2")}>
+          Back to store
+        </Link>
+      </Card>
+    );
+  }
+
+  if (data.status === "FAILED") {
+    return (
+      <Card className="space-y-4 p-6">
+        <div>
+          <div className="flex items-center gap-2 font-medium">
+            <XCircle className="size-5 text-muted-foreground" />
+            The payment didn&apos;t go through
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            No payment was taken for this order. If you see a pending charge from your bank, it&apos;s
+            a temporary hold that will be released. You can try again with a new order.
+          </p>
+        </div>
+        <Link href="/cart" className={cn(buttonVariants({ size: "sm" }))}>
+          Back to cart
+        </Link>
+      </Card>
+    );
+  }
+
+  if (data.status === "EXPIRED") {
     return (
       <Card className="space-y-4 p-6">
         <div>
@@ -191,7 +229,7 @@ export function OrderStatusView({
     );
   }
 
-  // FULFILLED (or REFUNDED - still show what was delivered)
+  // FULFILLED
   return (
     <div className="space-y-5">
       <Card className="p-6">
