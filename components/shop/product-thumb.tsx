@@ -48,16 +48,18 @@ export function ProductThumb({
 
   const gradient = BRAND_GRADIENTS[brand] ?? "from-primary/20 to-primary/5";
 
+  // Sized by its own width (container queries), so the same placeholder works
+  // as a big product card and as a small cart thumbnail without overlapping.
   return (
     <div
       className={cn(
-        "relative flex h-full w-full items-center justify-center bg-linear-to-br",
+        "@container relative flex h-full w-full items-center justify-center bg-linear-to-br",
         gradient,
         className,
       )}
     >
-      <KeyRound className="absolute right-3 top-3 size-4 text-foreground/30" />
-      <span className="font-heading text-3xl font-semibold text-foreground/70">
+      <KeyRound className="absolute top-1.5 right-1.5 size-3 text-foreground/30 @[10rem]:top-3 @[10rem]:right-3 @[10rem]:size-4" />
+      <span className="font-heading text-xl font-semibold text-foreground/70 @[10rem]:text-3xl">
         {initials(name)}
       </span>
     </div>

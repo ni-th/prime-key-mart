@@ -48,7 +48,12 @@ function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
         href={`/products/${line.slug}`}
         className="relative aspect-square h-20 w-20 shrink-0 overflow-hidden rounded-lg border"
       >
-        <ProductThumb name={line.name} brand={line.brand} />
+        <ProductThumb
+          name={line.name}
+          brand={line.brand}
+          imageUrl={quoted?.imageUrl}
+          width={160}
+        />
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">

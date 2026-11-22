@@ -24,6 +24,8 @@ export type CartQuoteLine = {
   available: boolean;
   /** Keys in stock right now (0 when unavailable). */
   stock: number;
+  /** Product image for the cart thumbnail, if set. */
+  imageUrl: string | null;
 };
 
 export type CartQuote = {
@@ -44,7 +46,7 @@ export async function quoteCart(input: unknown): Promise<CartQuote> {
   const [products, settings, discounts, stock] = await Promise.all([
     prisma.product.findMany({
       where: { id: { in: ids }, published: true },
-      select: { id: true, categoryId: true, priceCents: true, priceLkrCents: true },
+      select: { id: true, categoryId: true, priceCents: true, priceLkrCents: true, imageUrl: true },
     }),
     getPricingSettings(),
     getActiveDiscounts(),
@@ -55,7 +57,7 @@ export async function quoteCart(input: unknown): Promise<CartQuote> {
   const lines = parsed.data.map((l): CartQuoteLine => {
     const p = byId.get(l.productId);
     if (!p) {
-      return { ...l, usdCents: 0, lkrCents: 0, listUsdCents: 0, listLkrCents: 0, salePercent: null, available: false, stock: 0 };
+      return { ...l, usdCents: 0, lkrCents: 0, listUsdCents: 0, listLkrCents: 0, salePercent: null, available: false, stock: 0, imageUrl: null };
     }
     const price = priceOf(p, settings, discounts);
     return {
@@ -67,6 +69,7 @@ export async function quoteCart(input: unknown): Promise<CartQuote> {
       salePercent: price.sale?.percent ?? null,
       available: true,
       stock: stock.get(p.id) ?? 0,
+      imageUrl: p.imageUrl,
     };
   });
 
