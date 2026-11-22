@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -10,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { formatMoney, formatUsd } from "@/lib/money";
 import { useCartQuote } from "@/lib/use-cart-quote";
 import type { CartQuoteLine } from "@/app/actions/pricing";
+import { cartIssues, type CartIssue } from "@/lib/cart-issues";
+import { StockIssueDialog } from "@/components/shop/stock-issue-dialog";
 import {
   selectCartSubtotal,
   useCart,
@@ -26,6 +30,17 @@ function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
   // Live USD price from the server; the price saved when added is a fallback.
   const unit = quoted?.available ? quoted.usdCents : line.priceCents;
   const onSale = Boolean(quoted?.available && quoted.salePercent);
+  const problem = !quoted
+    ? null
+    : !quoted.available
+      ? "No longer available"
+      : quoted.stock === 0
+        ? "Out of stock"
+        : quoted.stock < line.quantity
+          ? `Only ${quoted.stock} left`
+          : null;
+  // Can't add more than we have (and never more than 10 per item).
+  const maxQty = quoted?.available ? Math.min(MAX_PER_LINE, Math.max(quoted.stock, 1)) : MAX_PER_LINE;
 
   return (
     <div className="flex gap-4 py-4">
@@ -55,6 +70,11 @@ function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
             )}
           </span>
         </div>
+        {problem && (
+          <span className="w-fit rounded-md bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
+            {problem}
+          </span>
+        )}
         <span className="text-xs text-muted-foreground">
           {line.brand} · {formatUsd(unit)} each
           {onSale && (
@@ -81,7 +101,7 @@ function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
               variant="ghost"
               size="icon-sm"
               aria-label="Increase quantity"
-              disabled={line.quantity >= MAX_PER_LINE}
+              disabled={line.quantity >= maxQty}
               onClick={() => setQty(line.productId, line.quantity + 1)}
             >
               <Plus className="size-3.5" />
@@ -110,9 +130,30 @@ export function CartView() {
   const clear = useCart((s) => s.clear);
   const snapshotSubtotal = useCart(selectCartSubtotal);
   // Live prices from the server; the stored snapshot is only a placeholder.
-  const { quote, byId } = useCartQuote(lines);
+  const { quote, byId, refresh } = useCartQuote(lines);
+  const router = useRouter();
+  const [checking, setChecking] = useState(false);
+  const [dialogIssues, setDialogIssues] = useState<CartIssue[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  /** Check stock live before moving on; show what changed instead of continuing. */
+  async function proceed() {
+    setChecking(true);
+    const fresh = await refresh();
+    const found = fresh
+      ? cartIssues(lines, new Map(fresh.lines.map((l) => [l.productId, l])))
+      : [];
+    if (found.length > 0) {
+      setDialogIssues(found);
+      setDialogOpen(true);
+      setChecking(false);
+      return;
+    }
+    router.push("/checkout");
+  }
   const usdTotal = quote?.totals.USD ?? snapshotSubtotal;
   const lkrTotal = quote?.totals.LKR ?? null;
+  const issueCount = cartIssues(lines, byId).length;
   const usdSavings = quote
     ? quote.lines.reduce((n, l) => n + (l.listUsdCents - l.usdCents) * l.quantity, 0)
     : 0;
@@ -188,13 +229,24 @@ export function CartView() {
           <p className="mt-3 text-xs text-muted-foreground">
             Choose LKR or USD at checkout. No extra fees or taxes are added.
           </p>
+          {issueCount > 0 && (
+            <p className="mt-2 text-xs text-destructive">
+              {issueCount === 1 ? "1 item is" : `${issueCount} items are`} out of stock or no
+              longer available. Remove {issueCount === 1 ? "it" : "them"} or lower the quantity
+              to check out.
+            </p>
+          )}
           <Separator className="my-4" />
-          <Link
-            href="/checkout"
-            className={cn(buttonVariants({ size: "lg" }), "mt-4 w-full")}
+          <Button
+            type="button"
+            size="lg"
+            className="mt-4 w-full"
+            disabled={checking}
+            onClick={proceed}
           >
+            {checking && <Loader2 className="size-4 animate-spin" />}
             Proceed to checkout
-          </Link>
+          </Button>
           <Link
             href="/products"
             className={cn(
@@ -209,6 +261,12 @@ export function CartView() {
           </p>
         </Card>
       </div>
+      <StockIssueDialog
+        issues={dialogIssues}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCartPage
+      />
     </div>
   );
 }

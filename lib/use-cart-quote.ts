@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { quoteCart, type CartQuote, type CartQuoteLine } from "@/app/actions/pricing";
 import type { CartLine } from "@/lib/cart-store";
 
@@ -35,10 +35,27 @@ export function useCartQuote(lines: CartLine[]) {
     };
   }, [key]);
 
+  /** Fetch a fresh quote now (e.g. right before paying) and return it. */
+  const refresh = useCallback(async (): Promise<CartQuote | null> => {
+    const items = key
+      ? key.split(",").map((s) => {
+          const [productId, qty] = s.split(":");
+          return { productId, quantity: Number(qty) };
+        })
+      : [];
+    try {
+      const fresh = await quoteCart(items);
+      setState({ key, quote: fresh });
+      return fresh;
+    } catch {
+      return null;
+    }
+  }, [key]);
+
   const quote = state?.quote ?? null;
   const byId = useMemo(
     () => new Map<string, CartQuoteLine>((quote?.lines ?? []).map((l) => [l.productId, l])),
     [quote],
   );
-  return { quote, byId, loading: state?.key !== key };
+  return { quote, byId, loading: state?.key !== key, refresh };
 }

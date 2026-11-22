@@ -16,6 +16,9 @@ import { formatMoney } from "@/lib/money";
 import { useCart } from "@/lib/cart-store";
 import { useCartQuote } from "@/lib/use-cart-quote";
 import { useHydrated } from "@/lib/use-hydrated";
+import { cartIssues, issueLabel, type CartIssue } from "@/lib/cart-issues";
+import type { CartQuote, CartQuoteLine } from "@/app/actions/pricing";
+import { StockIssueDialog } from "@/components/shop/stock-issue-dialog";
 
 export function CheckoutForm({
   defaultEmail,
@@ -30,7 +33,22 @@ export function CheckoutForm({
   const hydrated = useHydrated();
   const lines = useCart((s) => s.lines);
   // Live prices from the server (fixed LKR prices / admin exchange rate).
-  const { quote, byId, loading } = useCartQuote(lines);
+  const { quote, byId, loading, refresh } = useCartQuote(lines);
+  const [dialogIssues, setDialogIssues] = useState<CartIssue[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const issues = cartIssues(lines, byId);
+  const issueFor = (productId: string) => issues.find((i) => i.productId === productId);
+
+  /** Re-check stock with the server; open the dialog if anything changed. */
+  async function stockProblems(fresh: CartQuote | null): Promise<boolean> {
+    if (!fresh) return false;
+    const map = new Map<string, CartQuoteLine>(fresh.lines.map((l) => [l.productId, l]));
+    const found = cartIssues(lines, map);
+    if (found.length === 0) return false;
+    setDialogIssues(found);
+    setDialogOpen(true);
+    return true;
+  }
 
   const [email, setEmail] = useState(defaultEmail ?? "");
   const [currency, setCurrency] = useState<"LKR" | "USD">("LKR");
@@ -51,7 +69,6 @@ export function CheckoutForm({
         0,
       )
     : 0;
-  const unavailable = quote?.lines.some((l) => !l.available) ?? false;
 
   if (!hydrated) {
     return <Skeleton className="h-72 w-full" />;
@@ -76,6 +93,12 @@ export function CheckoutForm({
   async function pay() {
     setError(null);
     setPending(true);
+    // Stock changes all the time: check right before paying, not with the
+    // numbers from when the page loaded.
+    if (await stockProblems(await refresh())) {
+      setPending(false);
+      return;
+    }
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -95,6 +118,11 @@ export function CheckoutForm({
         error?: string;
       };
       if (!res.ok || !data.url) {
+        // 409 = an item sold out in the last few seconds: show what changed.
+        if (res.status === 409 && (await stockProblems(await refresh()))) {
+          setPending(false);
+          return;
+        }
         setError(data.error ?? "Something went wrong. Please try again.");
         setPending(false);
         return;
@@ -203,10 +231,10 @@ export function CheckoutForm({
                 <span className="tabular-nums">
                   {!quote ? (
                     <Skeleton className="inline-block h-4 w-16 align-middle" />
-                  ) : byId.get(l.productId)?.available ? (
-                    formatMoney(lineTotal(l.productId, l.quantity) ?? 0, currency)
+                  ) : issueFor(l.productId) ? (
+                    <span className="text-destructive">{issueLabel(issueFor(l.productId)!)}</span>
                   ) : (
-                    <span className="text-destructive">Unavailable</span>
+                    formatMoney(lineTotal(l.productId, l.quantity) ?? 0, currency)
                   )}
                 </span>
               </li>
@@ -229,9 +257,9 @@ export function CheckoutForm({
               )}
             </span>
           </div>
-          {unavailable && (
+          {issues.length > 0 && (
             <p className="mt-2 text-xs text-destructive">
-              Some items are no longer available. Remove them from your cart to continue.
+              Some items are out of stock or no longer available.
             </p>
           )}
 
@@ -245,7 +273,7 @@ export function CheckoutForm({
             className="mt-4 w-full"
             size="lg"
             disabled={
-              pending || total === null || unavailable || (!emailLocked && !email.trim())
+              pending || total === null || (!emailLocked && !email.trim())
             }
             onClick={pay}
           >
@@ -263,6 +291,7 @@ export function CheckoutForm({
           </Link>
         </Card>
       </div>
+      <StockIssueDialog issues={dialogIssues} open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }

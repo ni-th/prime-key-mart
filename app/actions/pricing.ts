@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getActiveDiscounts, getPricingSettings, priceOf } from "@/lib/pricing";
+import { availableStockByProduct } from "@/lib/products";
 
 const quoteSchema = z
   .array(z.object({ productId: z.string().min(1).max(64), quantity: z.number().int().min(1).max(10) }))
@@ -19,7 +20,10 @@ export type CartQuoteLine = {
   listLkrCents: number;
   /** Percent off from a sale, or null. */
   salePercent: number | null;
+  /** False when the product was removed or unpublished. */
   available: boolean;
+  /** Keys in stock right now (0 when unavailable). */
+  stock: number;
 };
 
 export type CartQuote = {
@@ -37,20 +41,21 @@ export async function quoteCart(input: unknown): Promise<CartQuote> {
   if (!parsed.success) return { lines: [], totals: { USD: 0, LKR: 0 } };
 
   const ids = [...new Set(parsed.data.map((l) => l.productId))];
-  const [products, settings, discounts] = await Promise.all([
+  const [products, settings, discounts, stock] = await Promise.all([
     prisma.product.findMany({
       where: { id: { in: ids }, published: true },
       select: { id: true, categoryId: true, priceCents: true, priceLkrCents: true },
     }),
     getPricingSettings(),
     getActiveDiscounts(),
+    availableStockByProduct(ids),
   ]);
   const byId = new Map(products.map((p) => [p.id, p]));
 
   const lines = parsed.data.map((l): CartQuoteLine => {
     const p = byId.get(l.productId);
     if (!p) {
-      return { ...l, usdCents: 0, lkrCents: 0, listUsdCents: 0, listLkrCents: 0, salePercent: null, available: false };
+      return { ...l, usdCents: 0, lkrCents: 0, listUsdCents: 0, listLkrCents: 0, salePercent: null, available: false, stock: 0 };
     }
     const price = priceOf(p, settings, discounts);
     return {
@@ -61,6 +66,7 @@ export async function quoteCart(input: unknown): Promise<CartQuote> {
       listLkrCents: price.listLkrCents,
       salePercent: price.sale?.percent ?? null,
       available: true,
+      stock: stock.get(p.id) ?? 0,
     };
   });
 
