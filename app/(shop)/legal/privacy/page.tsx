@@ -21,8 +21,9 @@ export default function PrivacyPage() {
         <h2>What we collect</h2>
         <ul>
           <li>
-            <strong>Order details:</strong> your email address, the products you
-            bought, prices and the keys delivered to you.
+            <strong>Order details:</strong> your email address, name, phone
+            number and country, the products you bought, prices and the keys
+            delivered to you.
           </li>
           <li>
             <strong>Account details</strong> (if you create one): your name,
@@ -47,7 +48,7 @@ export default function PrivacyPage() {
         <ul>
           <li>To process your order and email you your keys.</li>
           <li>To let you see past orders and keys in your account.</li>
-          <li>To answer support requests and handle refunds.</li>
+          <li>To answer support requests, key reports and refunds.</li>
           <li>To prevent fraud and keep the store secure.</li>
         </ul>
         <p className="mt-2">
@@ -59,9 +60,11 @@ export default function PrivacyPage() {
       <section>
         <h2>Who we share it with</h2>
         <p>
-          Only the services needed to run the store: PayHere (payments), our
-          hosting and database providers, and our email provider (to send your
-          keys). Each of them handles your data only to provide that service. We
+          Only the services needed to run the store: PayHere (payments, which
+          receives your name, email, phone number and country with each
+          payment), Cloudflare Turnstile (checks that sign-in and sign-up forms
+          are used by a person, not a bot), our hosting and database providers,
+          and our email provider (to send your keys). Each of them handles your data only to provide that service. We
           may also disclose information if the law requires it.
         </p>
       </section>
@@ -70,8 +73,10 @@ export default function PrivacyPage() {
         <h2>Cookies and local storage</h2>
         <p>
           We use one essential cookie to keep you signed in, and your
-          browser&apos;s local storage to remember your cart. We do not use
-          advertising or tracking cookies.
+          browser&apos;s local storage to remember your cart and the details you
+          entered at checkout. Cloudflare Turnstile may set its own security
+          cookie on sign-in pages. We do not use advertising or tracking
+          cookies.
         </p>
       </section>
 
@@ -96,8 +101,9 @@ export default function PrivacyPage() {
       <section>
         <h2>Security</h2>
         <p>
-          License keys are encrypted in our database, passwords are hashed, and
-          the whole site uses HTTPS.
+          License keys are encrypted in our database, passwords are hashed,
+          two-factor authentication is available for accounts, and the whole
+          site uses HTTPS.
         </p>
       </section>
     </LegalPage>

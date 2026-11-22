@@ -17,6 +17,14 @@ export const CLAIM_STATUS = {
 export type ClaimStatus = keyof typeof CLAIM_STATUS;
 
 /** One delivered item with a warranty, as the customer sees it on their order. */
+/** Why a key can be reported right now. */
+export type KeyCover = {
+  /** WARRANTY = paid plan; FREE_CHECK = the short period every key gets after delivery. */
+  kind: "WARRANTY" | "FREE_CHECK";
+  /** When cover ends (ISO); null = lifetime warranty. */
+  endsAt: string | null;
+};
+
 /** One delivered product line on the customer's order page: its keys, warranty and claims. */
 export type OrderKeyItem = {
   itemId: string;
@@ -37,9 +45,17 @@ export type OrderKeyItem = {
     label: string;
     /** The full key (only sent to the order's owner; hidden until they tap the eye). */
     value: string;
+    /** Can be reported now, and why (null = not covered any more). */
+    cover: KeyCover | null;
     /** This key was sent as a warranty replacement. */
     isReplacement: boolean;
     /** The latest claim on this key, if any. */
     claim: { status: ClaimStatus; note: string | null; createdAt: string } | null;
   }[];
 };
+
+/** Free check period for display: 24 -> "24 hours", 72 -> "3 days". */
+export function checkPeriod(hours: number): string {
+  if (hours > 24 && hours % 24 === 0) return `${hours / 24} days`;
+  return `${hours} hour${hours === 1 ? "" : "s"}`;
+}

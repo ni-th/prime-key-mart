@@ -44,10 +44,12 @@ export default function TermsPage() {
         <h2>3. Delivery</h2>
         <p>
           Keys are delivered digitally, normally within a few minutes of a
-          successful payment, to the email address on the order. They also
-          appear on the order confirmation page, in your account (if you have
-          one) and through <Link href="/order-lookup">order lookup</Link>. If you
-          have not received your key within 2 hours, check your spam folder and
+          successful payment. We email the address on the order a secure link
+          to your order page, where the keys are shown. Keys are hidden until
+          you tap the eye icon, so you can open the page in public. If you have
+          an account, they also appear under My keys. Lost the email? Use{" "}
+          <Link href="/order-lookup">order lookup</Link> and we will send it
+          again. If nothing arrives within 2 hours, check your spam folder and
           then contact us. No physical item is shipped.
         </p>
       </section>
@@ -58,8 +60,10 @@ export default function TermsPage() {
           You are responsible for making sure the product suits your device and
           for entering the key on a compatible system. A key counts as delivered
           once it has been shown or emailed to you. If a key does not activate,
-          our <Link href="/legal/refund-policy">refund policy</Link> explains how
-          we replace or refund it.
+          report it from your order page. Our{" "}
+          <Link href="/legal/refund-policy">refund and warranty policy</Link>{" "}
+          explains the free check period after delivery, what a warranty covers,
+          and when we replace or refund a key.
         </p>
       </section>
 
@@ -67,9 +71,12 @@ export default function TermsPage() {
         <h2>5. Your account</h2>
         <p>
           You can buy as a guest or with an account. Keep your password private;
-          you are responsible for orders placed through your account. We may
-          suspend accounts or refuse orders that we reasonably believe involve
-          fraud, abuse or a breach of these terms.
+          you are responsible for orders placed through your account. You can
+          turn on two-factor authentication in your account settings for extra
+          protection. Guest orders placed with your email can be added to your
+          account after you confirm that email address. We may suspend accounts
+          or refuse orders that we reasonably believe involve fraud, abuse or a
+          breach of these terms.
         </p>
       </section>
 

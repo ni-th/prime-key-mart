@@ -8,6 +8,7 @@ import { formatMoney, formatUsd } from "@/lib/money";
 import { getActiveDiscounts, getPricingSettings, priceOf } from "@/lib/pricing";
 import { endsInText } from "@/lib/sale";
 import { getWarrantyOptions } from "@/lib/warranty-server";
+import { getFreeCheckHours } from "@/lib/warranty-claims";
 import { priceWarranties } from "@/lib/warranty";
 import { SaleBadge } from "@/components/shop/sale-badge";
 import { Badge } from "@/components/ui/badge";
@@ -39,10 +40,11 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [settings, discounts, warrantyOptions] = await Promise.all([
+  const [settings, discounts, warrantyOptions, freeCheckHours] = await Promise.all([
     getPricingSettings(),
     getActiveDiscounts(),
     getWarrantyOptions([product.id]),
+    getFreeCheckHours(),
   ]);
   const price = priceOf(product, settings, discounts);
   // Warranty is a percent of the normal price (sales don't discount it).
@@ -137,6 +139,7 @@ export default async function ProductPage({
             stock={product.stock}
             warranties={warranties}
             unitLkrCents={price.lkrCents}
+            freeCheckHours={freeCheckHours}
             product={{
               productId: product.id,
               slug: product.slug,

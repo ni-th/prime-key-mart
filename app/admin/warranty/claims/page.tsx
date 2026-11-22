@@ -9,10 +9,12 @@ import { Card } from "@/components/ui/card";
 import { ResolveClaimForm } from "@/components/admin/resolve-claim-form";
 import { decryptSecret } from "@/lib/crypto";
 import { warrantySummary } from "@/lib/warranty";
+import { formatMoney } from "@/lib/money";
+import { perKeyPaidCents } from "@/lib/warranty-claims";
 import { CLAIM_REASONS, CLAIM_STATUS, type ClaimReason, type ClaimStatus } from "@/lib/warranty-claim-shared";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Warranty claims · Admin" };
+export const metadata: Metadata = { title: "Key claims · Admin" };
 
 const FILTERS = [
   { value: "", label: "Open" },
@@ -44,7 +46,7 @@ export default async function WarrantyClaimsPage({ searchParams }: { searchParam
       include: {
         key: true,
         replacementKey: true,
-        orderItem: { include: { order: { select: { orderNumber: true, email: true } } } },
+        orderItem: { include: { order: { select: { orderNumber: true, email: true, currency: true } } } },
       },
     }),
     prisma.warrantyClaim.count({ where: { status: "OPEN" } }),
@@ -62,10 +64,11 @@ export default async function WarrantyClaimsPage({ searchParams }: { searchParam
         Warranty plans
       </Link>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Warranty claims</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Key claims</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Customers report keys that stopped working. Check the key with your supplier if needed,
-          then send a replacement, refund, or explain why it isn&apos;t covered.
+          Customers report keys that don&apos;t work, during the free check period after delivery or
+          while their warranty runs. Check the key with your supplier if needed, then send a
+          replacement, refund that key, or explain why it isn&apos;t covered.
         </p>
       </div>
 
@@ -90,6 +93,8 @@ export default async function WarrantyClaimsPage({ searchParams }: { searchParam
         <div className="space-y-4">
           {claims.map((c) => {
             const order = c.orderItem.order;
+            const cur = order.currency.toUpperCase();
+            const paid = perKeyPaidCents(c.orderItem);
             return (
               <Card key={c.id} className="space-y-3 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -113,8 +118,20 @@ export default async function WarrantyClaimsPage({ searchParams }: { searchParam
                   <dd className="whitespace-pre-line">{c.message ?? "None"}</dd>
                   <dt className="text-muted-foreground">Key</dt>
                   <dd className="font-mono text-xs break-all">{plain(c.key)}</dd>
-                  <dt className="text-muted-foreground">Warranty</dt>
-                  <dd>{warrantySummary(c.orderItem) ?? "-"}</dd>
+                  <dt className="text-muted-foreground">Covered by</dt>
+                  <dd>
+                    {c.coverage === "FREE_CHECK"
+                      ? "Free check period after delivery"
+                      : `Warranty: ${warrantySummary(c.orderItem) ?? "-"}`}
+                  </dd>
+                  <dt className="text-muted-foreground">Key price paid</dt>
+                  <dd>{formatMoney(paid, cur)}</dd>
+                  {c.refundCents !== null && (
+                    <>
+                      <dt className="text-muted-foreground">Refunded</dt>
+                      <dd>{formatMoney(c.refundCents, cur)}</dd>
+                    </>
+                  )}
                   {c.replacementKey && (
                     <>
                       <dt className="text-muted-foreground">Replacement</dt>
@@ -128,7 +145,9 @@ export default async function WarrantyClaimsPage({ searchParams }: { searchParam
                     </>
                   )}
                 </dl>
-                {c.status === "OPEN" && <ResolveClaimForm claimId={c.id} />}
+                {c.status === "OPEN" && (
+                  <ResolveClaimForm claimId={c.id} keyPaid={(paid / 100).toFixed(2)} currency={cur} />
+                )}
               </Card>
             );
           })}

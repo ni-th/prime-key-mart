@@ -61,21 +61,23 @@ export default function ContactPage() {
       <section>
         <h2>Looking for your keys?</h2>
         <p>
-          You can find any order with your email and order number on{" "}
+          Use the link in your keys email to open your order, or see{" "}
+          <Link href="/account/keys">My keys</Link> in your account. Lost the
+          email? Use{" "}
           <Link href="/order-lookup">
             <Search className="mr-1 inline size-3.5 align-[-2px]" />
             order lookup
-          </Link>
-          , or in <Link href="/account/orders">your account</Link> if you bought
-          while signed in.
+          </Link>{" "}
+          and we&apos;ll email your order to you again.
         </p>
       </section>
 
       <section>
         <h2>Refunds and faulty keys</h2>
         <p>
-          See our <Link href="/legal/refund-policy">refund policy</Link> for when
-          and how we replace or refund keys.
+          If a key doesn&apos;t work, use &quot;Key not working?&quot; under it on
+          your order page. Our <Link href="/legal/refund-policy">refund policy</Link>{" "}
+          explains when we replace or refund a key.
         </p>
       </section>
     </LegalPage>

@@ -196,6 +196,18 @@ export default async function AdminOrderDetailPage({
               <span>Cost of keys</span>
               <span>-{formatMoney(profit.costCents, cur)}</span>
             </div>
+            {profit.replacementCostCents > 0 && (
+              <div className="flex justify-between gap-3 text-muted-foreground">
+                <span>Replacement keys (claims)</span>
+                <span>-{formatMoney(profit.replacementCostCents, cur)}</span>
+              </div>
+            )}
+            {profit.refundedCents > 0 && (
+              <div className="flex justify-between gap-3 text-muted-foreground">
+                <span>Refunded keys (claims)</span>
+                <span>-{formatMoney(profit.refundedCents, cur)}</span>
+              </div>
+            )}
             <Separator className="my-2" />
             <div
               className={

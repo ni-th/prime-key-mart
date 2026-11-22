@@ -2,19 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart, type CartLine } from "@/lib/cart-store";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { WarrantyPicker } from "@/components/shop/warranty-picker";
 import { formatMoney } from "@/lib/money";
 import { resolveWarranty, type PricedWarranty } from "@/lib/warranty";
+import { checkPeriod } from "@/lib/warranty-claim-shared";
 
 export function ProductBuyBox({
   product,
   stock,
   warranties = [],
   unitLkrCents,
+  freeCheckHours = 0,
 }: {
   product: Omit<CartLine, "quantity" | "warrantyPlanId">;
   stock: number;
@@ -22,6 +24,8 @@ export function ProductBuyBox({
   warranties?: PricedWarranty[];
   /** Product price in LKR (after any sale), for the total line. */
   unitLkrCents: number;
+  /** Store-wide period after delivery in which any key can be reported. */
+  freeCheckHours?: number;
 }) {
   const router = useRouter();
   const add = useCart((s) => s.add);
@@ -98,6 +102,16 @@ export function ProductBuyBox({
           Buy now
         </Button>
       </div>
+
+      {freeCheckHours > 0 && (
+        <p className="flex gap-2 text-xs text-muted-foreground">
+          <ShieldCheck className="mt-px size-3.5 shrink-0 text-success" />
+          <span>
+            Key not working? Report it within {checkPeriod(freeCheckHours)} of delivery for a replacement or
+            refund.{warranties.length > 0 ? " Add a warranty for longer cover." : ""}
+          </span>
+        </p>
+      )}
     </div>
   );
 }

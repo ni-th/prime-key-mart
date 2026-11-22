@@ -133,3 +133,31 @@ export async function reorderWarrantyPlans(ids: string[]): Promise<FormResult> {
   revalidateAll();
   return { ok: true, message: "Order saved." };
 }
+
+export type FreeCheckState = { status: "idle" } | { status: "done"; message: string } | { status: "error"; error: string };
+
+/**
+ * How long after delivery every key (warranty or not) can be reported as not
+ * working. 0 turns it off. Capped at a week: longer cover is what warranty
+ * plans are for.
+ */
+export async function saveFreeCheckHours(_prev: FreeCheckState, formData: FormData): Promise<FreeCheckState> {
+  const admin = await getAdminSession();
+  if (!admin) return { status: "error", error: "Not authorized." };
+
+  const hours = Number(formData.get("hours"));
+  if (!Number.isInteger(hours) || hours < 0 || hours > 168) {
+    return { status: "error", error: "Enter whole hours from 0 (off) to 168 (7 days)." };
+  }
+  await prisma.storeSettings.upsert({
+    where: { id: "default" },
+    create: { id: "default", freeCheckHours: hours, updatedBy: admin.user.email },
+    update: { freeCheckHours: hours, updatedBy: admin.user.email },
+  });
+  revalidatePath("/admin/warranty");
+  revalidatePath("/", "layout");
+  return {
+    status: "done",
+    message: hours === 0 ? "Free check period turned off." : `Every key can now be reported within ${hours} hours of delivery.`,
+  };
+}

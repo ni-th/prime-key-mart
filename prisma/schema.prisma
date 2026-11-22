@@ -77,6 +77,8 @@ model StoreSettings {
   lkrMarginPercent  Float  @default(0)
   /// Payment gateway (PayHere) fee as a percent of each payment, for profit reports.
   gatewayFeePercent Float  @default(0)
+  /// Every key (warranty or not) can be reported this many hours after delivery. 0 = off.
+  freeCheckHours    Int    @default(24)
 
   // --- Admin alerts (emails to the store owner) ---
   /// Comma-separated recipients. Empty = ADMIN_EMAIL from the environment.
@@ -212,6 +214,10 @@ model WarrantyClaim {
   replacementKey       LicenseKey? @relation("ReplacementKey", fields: [replacementKeyId], references: [id])
   /// ADMIN ONLY. Cost of the replacement key (order currency, cents).
   replacementCostCents Int?
+  /// WARRANTY (paid plan) or FREE_CHECK (the short check period every key gets).
+  coverage             String      @default("WARRANTY")
+  /// Amount refunded for this one key (order currency, cents), when refunded.
+  refundCents          Int?
   resolvedAt           DateTime?
   resolvedBy           String?
   createdAt            DateTime    @default(now())

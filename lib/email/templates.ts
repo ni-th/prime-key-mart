@@ -156,7 +156,7 @@ export function warrantyClaimReceivedEmail(o: {
       viewUrl: orderViewUrl(o.orderNumber),
     },
     {
-      subject: `We got your warranty claim for order ${o.orderNumber}`,
+      subject: `We got your report about order ${o.orderNumber}`,
       preheader: "We'll check your key and send a replacement if it's covered.",
     },
   );
@@ -164,8 +164,8 @@ export function warrantyClaimReceivedEmail(o: {
 
 const CLAIM_OUTCOME = {
   REPLACED: { headline: "Here's your replacement key", tone: "success" as Tone },
-  REFUNDED: { headline: "Your warranty claim was refunded", tone: "info" as Tone },
-  REJECTED: { headline: "About your warranty claim", tone: "warning" as Tone },
+  REFUNDED: { headline: "Your key was refunded", tone: "info" as Tone },
+  REJECTED: { headline: "About your key claim", tone: "warning" as Tone },
 };
 
 export function warrantyClaimResolvedEmail(o: {
@@ -175,6 +175,8 @@ export function warrantyClaimResolvedEmail(o: {
   newKey?: string | null;
   warrantyNote?: string | null;
   note?: string | null;
+  /** Formatted amount refunded for this key, e.g. "LKR 1,250". */
+  refund?: string | null;
 }): EmailContent {
   const copy = CLAIM_OUTCOME[o.outcome];
   return renderEmail(
@@ -190,7 +192,7 @@ export function warrantyClaimResolvedEmail(o: {
       preheader:
         o.outcome === "REPLACED"
           ? `Your new ${o.productName} key is inside.`
-          : `An update on your warranty claim for order ${o.orderNumber}.`,
+          : `An update on your claim for order ${o.orderNumber}.`,
     },
   );
 }

@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const orderDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const coverEnd = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 function ClaimForm({
   orderNumber,
@@ -97,13 +98,11 @@ function ClaimForm({
 
 /** Small line under a key: the claim link, or where its claim stands. */
 function KeyStatus({
-  item,
   k,
   done,
   open,
   onOpen,
 }: {
-  item: OrderKeyItem;
   k: OrderKeyItem["keys"][number];
   done: string | undefined;
   open: boolean;
@@ -127,16 +126,25 @@ function KeyStatus({
         </span>
       </p>
     ) : null;
+  // Keys without a (running) warranty: say how long the free check lasts.
+  const freeCheck =
+    k.cover?.kind === "FREE_CHECK" && k.cover.endsAt && !lastClaim ? (
+      <p className="text-xs text-muted-foreground">
+        Check it now: you can report a problem until{" "}
+        {/* Local time differs from the server's, so the client renders its own. */}
+        <span suppressHydrationWarning>{coverEnd.format(new Date(k.cover.endsAt))}</span>.
+      </p>
+    ) : null;
   const claimLink =
-    item.active && !open ? (
-      <button type="button" onClick={onOpen} className="text-xs font-medium text-primary hover:underline">
-        Key stopped working?
+    k.cover && !open ? (
+      <button type="button" onClick={onOpen} className="shrink-0 text-xs font-medium text-primary hover:underline">
+        Key not working?
       </button>
     ) : null;
   if (!lastClaim && !claimLink) return null;
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-      {lastClaim ?? <span />}
+      {lastClaim ?? freeCheck ?? <span />}
       {claimLink}
     </div>
   );
@@ -144,8 +152,9 @@ function KeyStatus({
 
 /**
  * The customer's delivered keys, one card per product. Keys are hidden until
- * the eye is tapped. Products with a warranty show it in the heading and a
- * "Key stopped working?" link under each covered key.
+ * the eye is tapped. Products with a warranty show it in the heading. Every
+ * key that's still covered (warranty, or the free check period after
+ * delivery) has a "Key not working?" link under it.
  */
 export function OrderKeys({
   token,
@@ -170,7 +179,7 @@ export function OrderKeys({
       <Card className="p-8 text-center text-sm text-muted-foreground">{emptyText}</Card>
     ) : null;
   }
-  const anyWarranty = delivered.some((i) => i.warrantyName);
+  const anyCover = delivered.some((i) => i.warrantyName || i.keys.some((k) => k.cover));
 
   return (
     <div className="space-y-4">
@@ -206,7 +215,6 @@ export function OrderKeys({
                 {k.isReplacement && <div className="text-xs text-muted-foreground">Replacement key</div>}
                 <CopyKey value={k.value} />
                 <KeyStatus
-                  item={item}
                   k={k}
                   done={done[k.id]}
                   open={openKey === k.id}
@@ -230,10 +238,11 @@ export function OrderKeys({
           </ul>
         </Card>
       ))}
-      {anyWarranty && (
+      {anyCover && (
         <p className="text-xs text-muted-foreground">
-          A warranty covers keys that stop working through no fault of yours. We check each claim and
-          send a replacement (or a refund) by email.
+          Activate your keys as soon as you get them. If one doesn&apos;t work, use the link under it
+          while it&apos;s covered: we check each report and email you a replacement or a refund for that
+          key.
         </p>
       )}
     </div>

@@ -1,4 +1,4 @@
-{{!-- Admin resolved a warranty claim. Data: orderNumber, productName, outcome (REPLACED|REFUNDED|REJECTED), headline, tone, newKey?, note?, viewUrl --}}
+{{!-- Admin resolved a warranty claim. Data: orderNumber, productName, outcome (REPLACED|REFUNDED|REJECTED), headline, tone, newKey?, note?, refund?, viewUrl --}}
 {{> heading text=headline}}
 {{#> para}}About your <strong>{{productName}}</strong> key from order <strong>{{orderNumber}}</strong>:{{/para}}
 
@@ -12,7 +12,7 @@
 {{/if}}
 
 {{#if (eq outcome "REFUNDED")}}
-  {{#> callout tone="info"}}Refunds usually reach your account within 5-10 working days, depending on your bank.{{/callout}}
+  {{#> callout tone="info"}}{{#if refund}}We've refunded <strong>{{refund}}</strong> for this key. {{/if}}Refunds usually reach your account within 5-10 working days, depending on your bank.{{/callout}}
 {{/if}}
 
 {{> button url=viewUrl label="View your order"}}

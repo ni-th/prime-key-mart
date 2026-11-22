@@ -6,7 +6,8 @@ import { sendWarrantyClaimResolvedEmail } from "@/lib/mailer";
 import { getPricingSettings } from "@/lib/pricing";
 import { asCurrency, convertCost } from "@/lib/profit";
 import { warrantySummary } from "@/lib/warranty";
-import type { ClaimStatus, OrderKeyItem } from "@/lib/warranty-claim-shared";
+import { formatMoney } from "@/lib/money";
+import type { ClaimStatus, KeyCover, OrderKeyItem } from "@/lib/warranty-claim-shared";
 
 /** Covered right now: lifetime (no end) or not yet expired. */
 export function warrantyActive(item: {
@@ -17,6 +18,35 @@ export function warrantyActive(item: {
   if (!item.warrantyName) return false;
   if (item.warrantyDays === null) return true; // lifetime
   return item.warrantyExpiresAt !== null && item.warrantyExpiresAt > new Date();
+}
+
+/** Hours after delivery during which any key can be reported (store setting). */
+export async function getFreeCheckHours(): Promise<number> {
+  const row = await prisma.storeSettings.findUnique({ where: { id: "default" }, select: { freeCheckHours: true } });
+  return row?.freeCheckHours ?? 24;
+}
+
+/**
+ * Whether a key can be reported now. A paid warranty covers until its end
+ * date; without one (or after it ends) every key still gets the free check
+ * period counted from when that key was delivered. Whichever ends later wins.
+ */
+export function keyCover(
+  item: { warrantyName: string | null; warrantyDays: number | null; warrantyExpiresAt: Date | null },
+  soldAt: Date | null,
+  freeCheckHours: number,
+  now = new Date(),
+): KeyCover | null {
+  const free =
+    soldAt && freeCheckHours > 0 ? new Date(soldAt.getTime() + freeCheckHours * 3_600_000) : null;
+  const freeOpen = free !== null && free > now;
+  if (warrantyActive(item)) {
+    const ends = item.warrantyDays === null ? null : item.warrantyExpiresAt;
+    // A short warranty can end before the free check (e.g. replacement key on day 6 of 7).
+    if (ends && freeOpen && free > ends) return { kind: "FREE_CHECK", endsAt: free.toISOString() };
+    return { kind: "WARRANTY", endsAt: ends ? ends.toISOString() : null };
+  }
+  return freeOpen ? { kind: "FREE_CHECK", endsAt: free.toISOString() } : null;
 }
 
 /**
@@ -39,6 +69,8 @@ export async function keysForUser(userId: string): Promise<OrderKeyItem[]> {
 }
 
 async function keyItems(where: Prisma.OrderItemWhereInput): Promise<OrderKeyItem[]> {
+  const freeHours = await getFreeCheckHours();
+  const now = new Date();
   const items = await prisma.orderItem.findMany({
     where,
     orderBy: { order: { createdAt: "desc" } },
@@ -67,6 +99,7 @@ async function keyItems(where: Prisma.OrderItemWhereInput): Promise<OrderKeyItem
         id: k.id,
         label: `...${plain.replace(/[^A-Za-z0-9]/g, "").slice(-5)}`,
         value: plain,
+        cover: keyCover(item, k.soldAt, freeHours, now),
         isReplacement: item.warrantyClaims.some((c) => c.replacementKeyId === k.id),
         claim: claim
           ? {
@@ -80,6 +113,11 @@ async function keyItems(where: Prisma.OrderItemWhereInput): Promise<OrderKeyItem
   }));
 }
 
+/** What the customer paid for one key of this line: its price plus its warranty fee. */
+export function perKeyPaidCents(item: { unitPriceCents: number; warrantyCents: number | null }): number {
+  return item.unitPriceCents + (item.warrantyCents ?? 0);
+}
+
 export type ResolveClaimResult =
   | { ok: true; orderNumber: string; message: string }
   | { ok: false; orderNumber: string | null; error: string };
@@ -88,7 +126,9 @@ export type ResolveClaimResult =
  * Close an open warranty claim (admin decision, already authorized by the caller):
  * - replace: sell a new key from stock to the same order line, mark the old
  *   one replaced and email the new key.
- * - refund: record it (the money is returned in PayHere separately).
+ * - refund: record the amount refunded for this one key (the money is
+ *   returned in PayHere separately). Defaults to what the key cost the
+ *   customer (its price plus its warranty fee).
  * - reject: not covered; the note explains why (required).
  * The note is emailed to the customer in every case.
  */
@@ -96,6 +136,8 @@ export async function resolveClaim(opts: {
   claimId: string;
   action: string;
   note: string;
+  /** Refund for this key in the order currency, e.g. "1250" or "12.50". Blank = full key price. */
+  refundAmount?: string;
   adminEmail: string | null;
 }): Promise<ResolveClaimResult> {
   const { claimId, action } = opts;
@@ -113,6 +155,22 @@ export async function resolveClaim(opts: {
   if (claim.status !== "OPEN") return { ok: false, orderNumber: null, error: "This claim is already closed." };
   const { orderItem: item } = claim;
   const order = item.order;
+  const keyPaidCents = perKeyPaidCents(item);
+  let refundCents: number | null = null;
+  if (action === "refund") {
+    const raw = (opts.refundAmount ?? "").trim();
+    if (raw === "") refundCents = keyPaidCents;
+    else {
+      const n = Number(raw.replace(/,/g, ""));
+      if (!Number.isFinite(n) || n < 0) {
+        return { ok: false, orderNumber: order.orderNumber, error: "Enter a valid refund amount." };
+      }
+      refundCents = Math.round(n * 100);
+      if (refundCents > keyPaidCents) {
+        return { ok: false, orderNumber: order.orderNumber, error: "That's more than the customer paid for this key." };
+      }
+    }
+  }
 
   let newKey: string | null = null;
   if (action === "replace") {
@@ -180,6 +238,7 @@ export async function resolveClaim(opts: {
       where: { id: claim.id, status: "OPEN" },
       data: {
         status: action === "refund" ? "REFUNDED" : "REJECTED",
+        refundCents,
         resolvedAt: new Date(),
         resolvedBy: opts.adminEmail,
         resolutionNote: note || null,
@@ -196,6 +255,7 @@ export async function resolveClaim(opts: {
       productName: item.productName,
       outcome,
       newKey,
+      refund: refundCents !== null ? formatMoney(refundCents, order.currency.toUpperCase()) : null,
       warrantyNote: warrantySummary(item),
       note: note || null,
     });
@@ -208,7 +268,7 @@ export async function resolveClaim(opts: {
     outcome === "REPLACED"
       ? "Replacement key sent."
       : outcome === "REFUNDED"
-        ? "Claim marked refunded. Remember to refund the payment in PayHere."
+        ? `Refund of ${formatMoney(refundCents ?? 0, order.currency.toUpperCase())} recorded. Remember to refund it in PayHere (partial refund).`
         : "Claim closed as not covered.";
   return emailNote
     ? { ok: false, orderNumber: order.orderNumber, error: done + emailNote }

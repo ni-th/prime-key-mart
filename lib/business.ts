@@ -20,4 +20,4 @@ export const BUSINESS = {
 } as const;
 
 /** Date shown as "Last updated" on the policy pages. Bump when they change. */
-export const POLICIES_UPDATED = "21 November 2026";
+export const POLICIES_UPDATED = "22 November 2026";

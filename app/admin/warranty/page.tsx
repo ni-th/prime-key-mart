@@ -4,12 +4,15 @@ import { Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { WarrantyPlanList } from "@/components/admin/warranty-plan-list";
+import { FreeCheckForm } from "@/components/admin/free-check-form";
+import { Card } from "@/components/ui/card";
+import { getFreeCheckHours } from "@/lib/warranty-claims";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Warranty · Admin" };
 
 export default async function AdminWarrantyPage() {
-  const [plans, customCount, storeCount, productCount, openClaims] = await Promise.all([
+  const [plans, customCount, storeCount, productCount, openClaims, freeCheckHours] = await Promise.all([
     prisma.warrantyPlan.findMany({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       include: { _count: { select: { products: true } } },
@@ -18,6 +21,7 @@ export default async function AdminWarrantyPage() {
     prisma.product.count({ where: { warrantyMode: "STORE" } }),
     prisma.product.count(),
     prisma.warrantyClaim.count({ where: { status: "OPEN" } }),
+    getFreeCheckHours(),
   ]);
   const withWarranty = customCount + storeCount;
 
@@ -46,7 +50,7 @@ export default async function AdminWarrantyPage() {
             href="/admin/warranty/claims"
             className={cn(buttonVariants({ variant: openClaims > 0 ? "default" : "outline", size: "sm" }))}
           >
-            Claims{openClaims > 0 ? ` (${openClaims} open)` : ""}
+            Key claims{openClaims > 0 ? ` (${openClaims} open)` : ""}
           </Link>
           <Link href="/admin/warranty/new" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
             <Plus className="size-4" />
@@ -54,6 +58,19 @@ export default async function AdminWarrantyPage() {
           </Link>
         </div>
       </div>
+
+      <Card className="space-y-3 p-5">
+        <div>
+          <h2 className="font-medium">Free check period (every key)</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Every key, with or without a warranty, can be reported as not working for this long
+            after it&apos;s delivered, so a dead key is always replaced or refunded. Keep it shorter
+            than your cheapest plan ({plans.length ? `${Math.min(...plans.map((p) => p.days ?? Infinity))} days` : "no plans yet"}) so
+            warranties stay worth buying. 0 turns it off.
+          </p>
+        </div>
+        <FreeCheckForm hours={freeCheckHours} />
+      </Card>
 
       <WarrantyPlanList
         key={plans.map((p) => p.id).join(",")}

@@ -10,7 +10,7 @@ import { sendAlert } from "@/lib/alerts";
 import { sendWarrantyClaimReceivedEmail } from "@/lib/mailer";
 import { rateLimit } from "@/lib/rate-limit";
 import { warrantySummary } from "@/lib/warranty";
-import { resolveClaim, warrantyActive } from "@/lib/warranty-claims";
+import { getFreeCheckHours, keyCover, resolveClaim } from "@/lib/warranty-claims";
 import { CLAIM_REASONS, type ClaimReason } from "@/lib/warranty-claim-shared";
 
 export type ClaimResult = { ok: true; message: string } | { ok: false; error: string };
@@ -51,8 +51,14 @@ export async function createWarrantyClaim(input: {
   if (!item || !key || key.status !== "SOLD" || key.replacedAt) {
     return { ok: false, error: "That key isn't part of this order." };
   }
-  if (!warrantyActive(item)) {
-    return { ok: false, error: "The warranty for this key has ended. Reply to your order email and we'll still try to help." };
+  const cover = keyCover(item, key.soldAt, await getFreeCheckHours());
+  if (!cover) {
+    return {
+      ok: false,
+      error: item.warrantyName
+        ? "The warranty for this key has ended. Reply to your order email and we'll still try to help."
+        : "The check period for this key has ended. Reply to your order email and we'll still try to help.",
+    };
   }
 
   const open = await prisma.warrantyClaim.findFirst({ where: { keyId: key.id, status: "OPEN" }, select: { id: true } });
@@ -63,19 +69,19 @@ export async function createWarrantyClaim(input: {
   }
 
   await prisma.warrantyClaim.create({
-    data: { orderItemId: item.id, keyId: key.id, reason: d.reason, message: d.message || null },
+    data: { orderItemId: item.id, keyId: key.id, reason: d.reason, message: d.message || null, coverage: cover.kind },
   });
 
   const reasonLabel = CLAIM_REASONS[d.reason];
   await sendAlert({
     type: "WARRANTY_CLAIM",
-    subject: `Warranty claim: ${item.productName} (order ${order.orderNumber})`,
+    subject: `Key claim: ${item.productName} (order ${order.orderNumber})`,
     lines: [
-      `${order.email} says their ${item.productName} key stopped working.`,
+      `${order.email} says their ${item.productName} key isn't working.`,
       ``,
       `Problem: ${reasonLabel}`,
       `Message: ${d.message || "(none)"}`,
-      `Warranty: ${warrantySummary(item) ?? "-"}`,
+      `Cover: ${cover.kind === "WARRANTY" ? (warrantySummary(item) ?? "Warranty") : "Free check period after delivery"}`,
       ``,
       `Review it and send a replacement, refund or reply: ${SITE_URL}/admin/warranty/claims`,
     ],
@@ -106,6 +112,7 @@ export async function resolveWarrantyClaim(_prev: ClaimResult | null, formData: 
     claimId: String(formData.get("claimId") ?? ""),
     action: String(formData.get("action") ?? ""),
     note: String(formData.get("note") ?? ""),
+    refundAmount: String(formData.get("refundAmount") ?? ""),
     adminEmail: admin.user.email ?? null,
   });
   revalidatePath("/admin/warranty/claims");

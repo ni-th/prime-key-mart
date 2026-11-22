@@ -45,10 +45,20 @@ export async function getAdminStats() {
     prisma.product.count(),
     prisma.order.count({ where: { issueReportedAt: { not: null }, issueResolvedAt: null } }),
     prisma.warrantyClaim.count({ where: { status: "OPEN" } }),
-    // Replacement keys sent under warranty cost money too.
+    // Key claims: replacement keys cost money, per-key refunds give it back.
     prisma.warrantyClaim.findMany({
-      where: { status: "REPLACED", replacementCostCents: { not: null }, orderItem: { order: { status: "FULFILLED" } } },
-      select: { replacementCostCents: true, orderItem: { select: { order: { select: { currency: true } } } } },
+      where: {
+        OR: [
+          { status: "REPLACED", replacementCostCents: { not: null } },
+          { status: "REFUNDED", refundCents: { gt: 0 } },
+        ],
+        orderItem: { order: { status: "FULFILLED" } },
+      },
+      select: {
+        replacementCostCents: true,
+        refundCents: true,
+        orderItem: { select: { order: { select: { currency: true } } } },
+      },
     }),
   ]);
 
@@ -70,7 +80,9 @@ export async function getAdminStats() {
 
   for (const c of claimCosts) {
     const t = totals.get(c.orderItem.order.currency.toUpperCase());
-    if (t) t.profitCents -= c.replacementCostCents ?? 0;
+    if (!t) continue;
+    t.profitCents -= (c.replacementCostCents ?? 0) + (c.refundCents ?? 0);
+    t.revenueCents -= c.refundCents ?? 0;
   }
 
   return {
@@ -279,17 +291,31 @@ export async function getDiscountFormProducts() {
 
 /** Saved fee + per-line costs of one order, for the admin order page. */
 export async function getOrderProfit(orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: {
-      totalCents: true,
-      feeCents: true,
-      items: { select: { id: true, unitCostCents: true, quantity: true } },
-    },
-  });
+  const [order, claims] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        totalCents: true,
+        feeCents: true,
+        items: { select: { id: true, unitCostCents: true, quantity: true } },
+      },
+    }),
+    prisma.warrantyClaim.findMany({
+      where: { orderItem: { orderId }, status: { in: ["REPLACED", "REFUNDED"] } },
+      select: { replacementCostCents: true, refundCents: true },
+    }),
+  ]);
   if (!order) return null;
+  const base = orderProfit(order);
+  const replacementCostCents = claims.reduce((n, c) => n + (c.replacementCostCents ?? 0), 0);
+  const refundedCents = claims.reduce((n, c) => n + (c.refundCents ?? 0), 0);
   return {
-    ...orderProfit(order),
+    ...base,
+    /** Replacement keys sent for claims on this order. */
+    replacementCostCents,
+    /** Money returned for individual keys (claims). */
+    refundedCents,
+    profitCents: base.profitCents - replacementCostCents - refundedCents,
     costByItem: new Map(order.items.map((i) => [i.id, i.unitCostCents])),
   };
 }
