@@ -17,17 +17,14 @@ import { Textarea } from "@/components/ui/textarea";
 export function ReportPaymentIssue({
   orderNumber,
   token,
-  email,
   alreadyReported = false,
   closedMessage = null,
   canFollowUp = true,
   defaultOpen = false,
 }: {
   orderNumber: string;
-  /** Signed order link token (success page), if any. */
+  /** Signed order link token (success page / emailed link). Signed-in owners need none. */
   token?: string | null;
-  /** Checkout email (order lookup), if any. Signed-in owners need neither. */
-  email?: string | null;
   alreadyReported?: boolean;
   /** We checked and found no payment: our message to the customer. */
   closedMessage?: string | null;
@@ -102,7 +99,7 @@ export function ReportPaymentIssue({
       onSubmit={(e) => {
         e.preventDefault();
         startTransition(async () => {
-          setResult(await reportPaymentIssue({ orderNumber, token, email, paymentRef, note }));
+          setResult(await reportPaymentIssue({ orderNumber, token, paymentRef, note }));
         });
       }}
     >

@@ -1,6 +1,7 @@
 import { BRAND } from "@/lib/brand";
 import { formatMoney } from "@/lib/money";
 import { SITE_URL, renderEmail, type RenderedEmail, type Tone } from "@/lib/email/render";
+import { orderViewUrl } from "@/lib/order-token";
 
 /**
  * One function per email. Each prepares the data for its Handlebars template
@@ -30,11 +31,67 @@ export function orderKeysEmail(o: {
         { label: "Order", value: o.orderNumber },
         { label: "Total paid", value: total },
       ],
-      accountUrl: `${SITE_URL}/account/orders/${encodeURIComponent(o.orderNumber)}`,
+      viewUrl: orderViewUrl(o.orderNumber),
     },
     {
       subject: `Your ${BRAND.name} keys for order ${o.orderNumber}`,
       preheader: `Your ${keyCount === 1 ? "license key is" : `${keyCount} license keys are`} ready. Order ${o.orderNumber}, ${total}.`,
+    },
+  );
+}
+
+const STATUS_COPY: Record<string, { headline: string; message: string; tone: Tone }> = {
+  PENDING: {
+    headline: "We're waiting for your payment",
+    message: "We haven't received the payment confirmation yet. If you paid, your keys will be emailed as soon as it arrives. If it's been more than an hour, open your order and tell us.",
+    tone: "info",
+  },
+  PAID: {
+    headline: "Payment received, keys on the way",
+    message: "Your payment went through. We're preparing your keys and will email them shortly.",
+    tone: "success",
+  },
+  EXPIRED: {
+    headline: "We didn't receive a payment",
+    message: "This order timed out before we got a payment confirmation. If money was taken from your account, open your order and tell us so we can send your keys.",
+    tone: "warning",
+  },
+  FAILED: {
+    headline: "The payment didn't go through",
+    message: "No payment was taken for this order. If you see a pending charge from your bank, it's a temporary hold that will be released.",
+    tone: "warning",
+  },
+  REFUNDED: {
+    headline: "This order was refunded",
+    message: "The payment for this order was refunded. Refunds usually reach your account within 5-10 working days.",
+    tone: "info",
+  },
+};
+
+/** Find my order, for an order without keys to send (pending, failed, ...). */
+export function orderStatusEmail(o: {
+  orderNumber: string;
+  status: string;
+  totalCents: number;
+  currency: string;
+}): EmailContent {
+  const copy = STATUS_COPY[o.status] ?? STATUS_COPY.PENDING;
+  const total = formatMoney(o.totalCents, o.currency.toUpperCase());
+  return renderEmail(
+    "order-status",
+    {
+      ...copy,
+      orderNumber: o.orderNumber,
+      total,
+      detailRows: [
+        { label: "Order", value: o.orderNumber },
+        { label: "Total", value: total },
+      ],
+      viewUrl: orderViewUrl(o.orderNumber),
+    },
+    {
+      subject: `Your ${BRAND.name} order ${o.orderNumber}`,
+      preheader: copy.headline,
     },
   );
 }
@@ -77,6 +134,7 @@ const ALERT_STYLE: Record<string, { tone: Tone; label: string }> = {
   FAILED_DELIVERY: { tone: "danger", label: "Action needed" },
   PAYMENT_PROBLEM: { tone: "danger", label: "Payment problem" },
   CUSTOMER_REPORT: { tone: "warning", label: "Customer report" },
+  SECURITY: { tone: "warning", label: "Security" },
   OUT_OF_STOCK: { tone: "danger", label: "Out of stock" },
   LOW_STOCK: { tone: "warning", label: "Low stock" },
   NEW_ORDER: { tone: "success", label: "New order" },

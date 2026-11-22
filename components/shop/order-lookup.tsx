@@ -2,18 +2,13 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Loader2, MailCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatMoney } from "@/lib/money";
-import { OrderStatusBadge } from "@/components/shop/order-status-badge";
-import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
-import { canReportPaymentIssue } from "@/lib/payment-issue";
-import { KeyList } from "@/components/shop/key-list";
 import { lookupOrderAction, type LookupState } from "@/app/actions/order-lookup";
 
 function SubmitButton() {
@@ -21,110 +16,102 @@ function SubmitButton() {
   return (
     <Button type="submit" className="w-full" disabled={pending}>
       {pending && <Loader2 className="size-4 animate-spin" />}
-      Find my order
+      Email me my order
     </Button>
   );
 }
 
-export function OrderLookup() {
-  const [state, formAction] = useActionState<LookupState, FormData>(
-    lookupOrderAction,
-    { status: "idle" },
-  );
+/**
+ * Find my order: emails the order (keys if delivered) to the address used at
+ * checkout. Nothing about the order is ever shown here, so knowing someone's
+ * order number and email doesn't give away their keys.
+ */
+export function OrderLookup({ supportEmail }: { supportEmail?: string | null }) {
+  const [state, formAction] = useActionState<LookupState, FormData>(lookupOrderAction, {
+    status: "idle",
+  });
+
+  if (state.status === "blocked") {
+    return (
+      <Card className="space-y-3 p-6 text-sm">
+        <div className="flex items-center gap-2 font-medium">
+          <ShieldAlert className="size-5 text-destructive" />
+          We couldn&apos;t verify this order
+        </div>
+        <p className="text-muted-foreground">
+          The order number and email didn&apos;t match too many times, so Find my order is paused
+          for 24 hours to protect our customers&apos; keys.
+        </p>
+        <p className="text-muted-foreground">
+          Please contact the Keysby team and we&apos;ll help you get your order. Include your order
+          number and, if you have it, your PayHere receipt.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          {supportEmail && (
+            <a
+              href={`mailto:${supportEmail}?subject=${encodeURIComponent("Help finding my order")}`}
+              className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Email {supportEmail}
+            </a>
+          )}
+          <Link
+            href="/contact"
+            className="inline-flex h-8 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted"
+          >
+            Contact page
+          </Link>
+        </div>
+      </Card>
+    );
+  }
+
+  if (state.status === "sent") {
+    return (
+      <Card className="space-y-3 p-6 text-sm">
+        <div className="flex items-center gap-2 font-medium">
+          <MailCheck className="size-5 text-success" />
+          Check your email
+        </div>
+        <p className="text-muted-foreground">
+          If an order matches, we&apos;ve sent its details to <strong>{state.email}</strong>. Delivered
+          orders include your license keys. It usually arrives within a minute; check your spam
+          folder too.
+        </p>
+        <p className="text-muted-foreground">
+          Nothing arrived? Make sure the order number and email match your PayHere receipt, or reply
+          to any email from us.
+        </p>
+        {/* Full reload resets the form (and the server keeps counting attempts). */}
+        <a href="/order-lookup" className="inline-block text-sm font-medium text-primary hover:underline">
+          Look up another order
+        </a>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <Card className="p-6">
-        <form action={formAction} className="space-y-4">
-          {state.status === "error" && (
-            <Alert variant="destructive">
-              <AlertDescription>{state.message}</AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="orderNumber">Order number</Label>
-            <Input
-              id="orderNumber"
-              name="orderNumber"
-              placeholder="KM-XXXXXX"
-              required
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email used at checkout</Label>
-            <Input id="email" name="email" type="email" required />
-          </div>
-          <SubmitButton />
-        </form>
-      </Card>
-
-      {state.status === "ok" && (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="font-medium">{state.order.orderNumber}</div>
-              <div className="text-sm text-muted-foreground">
-                {state.order.email}
-              </div>
-            </div>
-            <OrderStatusBadge status={state.order.status} />
-          </div>
-
-          <Card className="p-5">
-            <ul className="space-y-2 text-sm">
-              {state.order.items.map((item) => (
-                <li
-                  key={item.productName}
-                  className="flex justify-between gap-3"
-                >
-                  <span className="text-muted-foreground">
-                    {item.productName}
-                    {item.quantity > 1 ? ` × ${item.quantity}` : ""}
-                  </span>
-                  <span className="tabular-nums">
-                    {formatMoney(item.unitPriceCents * item.quantity, state.order.currency.toUpperCase())}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <Separator className="my-3" />
-            <div className="flex justify-between font-medium">
-              <span>Total</span>
-              <span className="tabular-nums">
-                {formatMoney(state.order.totalCents, state.order.currency.toUpperCase())}
-              </span>
-            </div>
-          </Card>
-
-          {state.order.status === "FULFILLED" ? (
-            <div className="space-y-3">
-              <h2 className="font-medium">Your license keys</h2>
-              <KeyList groups={state.order.keyGroups} />
-            </div>
-          ) : (
-            <Card className="space-y-4 p-5 text-sm text-muted-foreground">
-              <p>
-                {state.order.status === "PAID"
-                  ? "Your payment was received and your keys are being prepared. We'll email them shortly."
-                  : state.order.status === "REFUNDED"
-                    ? "This order was refunded."
-                    : state.order.status === "FAILED"
-                      ? "The payment for this order didn't go through, so no payment was taken."
-                      : "We haven't received a payment for this order, so there are no keys to show yet."}
-              </p>
-              {canReportPaymentIssue(state.order.status) && (
-                <ReportPaymentIssue
-                  orderNumber={state.order.orderNumber}
-                  email={state.order.email}
-                  alreadyReported={state.order.reported}
-                  closedMessage={state.order.closedMessage}
-                  canFollowUp={state.order.canFollowUp}
-                />
-              )}
-            </Card>
-          )}
+    <Card className="p-6">
+      <form action={formAction} className="space-y-4">
+        {state.status === "error" && (
+          <Alert variant="destructive">
+            <AlertDescription>{state.message}</AlertDescription>
+          </Alert>
+        )}
+        <div className="space-y-1.5">
+          <Label htmlFor="orderNumber">Order number</Label>
+          <Input id="orderNumber" name="orderNumber" placeholder="KM-XXXXXX" required />
         </div>
-      )}
-    </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email used at checkout</Label>
+          <Input id="email" name="email" type="email" required />
+        </div>
+        <SubmitButton />
+        <p className="text-xs text-muted-foreground">
+          For your security we never show keys here. We&apos;ll email your order to the address
+          used at checkout.
+        </p>
+      </form>
+    </Card>
   );
 }

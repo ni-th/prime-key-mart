@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { OrderLookup } from "@/components/shop/order-lookup";
+import { BUSINESS } from "@/lib/business";
 
 export const metadata: Metadata = {
   title: "Find my order",
-  description: "Look up a guest order and re-download your license keys.",
+  description: "Get your order and license keys emailed to you again.",
 };
 
 export default function OrderLookupPage() {
@@ -13,10 +14,10 @@ export default function OrderLookupPage() {
         Find my order
       </h1>
       <p className="mb-8 text-sm text-muted-foreground">
-        Enter your order number and the email you used at checkout to view your
-        license keys again.
+        Lost your keys email? Enter your order number (it&apos;s on your PayHere receipt)
+        and the email you used at checkout, and we&apos;ll email your order again.
       </p>
-      <OrderLookup />
+      <OrderLookup supportEmail={BUSINESS.email || null} />
     </div>
   );
 }

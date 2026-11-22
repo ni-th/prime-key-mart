@@ -5,6 +5,7 @@ import {
   passwordResetEmail,
   paymentReportClosedEmail,
   paymentReportReceivedEmail,
+  orderStatusEmail,
   type EmailContent,
 } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/email/render";
@@ -30,6 +31,12 @@ export const EMAIL_SAMPLES: {
           { name: "Microsoft Office 2021 Pro Plus", keys: ["XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99", "NMMKJ-6RK4F-KMJVX-8D9MJ-6MWKP"] },
         ],
       }),
+  },
+  {
+    id: "order-status",
+    name: "Order status (Find my order)",
+    when: "Find my order, for an order that isn't delivered (e.g. expired).",
+    render: () => orderStatusEmail({ orderNumber: "KM-8F3K2Q", status: "EXPIRED", totalCents: 1199700, currency: "lkr" }),
   },
   {
     id: "password-reset",

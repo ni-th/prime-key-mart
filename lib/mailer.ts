@@ -8,8 +8,10 @@ import {
   passwordResetEmail,
   paymentReportClosedEmail,
   paymentReportReceivedEmail,
+  orderStatusEmail,
   type EmailContent,
 } from "@/lib/email/templates";
+import { EMAIL_LOGO } from "@/lib/email/render";
 
 let cached: Transporter | null = null;
 let cachedIsEthereal = false;
@@ -72,6 +74,8 @@ async function send(to: string, email: EmailContent): Promise<void> {
     subject: email.subject,
     text: email.text,
     html: email.html,
+    // The header logo, referenced as cid:keysby-logo in the template.
+    attachments: [{ filename: EMAIL_LOGO.filename, path: EMAIL_LOGO.path, cid: EMAIL_LOGO.cid }],
   });
   if (cachedIsEthereal) {
     const preview = nodemailer.getTestMessageUrl(info);
@@ -129,6 +133,17 @@ export async function sendPasswordResetEmail(
 /** Heads-up after a password change, so an owner notices an unexpected reset. */
 export async function sendPasswordChangedEmail(to: string): Promise<void> {
   await send(to, passwordChangedEmail());
+}
+
+/** Find my order: the order's status and private link, for orders without keys. */
+export async function sendOrderStatusEmail(order: {
+  email: string;
+  orderNumber: string;
+  status: string;
+  totalCents: number;
+  currency: string;
+}): Promise<void> {
+  await send(order.email, orderStatusEmail(order));
 }
 
 /** Sends the license keys for a fulfilled order. Safe to call more than once. */

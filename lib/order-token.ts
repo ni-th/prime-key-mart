@@ -25,3 +25,12 @@ export function verifyOrderToken(orderNumber: string, token: string | null): boo
   const b = Buffer.from(token);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+/**
+ * Private link to one order's page (status, keys, "I paid" report). Only ever
+ * sent to the order's own email address - never shown on the website.
+ */
+export function orderViewUrl(orderNumber: string): string {
+  const site = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return `${site}/order?order=${encodeURIComponent(orderNumber)}&t=${encodeURIComponent(signOrderToken(orderNumber))}`;
+}

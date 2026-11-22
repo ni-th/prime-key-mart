@@ -21,6 +21,23 @@ import { formatMoney } from "@/lib/money";
 export const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const EMAILS_DIR = path.join(process.cwd(), "emails");
 
+/**
+ * The logo is embedded in every email as an inline attachment (cid:) rather
+ * than loaded from the website: it shows even when the site isn't reachable
+ * (localhost) and when the mail app blocks remote images.
+ */
+export const EMAIL_LOGO = {
+  cid: "keysby-logo",
+  filename: "keysby-logo.png",
+  path: path.join(EMAILS_DIR, "assets", "logo.png"),
+};
+
+/** For in-browser previews (no attachments there): inline the logo as data. */
+export function withPreviewLogo(html: string): string {
+  const data = fs.readFileSync(EMAIL_LOGO.path).toString("base64");
+  return html.replaceAll(`cid:${EMAIL_LOGO.cid}`, `data:image/png;base64,${data}`);
+}
+
 /** The site's theme tokens (app/globals.css), as hex for email clients. */
 export const THEME = {
   night: BRAND.ink, // dark theme background / logo ink
@@ -105,7 +122,7 @@ function globals() {
       name: BRAND.name,
       url: SITE_URL,
       host: SITE_URL.replace(/^https?:\/\//, ""),
-      logo: `${SITE_URL}/images/brand/keysby-logo-dark.png`,
+      logo: `cid:${EMAIL_LOGO.cid}`,
     },
     theme: THEME,
     business: BUSINESS,

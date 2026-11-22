@@ -141,6 +141,16 @@ model AlertLog {
   @@index([dedupeKey, createdAt])
 }
 
+/// One request counted by lib/rate-limit.ts (e.g. "lookup-ip:1.2.3.4").
+/// Stored in the database so limits hold across serverless instances.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
 model BlockedEmail {
   id        String   @id @default(cuid())
   email     String   @unique

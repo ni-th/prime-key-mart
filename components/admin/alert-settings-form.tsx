@@ -30,7 +30,7 @@ const TOGGLES: { name: keyof Toggles; label: string; hint: string }[] = [
   {
     name: "alertPaymentProblem",
     label: "Payment problems",
-    hint: "Wrong amount paid, chargebacks, or fake/invalid PayHere notifications.",
+    hint: "Wrong amount paid, chargebacks, fake PayHere notifications, and Find my order being blocked after repeated failed attempts.",
   },
   {
     name: "alertOutOfStock",

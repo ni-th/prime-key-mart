@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { EMAIL_SAMPLES } from "@/lib/email/samples";
+import { withPreviewLogo } from "@/lib/email/render";
 import { EmailPreview } from "@/components/admin/email-preview";
 
 export const metadata: Metadata = { title: "Emails · Admin" };
@@ -8,7 +9,7 @@ export default function AdminEmailsPage() {
   // Rendered on the server from the .hbs templates with sample data.
   const emails = EMAIL_SAMPLES.map((s) => {
     const e = s.render();
-    return { id: s.id, name: s.name, when: s.when, subject: e.subject, html: e.html, text: e.text };
+    return { id: s.id, name: s.name, when: s.when, subject: e.subject, html: withPreviewLogo(e.html), text: e.text };
   });
 
   return (

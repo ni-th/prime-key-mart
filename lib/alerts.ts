@@ -20,6 +20,7 @@ export const ALERT_TYPES = {
   PAYMENT_PROBLEM: "Payment problem",
   NEW_ORDER: "New order",
   CUSTOMER_REPORT: "Customer says they paid",
+  SECURITY: "Security",
   TEST: "Test",
 } as const;
 export type AlertType = keyof typeof ALERT_TYPES;
@@ -31,7 +32,7 @@ export type AlertSettings = {
   /** True when recipients come from settings (not the ADMIN_EMAIL fallback). */
   customRecipients: boolean;
   lowStockThreshold: number;
-  enabled: Record<Exclude<AlertType, "TEST" | "CUSTOMER_REPORT">, boolean>;
+  enabled: Record<Exclude<AlertType, "TEST" | "CUSTOMER_REPORT" | "SECURITY">, boolean>;
 };
 
 /** Split a comma/space/newline separated list into lower-case emails. */
@@ -83,8 +84,14 @@ export async function sendAlert(alert: {
 }): Promise<SendAlertResult> {
   try {
     const settings = await getAlertSettings();
-    // Customer reports follow the "Order not delivered" switch.
-    const toggle = alert.type === "CUSTOMER_REPORT" ? "FAILED_DELIVERY" : alert.type;
+    // Customer reports follow the "Order not delivered" switch; security
+    // notices (e.g. blocked lookups) follow "Payment problems".
+    const toggle =
+      alert.type === "CUSTOMER_REPORT"
+        ? "FAILED_DELIVERY"
+        : alert.type === "SECURITY"
+          ? "PAYMENT_PROBLEM"
+          : alert.type;
     if (toggle !== "TEST" && !settings.enabled[toggle]) return "disabled";
 
     const recipients = settings.recipients;

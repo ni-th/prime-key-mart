@@ -16,9 +16,8 @@ export type ReportResult =
 
 const schema = z.object({
   orderNumber: z.string().trim().min(3).max(40),
-  /** Proof of access: the signed link token, or the checkout email (order lookup). */
+  /** Proof of access: the signed order link token (or a signed-in owner). */
   token: z.string().max(200).optional(),
-  email: z.string().trim().toLowerCase().max(200).optional(),
   paymentRef: z.string().trim().max(80, "Keep the reference under 80 characters"),
   note: z.string().trim().max(1000, "Keep the message under 1000 characters"),
 });
@@ -34,14 +33,12 @@ const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/
 export async function reportPaymentIssue(input: {
   orderNumber: string;
   token?: string | null;
-  email?: string | null;
   paymentRef: string;
   note: string;
 }): Promise<ReportResult> {
   const parsed = schema.safeParse({
     ...input,
     token: input.token ?? undefined,
-    email: input.email ?? undefined,
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -51,12 +48,11 @@ export async function reportPaymentIssue(input: {
   const d = parsed.data;
 
   const order = await getOrderByNumber(d.orderNumber);
-  // Access: the signed order link, the checkout email (order lookup), or the
-  // signed-in owner. The session is only looked up when the others don't match.
+  // Access: the signed order link (only ever emailed to the owner), or the
+  // signed-in owner. Knowing the order number + email is NOT enough.
   const allowed =
     order &&
     (canViewOrder(order, { token: d.token ?? null, orderNumber: d.orderNumber }) ||
-      (d.email !== undefined && d.email === order.email.toLowerCase()) ||
       canViewOrder(order, { session: await auth(), orderNumber: d.orderNumber }));
   if (!order || !allowed) {
     return { ok: false, error: "We couldn't find that order." };

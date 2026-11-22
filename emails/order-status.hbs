@@ -1,0 +1,11 @@
+{{!-- Find my order, for an order that isn't delivered. Data: orderNumber, total, headline, message, tone, viewUrl --}}
+{{> heading text=headline}}
+{{#> para}}You asked us to look up order <strong>{{orderNumber}}</strong>.{{/para}}
+
+{{> details rows=detailRows}}
+
+{{#> callout tone=tone}}{{message}}{{/callout}}
+
+{{> button url=viewUrl label="View your order"}}
+
+{{#> para small=true}}This private link is just for you, so please don't share it. Didn't ask for this? You can ignore this email.{{/para}}
