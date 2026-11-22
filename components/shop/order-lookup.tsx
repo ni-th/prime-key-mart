@@ -74,13 +74,12 @@ export function OrderLookup({ supportEmail }: { supportEmail?: string | null }) 
           Check your email
         </div>
         <p className="text-muted-foreground">
-          If an order matches, we&apos;ve sent its details to <strong>{state.email}</strong>. Delivered
-          orders include your license keys. It usually arrives within a minute; check your spam
-          folder too.
+          We&apos;ve sent your order details to <strong>{state.email}</strong>. Delivered orders
+          include your license keys. It usually arrives within a minute; check your spam folder
+          too.
         </p>
         <p className="text-muted-foreground">
-          Nothing arrived? Make sure the order number and email match your PayHere receipt, or reply
-          to any email from us.
+          Nothing arrived after a few minutes? Reply to any email from us and we&apos;ll help.
         </p>
         {/* Full reload resets the form (and the server keeps counting attempts). */}
         <a href="/order-lookup" className="inline-block text-sm font-medium text-primary hover:underline">
@@ -90,21 +89,45 @@ export function OrderLookup({ supportEmail }: { supportEmail?: string | null }) 
     );
   }
 
+  const typed = state.status === "notFound" ? state : null;
+
   return (
     <Card className="p-6">
-      <form action={formAction} className="space-y-4">
+      {/* key: remount with the typed values after each failed attempt. */}
+      <form
+        key={typed ? `${typed.orderNumber}|${typed.email}|${typed.attemptsLeft}` : "new"}
+        action={formAction}
+        className="space-y-4"
+      >
         {state.status === "error" && (
           <Alert variant="destructive">
             <AlertDescription>{state.message}</AlertDescription>
           </Alert>
         )}
+        {state.status === "notFound" && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              We couldn&apos;t find an order with that order number and email. Check both against
+              your PayHere receipt.{" "}
+              {state.attemptsLeft > 0
+                ? `${state.attemptsLeft} attempt${state.attemptsLeft === 1 ? "" : "s"} left.`
+                : ""}
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="orderNumber">Order number</Label>
-          <Input id="orderNumber" name="orderNumber" placeholder="KM-XXXXXX" required />
+          <Input
+            id="orderNumber"
+            name="orderNumber"
+            placeholder="KM-XXXXXX"
+            defaultValue={typed?.orderNumber}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="email">Email used at checkout</Label>
-          <Input id="email" name="email" type="email" required />
+          <Input id="email" name="email" type="email" defaultValue={typed?.email} required />
         </div>
         <SubmitButton />
         <p className="text-xs text-muted-foreground">

@@ -16,6 +16,8 @@ export type LookupState =
   | { status: "idle" }
   | { status: "sent"; email: string }
   | { status: "blocked" }
+  /** Number + email don't match; the visitor can try again a few more times. */
+  | { status: "notFound"; attemptsLeft: number; orderNumber: string; email: string }
   | { status: "error"; message: string };
 
 /** Lookups per visitor (IP) per hour, matched or not. */
@@ -32,8 +34,8 @@ const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/
 /**
  * Find my order. Never shows the order on the page: if the order number and
  * email match, the order is EMAILED to that address (keys if delivered,
- * otherwise its status and a private link). The reply is the same whether it
- * matched or not.
+ * otherwise its status and a private link). A mismatch is reported (with the
+ * attempts left) so honest typos are easy to fix.
  *
  * Failed lookups (number + email don't match) are counted per email, per IP
  * and per order number; after MAX_FAILED_LOOKUPS on any of them in 24 hours,
@@ -93,8 +95,16 @@ export async function lookupOrderAction(
       );
       return { status: "blocked" };
     }
-    // Same reply as a match: don't reveal which orders exist.
-    return { status: "sent", email };
+    // Telling them it didn't match is safe: nothing is ever shown here (keys
+    // only go to the order's own email) and guessing stops after a few tries.
+    const used = Math.max(...failCounts) + 1;
+    return {
+      status: "notFound",
+      attemptsLeft: Math.max(MAX_FAILED_LOOKUPS - used, 0),
+      // Echo back what they typed so a typo can be fixed without retyping.
+      orderNumber,
+      email,
+    };
   }
 
   // Matched: send after the response.
