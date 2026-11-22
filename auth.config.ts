@@ -11,7 +11,13 @@ export const authConfig = {
   pages: { signIn: "/login" },
   providers: [],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
+      // Name changed in account settings (unstable_update from the server).
+      if (trigger === "update") {
+        const name = (session as { user?: { name?: unknown } } | undefined)?.user?.name;
+        if (typeof name === "string" && name.trim()) token.name = name.trim().slice(0, 80);
+        return token;
+      }
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role?: "USER" | "ADMIN" }).role ?? "USER";

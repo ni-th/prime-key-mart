@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Loader2, ShieldCheck, ShieldX } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,8 @@ import {
   type OrderKeyItem,
 } from "@/lib/warranty-claim-shared";
 import { cn } from "@/lib/utils";
+
+const orderDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 function ClaimForm({
   orderNumber,
@@ -145,19 +148,28 @@ function KeyStatus({
  * "Key stopped working?" link under each covered key.
  */
 export function OrderKeys({
-  orderNumber,
   token,
   items,
+  showOrder = false,
+  emptyText,
 }: {
-  orderNumber: string;
+  /** Signed order link token (guests); null when signed in. */
   token: string | null;
   items: OrderKeyItem[];
+  /** Show which order each product came from (the "My keys" page). */
+  showOrder?: boolean;
+  /** Shown when there are no keys; nothing is rendered without it. */
+  emptyText?: string;
 }) {
   const router = useRouter();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, string>>({});
   const delivered = items.filter((i) => i.keys.length > 0);
-  if (delivered.length === 0) return null;
+  if (delivered.length === 0) {
+    return emptyText ? (
+      <Card className="p-8 text-center text-sm text-muted-foreground">{emptyText}</Card>
+    ) : null;
+  }
   const anyWarranty = delivered.some((i) => i.warrantyName);
 
   return (
@@ -165,7 +177,17 @@ export function OrderKeys({
       {delivered.map((item) => (
         <Card key={item.itemId} className="space-y-3 p-5">
           <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-            <span className="font-medium">{item.productName}</span>
+            <div>
+              <div className="font-medium">{item.productName}</div>
+              {showOrder && (
+                <Link
+                  href={`/account/orders/${item.orderNumber}`}
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Order {item.orderNumber} · {orderDate.format(new Date(item.orderedAt))}
+                </Link>
+              )}
+            </div>
             {item.summary && (
               <span
                 className={cn(
@@ -192,7 +214,7 @@ export function OrderKeys({
                 />
                 {openKey === k.id && (
                   <ClaimForm
-                    orderNumber={orderNumber}
+                    orderNumber={item.orderNumber}
                     token={token}
                     keyId={k.id}
                     onCancel={() => setOpenKey(null)}

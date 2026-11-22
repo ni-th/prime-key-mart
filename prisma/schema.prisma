@@ -45,6 +45,9 @@ model User {
   totpSecret     String?
   totpEnabled    Boolean              @default(false)
   totpLastStep   Int? // last accepted 30s time-step; blocks code replay
+  /// Set once the customer confirms they own this email (via an emailed link).
+  /// Guest orders placed with this email are then linked to the account.
+  emailVerifiedAt DateTime?
   orders         Order[]
   passwordResets PasswordResetToken[]
   createdAt      DateTime             @default(now())

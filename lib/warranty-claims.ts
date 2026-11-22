@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { ADMIN_COST_FIELDS, prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
 import { queueStockCheck } from "@/lib/alerts";
@@ -25,9 +26,24 @@ export function warrantyActive(item: {
  * after checking the viewer may see the order: it contains the full keys.
  */
 export async function orderKeysForOwner(orderId: string): Promise<OrderKeyItem[]> {
+  return keyItems({ orderId });
+}
+
+/**
+ * Every key a signed-in customer owns, across all their delivered orders,
+ * newest order first. Same shape as an order page, so warranty claims work
+ * the same way.
+ */
+export async function keysForUser(userId: string): Promise<OrderKeyItem[]> {
+  return keyItems({ order: { userId, status: "FULFILLED" } });
+}
+
+async function keyItems(where: Prisma.OrderItemWhereInput): Promise<OrderKeyItem[]> {
   const items = await prisma.orderItem.findMany({
-    where: { orderId },
+    where,
+    orderBy: { order: { createdAt: "desc" } },
     include: {
+      order: { select: { orderNumber: true, createdAt: true } },
       licenseKeys: {
         where: { status: "SOLD", replacedAt: null },
         orderBy: { soldAt: "asc" },
@@ -38,6 +54,8 @@ export async function orderKeysForOwner(orderId: string): Promise<OrderKeyItem[]
 
   return items.map((item) => ({
     itemId: item.id,
+    orderNumber: item.order.orderNumber,
+    orderedAt: item.order.createdAt.toISOString(),
     productName: item.productName,
     warrantyName: item.warrantyName,
     summary: item.warrantyName ? (warrantySummary(item) ?? item.warrantyName) : null,

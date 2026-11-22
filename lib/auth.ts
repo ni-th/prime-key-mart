@@ -15,7 +15,7 @@ class TotpInvalid extends CredentialsSignin {
   code = "totp_invalid";
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
   providers: [
     Credentials({
@@ -38,11 +38,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
-        // Second factor for admins who have set up an authenticator app.
-        // (Admins who haven't are signed in without `mfa` and are forced
-        // through /two-factor setup before they can reach /admin.)
+        // Second factor for anyone who has turned on an authenticator app
+        // (required for admins; optional for customers in account settings).
+        // Admins without it are signed in without `mfa` and are forced
+        // through /two-factor setup before they can reach /admin.
         let mfa = false;
-        if (user.role === "ADMIN" && user.totpEnabled && user.totpSecret) {
+        if (user.totpEnabled && user.totpSecret) {
           if (!code) throw new TotpRequired();
 
           const step = verifyTotp(

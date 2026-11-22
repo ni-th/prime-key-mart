@@ -28,7 +28,7 @@ export function LoginForm() {
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Second step for admins with an authenticator app. Email and password stay
+  // Second step for accounts with an authenticator app (admins, and customers who turned it on). Email and password stay
   // in the (hidden) inputs so they're sent again together with the code.
   const [needsCode, setNeedsCode] = useState(false);
   const [code, setCode] = useState("");

@@ -242,7 +242,7 @@ export function OrderStatusView({
         </p>
       </Card>
 
-      <OrderKeys orderNumber={data.orderNumber} token={token} items={data.keys ?? []} />
+      <OrderKeys token={token} items={data.keys ?? []} />
 
       <div className="flex gap-3">
         <Link

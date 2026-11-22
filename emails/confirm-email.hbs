@@ -1,0 +1,10 @@
+{{!-- "Confirm your email" to link guest orders. Data: confirmUrl, orderCount, ttlHours --}}
+{{> heading text="Confirm your email"}}
+{{#> para}}You asked to add your past {{site.name}} orders to your account. We found {{orderCount}} order{{#unless single}}s{{/unless}} placed with this email address.{{/para}}
+
+{{> button url=confirmUrl label="Confirm and add my orders"}}
+
+{{#> para small=true}}This link works for {{ttlHours}} hours. If you didn't ask for this, ignore this email: nothing will change.{{/para}}
+
+<hr style="border:none;border-top:1px solid {{theme.border}};margin:22px 0">
+{{#> para small=true}}Button not working? Paste this link into your browser:<br><a href="{{confirmUrl}}" style="color:{{theme.primary}};word-break:break-all">{{confirmUrl}}</a>{{/para}}

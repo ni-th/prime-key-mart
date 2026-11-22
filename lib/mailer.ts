@@ -4,6 +4,7 @@ import { decryptSecret } from "@/lib/crypto";
 import {
   adminAlertEmail,
   orderKeysEmail,
+  confirmEmailEmail,
   passwordChangedEmail,
   passwordResetEmail,
   paymentReportClosedEmail,
@@ -131,6 +132,16 @@ export async function sendPasswordResetEmail(
   ttlMinutes: number,
 ): Promise<void> {
   await send(to, passwordResetEmail({ resetUrl, ttlMinutes }));
+}
+
+/** "Confirm your email" link that adds the customer's guest orders to their account. */
+export async function sendConfirmEmailEmail(
+  to: string,
+  confirmUrl: string,
+  orderCount: number,
+  ttlHours: number,
+): Promise<void> {
+  await send(to, confirmEmailEmail({ confirmUrl, orderCount, ttlHours }));
 }
 
 /** Heads-up after a password change, so an owner notices an unexpected reset. */

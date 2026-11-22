@@ -8,19 +8,36 @@ import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LinkOrdersCard } from "@/components/account/link-orders-card";
+import { syncGuestOrders } from "@/lib/account-link";
 
 export const metadata: Metadata = { title: "Your account" };
 
-export default async function AccountOverviewPage() {
+export default async function AccountOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ link?: string; n?: string }>;
+}) {
   const session = await auth();
   const userId = session!.user.id;
+  const sp = await searchParams;
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { id: true, email: true, name: true, emailVerifiedAt: true },
+  });
+  // Pick up guest orders (automatic once the email is confirmed).
+  const guest = await syncGuestOrders(user);
 
   const [orders, keysOwned] = await Promise.all([
     getUserOrders(userId),
     prisma.licenseKey.count({
-      where: { status: "SOLD", orderItem: { order: { userId } } },
+      // Keys replaced under warranty don't count; their replacement does.
+      where: { status: "SOLD", replacedAt: null, orderItem: { order: { userId } } },
     }),
   ]);
+  const linkedNow = sp.link === "done" ? Number(sp.n) || 0 : 0;
 
   const delivered = orders.filter((o) => o.status === "FULFILLED").length;
   const recent = orders.slice(0, 3);
@@ -29,10 +46,35 @@ export default async function AccountOverviewPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Hi{session!.user.name ? `, ${session!.user.name.split(" ")[0]}` : ""}
+          Hi{user.name ? `, ${user.name.split(" ")[0]}` : ""}
         </h1>
-        <p className="text-sm text-muted-foreground">{session!.user.email}</p>
+        <p className="text-sm text-muted-foreground">{user.email}</p>
       </div>
+
+      {sp.link === "done" && (
+        <Alert>
+          <AlertDescription>
+            {linkedNow > 0
+              ? `Email confirmed. We added ${linkedNow} order${linkedNow === 1 ? "" : "s"} to your account.`
+              : "Email confirmed. Future orders placed with this email will appear here automatically."}
+          </AlertDescription>
+        </Alert>
+      )}
+      {sp.link === "invalid" && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            That confirmation link is invalid or has expired. Please request a new one.
+          </AlertDescription>
+        </Alert>
+      )}
+      {guest.linked > 0 && (
+        <Alert>
+          <AlertDescription>
+            We added {guest.linked} new order{guest.linked === 1 ? "" : "s"} placed with your email.
+          </AlertDescription>
+        </Alert>
+      )}
+      {guest.waiting > 0 && <LinkOrdersCard count={guest.waiting} email={user.email} />}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-5">
@@ -45,7 +87,9 @@ export default async function AccountOverviewPage() {
         </Card>
         <Card className="p-5">
           <div className="text-2xl font-semibold">{keysOwned}</div>
-          <div className="text-sm text-muted-foreground">License keys</div>
+          <Link href="/account/keys" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+            License keys
+          </Link>
         </Card>
       </div>
 

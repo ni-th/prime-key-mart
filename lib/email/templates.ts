@@ -103,6 +103,17 @@ export function passwordResetEmail(o: { resetUrl: string; ttlMinutes: number }):
   });
 }
 
+export function confirmEmailEmail(o: { confirmUrl: string; orderCount: number; ttlHours: number }): EmailContent {
+  return renderEmail(
+    "confirm-email",
+    { ...o, single: o.orderCount === 1 },
+    {
+      subject: `Confirm your email to add your ${BRAND.name} orders`,
+      preheader: `One click adds ${o.orderCount} past order${o.orderCount === 1 ? "" : "s"} to your account.`,
+    },
+  );
+}
+
 export function passwordChangedEmail(): EmailContent {
   return renderEmail(
     "password-changed",

@@ -20,6 +20,10 @@ export type ClaimStatus = keyof typeof CLAIM_STATUS;
 /** One delivered product line on the customer's order page: its keys, warranty and claims. */
 export type OrderKeyItem = {
   itemId: string;
+  /** The order this line belongs to (claims are made against it). */
+  orderNumber: string;
+  /** When the order was placed (ISO). */
+  orderedAt: string;
   productName: string;
   /** Null when the line was bought without a warranty. */
   warrantyName: string | null;

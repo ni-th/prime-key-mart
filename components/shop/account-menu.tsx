@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   ChevronDown,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Package,
+  Settings,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,6 +61,14 @@ export function AccountMenu({
         <DropdownMenuItem render={<Link href="/account/orders" />}>
           <Package className="size-4" />
           My orders
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/account/keys" />}>
+          <KeyRound className="size-4" />
+          My keys
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/account/settings" />}>
+          <Settings className="size-4" />
+          Settings
         </DropdownMenuItem>
         {isAdmin && (
           <DropdownMenuItem render={<Link href="/admin" />}>

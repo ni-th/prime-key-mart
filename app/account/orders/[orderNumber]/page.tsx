@@ -76,7 +76,7 @@ export default async function AccountOrderDetailPage({
       {order.status === "FULFILLED" ? (
         <div className="space-y-3">
           <h2 className="font-medium">Your license keys</h2>
-          <OrderKeys orderNumber={order.orderNumber} token={null} items={await orderKeysForOwner(order.id)} />
+          <OrderKeys token={null} items={await orderKeysForOwner(order.id)} />
         </div>
       ) : (
         <Card className="space-y-4 p-5 text-sm text-muted-foreground">

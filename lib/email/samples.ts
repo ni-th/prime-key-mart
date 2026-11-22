@@ -1,6 +1,7 @@
 import {
   adminAlertEmail,
   orderKeysEmail,
+  confirmEmailEmail,
   passwordChangedEmail,
   passwordResetEmail,
   paymentReportClosedEmail,
@@ -66,6 +67,12 @@ export const EMAIL_SAMPLES: {
     name: "Password reset",
     when: "When someone uses \"Forgot password\".",
     render: () => passwordResetEmail({ resetUrl: `${SITE_URL}/reset-password?token=sample`, ttlMinutes: 30 }),
+  },
+  {
+    id: "confirm-email",
+    name: "Confirm email (link orders)",
+    when: "When a customer asks to add their past guest orders to their account.",
+    render: () => confirmEmailEmail({ confirmUrl: `${SITE_URL}/account/link-orders?t=sample`, orderCount: 2, ttlHours: 24 }),
   },
   {
     id: "password-changed",
