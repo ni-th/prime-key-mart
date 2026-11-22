@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { ADMIN_COST_FIELDS, prisma } from "@/lib/db";
 import { asCurrency, convertCost, gatewayFeeCents } from "@/lib/profit";
+import { getWarrantyOptions } from "@/lib/warranty-server";
+import { priceWarranties, resolveWarranty } from "@/lib/warranty";
 import { checkoutSchema } from "@/lib/validation";
 import { generateOrderNumber } from "@/lib/orders";
 import { signOrderToken } from "@/lib/order-token";
@@ -77,11 +79,27 @@ export async function POST(req: Request) {
   // set, else USD x admin exchange rate + margin). The total is the sum of the
   // line prices, so it always matches what the customer was shown.
   const currency = parsed.data.currency;
-  const [settings, discounts] = await Promise.all([getPricingSettings(), getActiveDiscounts()]);
+  const [settings, discounts, warranties] = await Promise.all([
+    getPricingSettings(),
+    getActiveDiscounts(),
+    getWarrantyOptions(ids),
+  ]);
   const lines = parsed.data.items.map((i) => {
     const product = byId.get(i.productId)!;
     const price = priceOf(product, settings, discounts);
+    // Warranty priced on the server too (percent of the normal price). A plan
+    // the product no longer offers falls back to the included one, exactly as
+    // the cart quote does, so the customer already saw this price.
+    const warranty = resolveWarranty(
+      priceWarranties(warranties.get(product.id) ?? [], {
+        usdCents: price.listUsdCents,
+        lkrCents: price.listLkrCents,
+      }),
+      i.warrantyPlanId,
+    );
     return {
+      warranty,
+      warrantyCents: warranty ? (currency === "LKR" ? warranty.lkrCents : warranty.usdCents) : 0,
       product,
       quantity: i.quantity,
       unitCents: unitPriceIn(price, currency),
@@ -93,7 +111,10 @@ export async function POST(req: Request) {
           : convertCost(product.costCents, asCurrency(product.costCurrency), currency, settings.rate),
     };
   });
-  const paymentSubtotalCents = lines.reduce((sum, l) => sum + l.unitCents * l.quantity, 0);
+  const paymentSubtotalCents = lines.reduce(
+    (sum, l) => sum + (l.unitCents + l.warrantyCents) * l.quantity,
+    0,
+  );
 
   // Return keys held by abandoned checkouts to stock before we try to reserve.
   // Never let housekeeping block a sale.
@@ -121,6 +142,10 @@ export async function POST(req: Request) {
           listPriceCents: l.listCents,
           discountPercent: l.sale?.percent ?? null,
           discountName: l.sale?.name ?? null,
+          warrantyPlanId: l.warranty?.planId ?? null,
+          warrantyName: l.warranty?.name ?? null,
+          warrantyDays: l.warranty?.days ?? null,
+          warrantyCents: l.warranty ? l.warrantyCents : null,
           quantity: l.quantity,
         })),
       },
@@ -166,7 +191,9 @@ export async function POST(req: Request) {
         cancel_url: `${SITE_URL}/checkout/cancel?order=${orderNumber}&t=${token}`,
         notify_url: `${SITE_URL}/api/webhooks/payhere`,
         order_id: orderNumber,
-        items: lines.map((l) => `${l.product.name} x ${l.quantity}`).join(", "),
+        items: lines
+          .map((l) => `${l.product.name}${l.warranty && l.warrantyCents > 0 ? ` + ${l.warranty.name} warranty` : ""} x ${l.quantity}`)
+          .join(", "),
         currency,
         amount,
         first_name: "Keysby",

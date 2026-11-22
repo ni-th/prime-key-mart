@@ -11,6 +11,7 @@ import { ProductForm } from "@/components/admin/product-form";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import { getPricingSettings } from "@/lib/pricing";
 import { getAlertSettings } from "@/lib/alerts";
+import { getActiveWarrantyPlans } from "@/lib/warranty-server";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
 
 export const metadata: Metadata = { title: "Edit product · Admin" };
@@ -21,11 +22,16 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [product, categories, pricing, alerts] = await Promise.all([
-    prisma.product.findUnique({ where: { id }, omit: ADMIN_COST_FIELDS.product }),
+  const [product, categories, pricing, alerts, plans] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id },
+      omit: ADMIN_COST_FIELDS.product,
+      include: { warrantyOverrides: { select: { planId: true, percent: true } } },
+    }),
     getAllCategories(),
     getPricingSettings(),
     getAlertSettings(),
+    getActiveWarrantyPlans(),
   ]);
   if (!product) notFound();
 
@@ -47,6 +53,7 @@ export default async function EditProductPage({
       <ProductForm
         uploadsEnabled={isCloudinaryConfigured}
         defaultLowStock={alerts.lowStockThreshold}
+        warrantyPlans={plans.map((p) => ({ id: p.id, name: p.name, days: p.days, percent: p.percent, isDefault: p.isDefault }))}
         pricing={{
           rate: pricing.rate,
           marginPercent: pricing.marginPercent,
@@ -67,6 +74,11 @@ export default async function EditProductPage({
           costCents: product.costCents,
           costCurrency: product.costCurrency === "LKR" ? "LKR" : "USD",
           lowStockThreshold: product.lowStockThreshold,
+          warrantyMode:
+            product.warrantyMode === "CUSTOM" || product.warrantyMode === "STORE"
+              ? product.warrantyMode
+              : "NONE",
+          warrantyOverrides: Object.fromEntries(product.warrantyOverrides.map((o) => [o.planId, o.percent])),
           categoryId: product.categoryId,
           imageUrl: product.imageUrl,
           published: product.published,

@@ -3,7 +3,7 @@ Your keys are ready
 Order {{orderNumber}} - {{total}}
 
 {{#each groups}}
-{{name}}
+{{name}}{{#if warranty}} (warranty: {{warranty}}){{/if}}
 {{#each keys}}
   {{this}}
 {{/each}}

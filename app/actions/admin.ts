@@ -117,13 +117,32 @@ export async function saveProduct(
     featured: data.featured,
   };
 
-  if (id) {
-    await prisma.product.update({ where: { id }, data: values });
-    // The alert level may have changed (or the product was just published).
-    queueStockCheck([id]);
-  } else {
-    await prisma.product.create({ data: values });
+  // Warranty: store plans, or a custom selection with optional percentages.
+  const rawMode = formData.get("warrantyMode");
+  const warrantyMode = rawMode === "CUSTOM" || rawMode === "STORE" ? rawMode : "NONE";
+  const overrides: { planId: string; percent: number | null }[] = [];
+  if (warrantyMode === "CUSTOM") {
+    const plans = await prisma.warrantyPlan.findMany({ select: { id: true } });
+    for (const plan of plans) {
+      if (formData.get(`warranty_${plan.id}`) !== "on") continue;
+      const raw = String(formData.get(`warrantyPct_${plan.id}`) ?? "").trim();
+      const pct = raw === "" ? null : Number.parseFloat(raw);
+      if (pct !== null && (!Number.isFinite(pct) || pct < 0 || pct > 100)) {
+        return { ok: false, error: "Warranty percentages must be between 0 and 100." };
+      }
+      overrides.push({ planId: plan.id, percent: pct === null ? null : Math.round(pct * 10) / 10 });
+    }
   }
+
+  const productId = id
+    ? (await prisma.product.update({ where: { id }, data: { ...values, warrantyMode } })).id
+    : (await prisma.product.create({ data: { ...values, warrantyMode } })).id;
+  await prisma.$transaction([
+    prisma.productWarranty.deleteMany({ where: { productId } }),
+    prisma.productWarranty.createMany({ data: overrides.map((o) => ({ ...o, productId })) }),
+  ]);
+  // The alert level may have changed (or the product was just published).
+  if (id) queueStockCheck([id]);
 
   revalidateCatalog(data.slug);
   redirect("/admin/products");

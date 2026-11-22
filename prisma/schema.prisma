@@ -151,6 +151,42 @@ model RateLimitHit {
   @@index([key, createdAt])
 }
 
+/// A warranty option (replacement guarantee), priced as a percent of the
+/// product's normal price. Store-wide: every product offers the active plans
+/// unless it's set to a custom selection (ProductWarranty).
+model WarrantyPlan {
+  id          String            @id @default(cuid())
+  name        String
+  /// Shown under the name, e.g. "Free replacement if your key stops working".
+  description String?
+  /// Days of cover (e.g. 7, 30, 365); null = lifetime of the product.
+  days        Int?
+  /// Price as a percent of the product's normal price (0 = free).
+  percent     Float             @default(0)
+  active      Boolean           @default(true)
+  /// The free plan every order gets unless the customer upgrades.
+  isDefault   Boolean           @default(false)
+  /// Highlighted as "Most popular" on product pages.
+  recommended Boolean           @default(false)
+  sortOrder   Int               @default(0)
+  products    ProductWarranty[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+/// A product's custom warranty selection (used when warrantyMode = CUSTOM).
+model ProductWarranty {
+  productId String
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      WarrantyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// Overrides the plan's store percentage for this product; null = store %.
+  percent   Float?
+
+  @@id([productId, planId])
+  @@index([planId])
+}
+
 model BlockedEmail {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -182,14 +218,14 @@ model Category {
 }
 
 model Product {
-  id                String       @id @default(cuid())
-  slug              String       @unique
+  id                String            @id @default(cuid())
+  slug              String            @unique
   name              String
   shortDescription  String
   description       String
   brand             String
   platform          String
-  region            String       @default("Global")
+  region            String            @default("Global")
   priceCents        Int // USD cents: the main price, required
   /// Optional fixed LKR price (cents). When null, LKR is calculated from
   /// priceCents with the exchange rate + margin in StoreSettings.
@@ -197,22 +233,27 @@ model Product {
   /// ADMIN ONLY. What the store pays per key (cents, in costCurrency). Hidden
   /// from every query by default (global omit in lib/db.ts).
   costCents         Int?
-  costCurrency      String       @default("USD")
+  costCurrency      String            @default("USD")
   /// Per-product low stock level; null = the store default (StoreSettings).
   lowStockThreshold Int?
   /// Last stock alert level sent: null (fine), "LOW" or "OUT". Lets each drop
   /// alert once; restocking re-arms it.
   stockAlertState   String?
+  /// "NONE" = no warranty offered (default); "STORE" = every active warranty
+  /// plan at its store percentage; "CUSTOM" = only the plans (and
+  /// percentages) set in ProductWarranty.
+  warrantyMode      String            @default("NONE")
+  warrantyOverrides ProductWarranty[]
   imageUrl          String?
   categoryId        String
-  category          Category     @relation(fields: [categoryId], references: [id])
-  published         Boolean      @default(true)
-  featured          Boolean      @default(false)
+  category          Category          @relation(fields: [categoryId], references: [id])
+  published         Boolean           @default(true)
+  featured          Boolean           @default(false)
   licenseKeys       LicenseKey[]
   orderItems        OrderItem[]
   discounts         Discount[]
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@index([categoryId])
   @@index([published])
@@ -273,23 +314,32 @@ model Order {
 }
 
 model OrderItem {
-  id              String       @id @default(cuid())
-  orderId         String
-  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId       String
-  product         Product      @relation(fields: [productId], references: [id])
-  productName     String
-  unitPriceCents  Int
+  id                String       @id @default(cuid())
+  orderId           String
+  order             Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product      @relation(fields: [productId], references: [id])
+  productName       String
+  unitPriceCents    Int
   /// Price before any sale (order currency). Null on orders from before sales existed.
-  listPriceCents  Int?
+  listPriceCents    Int?
   /// Sale applied at checkout, if any (kept for order history and reports).
-  discountPercent Float?
-  discountName    String?
+  discountPercent   Float?
+  discountName      String?
+  /// Warranty bought with this line (snapshot; plans can change later).
+  warrantyPlanId    String?
+  warrantyName      String?
+  /// Days of cover; null with a name = lifetime.
+  warrantyDays      Int?
+  /// Warranty price per unit, order currency (cents). 0 = included free.
+  warrantyCents     Int?
+  /// Set when the keys are delivered.
+  warrantyExpiresAt DateTime?
   /// ADMIN ONLY. Cost per key at checkout, converted to the order currency.
   /// Null when the product had no cost price set.
-  unitCostCents   Int?
-  quantity        Int
-  licenseKeys     LicenseKey[]
+  unitCostCents     Int?
+  quantity          Int
+  licenseKeys       LicenseKey[]
 
   @@index([orderId])
 }

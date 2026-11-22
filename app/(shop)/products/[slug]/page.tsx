@@ -7,6 +7,8 @@ import { getProductBySlug } from "@/lib/products";
 import { formatMoney, formatUsd } from "@/lib/money";
 import { getActiveDiscounts, getPricingSettings, priceOf } from "@/lib/pricing";
 import { endsInText } from "@/lib/sale";
+import { getWarrantyOptions } from "@/lib/warranty-server";
+import { priceWarranties } from "@/lib/warranty";
 import { SaleBadge } from "@/components/shop/sale-badge";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -37,8 +39,17 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [settings, discounts] = await Promise.all([getPricingSettings(), getActiveDiscounts()]);
+  const [settings, discounts, warrantyOptions] = await Promise.all([
+    getPricingSettings(),
+    getActiveDiscounts(),
+    getWarrantyOptions([product.id]),
+  ]);
   const price = priceOf(product, settings, discounts);
+  // Warranty is a percent of the normal price (sales don't discount it).
+  const warranties = priceWarranties(warrantyOptions.get(product.id) ?? [], {
+    usdCents: price.listUsdCents,
+    lkrCents: price.listLkrCents,
+  });
   const endsIn = price.sale ? endsInText(price.sale.endsAt) : null;
 
   const inStock = product.stock > 0;
@@ -124,6 +135,8 @@ export default async function ProductPage({
 
           <ProductBuyBox
             stock={product.stock}
+            warranties={warranties}
+            unitLkrCents={price.lkrCents}
             product={{
               productId: product.id,
               slug: product.slug,

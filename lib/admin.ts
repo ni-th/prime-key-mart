@@ -78,6 +78,7 @@ export async function getAdminStats() {
 
 export const PRODUCT_STATUS_FILTERS = ["published", "hidden", "featured"] as const;
 export const PRODUCT_STOCK_FILTERS = ["in", "low", "out"] as const;
+export const PRODUCT_WARRANTY_FILTERS = ["with", "without"] as const;
 export const PRODUCT_SORTS = ["newest", "name", "price-asc", "price-desc", "stock-asc", "best-selling"] as const;
 
 export type AdminProductFilters = {
@@ -86,6 +87,7 @@ export type AdminProductFilters = {
   category?: string;
   status?: (typeof PRODUCT_STATUS_FILTERS)[number];
   stock?: (typeof PRODUCT_STOCK_FILTERS)[number];
+  warranty?: (typeof PRODUCT_WARRANTY_FILTERS)[number];
   sort?: (typeof PRODUCT_SORTS)[number];
 };
 
@@ -95,7 +97,7 @@ export type AdminProductFilters = {
  * so they run afterwards (the catalog is small enough for that).
  */
 export async function getAdminProducts(filters: AdminProductFilters = {}) {
-  const { q, category, status, stock, sort = "newest" } = filters;
+  const { q, category, status, stock, warranty, sort = "newest" } = filters;
   const products = await prisma.product.findMany({
     where: {
       ...(q && {
@@ -110,6 +112,8 @@ export async function getAdminProducts(filters: AdminProductFilters = {}) {
       ...(status === "published" && { published: true }),
       ...(status === "hidden" && { published: false }),
       ...(status === "featured" && { featured: true }),
+      ...(warranty === "with" && { warrantyMode: { in: ["STORE", "CUSTOM"] } }),
+      ...(warranty === "without" && { warrantyMode: "NONE" }),
     },
     orderBy:
       sort === "name"

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderTree, LayoutDashboard, Mail, Package, Percent, Receipt, Settings, Users } from "lucide-react";
+import { FolderTree, LayoutDashboard, Mail, Package, Percent, Receipt, Settings, ShieldCheck, Users } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/discounts", label: "Discounts", icon: Percent },
+  { href: "/admin/warranty", label: "Warranty", icon: ShieldCheck },
   { href: "/admin/orders", label: "Orders", icon: Receipt },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/emails", label: "Emails", icon: Mail },

@@ -12,6 +12,7 @@ import {
   type EmailContent,
 } from "@/lib/email/templates";
 import { EMAIL_LOGO } from "@/lib/email/render";
+import { warrantySummary } from "@/lib/warranty";
 
 let cached: Transporter | null = null;
 let cachedIsEthereal = false;
@@ -156,6 +157,7 @@ export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
 
   const groups = order.items.map((item) => ({
     name: item.productName,
+    warranty: warrantySummary(item),
     keys: item.licenseKeys
       .filter((k) => k.status === "SOLD")
       .map((k) =>

@@ -7,6 +7,7 @@ import {
   PRODUCT_SORTS,
   PRODUCT_STATUS_FILTERS,
   PRODUCT_STOCK_FILTERS,
+  PRODUCT_WARRANTY_FILTERS,
 } from "@/lib/admin";
 import { getAllCategories } from "@/lib/products";
 import { oneOf, pageParam, paginate, param, type RawParams } from "@/lib/list-params";
@@ -39,6 +40,7 @@ export default async function AdminProductsPage({
   const category = param(sp, "category");
   const status = param(sp, "status");
   const stock = param(sp, "stock");
+  const warranty = param(sp, "warranty");
   const sort = oneOf(param(sp, "sort"), PRODUCT_SORTS, "newest");
 
   const [products, categories, pricing, discounts] = await Promise.all([
@@ -47,13 +49,14 @@ export default async function AdminProductsPage({
       category: category || undefined,
       status: PRODUCT_STATUS_FILTERS.find((s) => s === status),
       stock: PRODUCT_STOCK_FILTERS.find((s) => s === stock),
+      warranty: PRODUCT_WARRANTY_FILTERS.find((w) => w === warranty),
       sort,
     }),
     getAllCategories(),
     getPricingSettings(),
     getActiveDiscounts(),
   ]);
-  const filtered = Boolean(q || category || status || stock);
+  const filtered = Boolean(q || category || status || stock || warranty);
   const { page, items, total } = paginate(products, pageParam(sp), ADMIN_PAGE_SIZE);
   const pagination = (
     <ListPagination
@@ -111,6 +114,16 @@ export default async function AdminProductsPage({
           ]}
         />
         <ListSelect
+          param="warranty"
+          label="Warranty"
+          className="w-40"
+          options={[
+            { value: "", label: "Any warranty" },
+            { value: "with", label: "With warranty" },
+            { value: "without", label: "No warranty" },
+          ]}
+        />
+        <ListSelect
           param="sort"
           label="Sort"
           className="w-44"
@@ -123,7 +136,7 @@ export default async function AdminProductsPage({
             { value: "best-selling", label: "Best selling" },
           ]}
         />
-        <ListClear keys={["q", "category", "status", "stock", "sort"]} />
+        <ListClear keys={["q", "category", "status", "stock", "warranty", "sort"]} />
       </div>
 
       {pagination}
@@ -244,11 +257,16 @@ export default async function AdminProductsPage({
                   {p.sold}
                 </TableCell>
                 <TableCell>
-                  {p.published ? (
-                    <Badge variant="secondary">Published</Badge>
-                  ) : (
-                    <Badge variant="outline">Hidden</Badge>
-                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {p.published ? (
+                      <Badge variant="secondary">Published</Badge>
+                    ) : (
+                      <Badge variant="outline">Hidden</Badge>
+                    )}
+                    {p.warrantyMode !== "NONE" && (
+                      <Badge variant="outline">{p.warrantyMode === "CUSTOM" ? "Warranty (custom)" : "Warranty"}</Badge>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

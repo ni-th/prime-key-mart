@@ -5,6 +5,7 @@ import { ImageUpload } from "@/components/admin/image-upload";
 import { useActionState, useState } from "react";
 import { formatMoney } from "@/lib/money";
 import { unitProfit, type Currency } from "@/lib/profit";
+import { warrantyLength } from "@/lib/warranty";
 
 /** Matches LKR_DRIFT_WARN_PERCENT in lib/pricing.ts (not imported: server-only module). */
 const LKR_DRIFT_WARN_PERCENT = 10;
@@ -44,6 +45,10 @@ export type ProductFormValues = {
   costCurrency: Currency;
   /** Low stock alert level for this product; null = store default. */
   lowStockThreshold: number | null;
+  /** "NONE" = no warranty; "STORE" = all active store plans; "CUSTOM" = the selection below. */
+  warrantyMode: WarrantyMode;
+  /** Custom selection: planId -> percent override (null = store %). */
+  warrantyOverrides: Record<string, number | null>;
   categoryId: string;
   imageUrl: string | null;
   published: boolean;
@@ -86,6 +91,125 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
 }
 
 type Pricing = { rate: number; marginPercent: number; gatewayFeePercent: number };
+
+export type WarrantyMode = "NONE" | "STORE" | "CUSTOM";
+
+export type WarrantyPlanOption = {
+  id: string;
+  name: string;
+  days: number | null;
+  percent: number;
+  isDefault: boolean;
+};
+
+/** No warranty, the store plans, or this product's own selection and percentages. */
+function WarrantyFields({
+  plans,
+  mode: initialMode,
+  overrides,
+}: {
+  plans: WarrantyPlanOption[];
+  mode: WarrantyMode;
+  overrides: Record<string, number | null>;
+}) {
+  const [mode, setMode] = useState(initialMode);
+  if (plans.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No warranty plans yet. Create them in{" "}
+        <Link href="/admin/warranty" className="underline">
+          Admin &gt; Warranty
+        </Link>
+        , then choose them here for each product that has a warranty.
+        <input type="hidden" name="warrantyMode" value="NONE" />
+      </p>
+    );
+  }
+  const length = warrantyLength;
+  return (
+    <div className="space-y-3">
+      <input type="hidden" name="warrantyMode" value={mode} />
+      <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Warranty">
+        {(
+          [
+            ["NONE", "No warranty", "This product doesn't offer a warranty."],
+            ["STORE", "Store plans", "Every active plan at the store percentages."],
+            ["CUSTOM", "Custom", "Choose plans and percentages for this product."],
+          ] as const
+        ).map(([value, label, hint]) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={mode === value}
+            onClick={() => setMode(value)}
+            className={cn(
+              "rounded-lg border p-3 text-left text-sm transition-colors",
+              mode === value ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/50",
+            )}
+          >
+            <div className="font-medium">{label}</div>
+            <div className="text-xs text-muted-foreground">{hint}</div>
+          </button>
+        ))}
+      </div>
+
+      {mode === "NONE" ? (
+        <p className="text-xs text-muted-foreground">
+          Customers won&apos;t see any warranty options for this product.
+        </p>
+      ) : mode === "STORE" ? (
+        <p className="text-xs text-muted-foreground">
+          Offers:{" "}
+          {plans.map((p) => `${p.name} (${length(p.days)}, ${p.isDefault ? "free" : `+${p.percent}%`})`).join(" · ")}
+        </p>
+      ) : (
+        <div className="divide-y rounded-lg border">
+          {plans.map((p) => {
+            // Switching to Custom from another mode starts with every plan ticked.
+            const on = p.id in overrides || initialMode !== "CUSTOM";
+            return (
+              <div key={p.id} className="flex flex-wrap items-center gap-3 p-2.5 text-sm">
+                <label className="flex min-w-0 flex-1 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name={`warranty_${p.id}`}
+                    defaultChecked={on}
+                    className="size-4 rounded border-input"
+                  />
+                  <span className="font-medium">{p.name}</span>
+                  <span className="text-muted-foreground">{length(p.days)}</span>
+                </label>
+                {p.isDefault ? (
+                  <span className="text-xs text-muted-foreground">Included, free</span>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      name={`warrantyPct_${p.id}`}
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      placeholder={String(p.percent)}
+                      defaultValue={overrides[p.id] ?? ""}
+                      aria-label={`${p.name} percent for this product`}
+                      className="h-8 w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">% (store: {p.percent}%)</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <p className="p-2.5 text-xs text-muted-foreground">
+            Leave a percentage empty to use the store percentage. Unticked plans aren&apos;t offered on
+            this product.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Profit breakdown for one sale in `currency`. */
 function ProfitColumn({
@@ -317,6 +441,7 @@ export function ProductForm({
   uploadsEnabled = false,
   pricing,
   defaultLowStock,
+  warrantyPlans,
 }: {
   categories: Category[];
   product?: ProductFormValues;
@@ -326,6 +451,8 @@ export function ProductForm({
   pricing: Pricing;
   /** Store-wide low stock level (Admin -> Settings), shown as the placeholder. */
   defaultLowStock: number;
+  /** Active warranty plans (Admin -> Warranty). */
+  warrantyPlans: WarrantyPlanOption[];
 }) {
   const initial: FormResult = { ok: false, error: "" };
   const [state, formAction] = useActionState(saveProduct, initial);
@@ -439,6 +566,21 @@ export function ProductForm({
             invalid={Boolean(fe.imageUrl)}
           />
         </Field>
+      </Card>
+
+      <Card className="space-y-3 p-5">
+        <div>
+          <h2 className="font-medium">Warranty</h2>
+          <p className="text-sm text-muted-foreground">
+            Off by default. Turn it on for products you can guarantee (free replacement if the key
+            stops working).
+          </p>
+        </div>
+        <WarrantyFields
+          plans={warrantyPlans}
+          mode={product?.warrantyMode ?? "NONE"}
+          overrides={product?.warrantyOverrides ?? {}}
+        />
       </Card>
 
       <Card className="space-y-3 p-5">

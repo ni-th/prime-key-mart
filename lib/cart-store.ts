@@ -10,12 +10,15 @@ export type CartLine = {
   priceCents: number;
   brand: string;
   quantity: number;
+  /** Chosen warranty plan; unset = the product's included (default) plan. */
+  warrantyPlanId?: string | null;
 };
 
 type CartState = {
   lines: CartLine[];
   add: (line: Omit<CartLine, "quantity">, qty?: number) => void;
   setQty: (productId: string, qty: number) => void;
+  setWarranty: (productId: string, planId: string | null) => void;
   remove: (productId: string) => void;
   clear: () => void;
 };
@@ -33,7 +36,12 @@ export const useCart = create<CartState>()(
             return {
               lines: state.lines.map((l) =>
                 l.productId === line.productId
-                  ? { ...l, quantity: l.quantity + qty }
+                  ? {
+                      ...l,
+                      quantity: l.quantity + qty,
+                      // A plan picked on the product page replaces the old one.
+                      ...(line.warrantyPlanId !== undefined && { warrantyPlanId: line.warrantyPlanId }),
+                    }
                   : l,
               ),
             };
@@ -48,6 +56,12 @@ export const useCart = create<CartState>()(
               : state.lines.map((l) =>
                   l.productId === productId ? { ...l, quantity: qty } : l,
                 ),
+        })),
+      setWarranty: (productId, planId) =>
+        set((state) => ({
+          lines: state.lines.map((l) =>
+            l.productId === productId ? { ...l, warrantyPlanId: planId } : l,
+          ),
         })),
       remove: (productId) =>
         set((state) => ({

@@ -19,6 +19,7 @@ import { useHydrated } from "@/lib/use-hydrated";
 import { cartIssues, issueLabel, type CartIssue } from "@/lib/cart-issues";
 import type { CartQuote, CartQuoteLine } from "@/app/actions/pricing";
 import { StockIssueDialog } from "@/components/shop/stock-issue-dialog";
+import { warrantyLength } from "@/lib/warranty";
 
 export function CheckoutForm({
   defaultEmail,
@@ -57,7 +58,8 @@ export function CheckoutForm({
   const lineTotal = (productId: string, qty: number) => {
     const q = byId.get(productId);
     if (!q) return null;
-    return (currency === "LKR" ? q.lkrCents : q.usdCents) * qty;
+    const warranty = q.warranty ? (currency === "LKR" ? q.warranty.lkrCents : q.warranty.usdCents) : 0;
+    return ((currency === "LKR" ? q.lkrCents : q.usdCents) + warranty) * qty;
   };
   const total = quote ? quote.totals[currency] : null;
   const savings = quote
@@ -108,6 +110,7 @@ export function CheckoutForm({
           items: lines.map((l) => ({
             productId: l.productId,
             quantity: l.quantity,
+            warrantyPlanId: l.warrantyPlanId ?? null,
           })),
           currency,
         }),
@@ -225,6 +228,12 @@ export function CheckoutForm({
                   {byId.get(l.productId)?.salePercent && (
                     <span className="ml-1.5 text-xs font-medium text-destructive">
                       -{byId.get(l.productId)!.salePercent}%
+                    </span>
+                  )}
+                  {byId.get(l.productId)?.warranty && (
+                    <span className="block text-xs">
+                      {byId.get(l.productId)!.warranty!.name} warranty (
+                      {warrantyLength(byId.get(l.productId)!.warranty!.days)})
                     </span>
                   )}
                 </span>

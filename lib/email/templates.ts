@@ -16,7 +16,7 @@ export function orderKeysEmail(o: {
   orderNumber: string;
   totalCents: number;
   currency: string;
-  groups: { name: string; keys: string[] }[];
+  groups: { name: string; keys: string[]; warranty?: string | null }[];
 }): EmailContent {
   const total = formatMoney(o.totalCents, o.currency.toUpperCase());
   const keyCount = o.groups.reduce((n, g) => n + g.keys.length, 0);

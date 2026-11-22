@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
+import { Loader2, Minus, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { warrantyLength } from "@/lib/warranty";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -26,9 +27,12 @@ const MAX_PER_LINE = 10;
 
 function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
   const setQty = useCart((s) => s.setQty);
+  const setWarranty = useCart((s) => s.setWarranty);
   const remove = useCart((s) => s.remove);
   // Live USD price from the server; the price saved when added is a fallback.
   const unit = quoted?.available ? quoted.usdCents : line.priceCents;
+  const warranty = quoted?.available ? quoted.warranty : null;
+  const warrantyUsd = warranty?.usdCents ?? 0;
   const onSale = Boolean(quoted?.available && quoted.salePercent);
   const problem = !quoted
     ? null
@@ -66,11 +70,11 @@ function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
           </Link>
           <span className="shrink-0 text-right font-medium tabular-nums">
             <span className={onSale ? "text-destructive" : undefined}>
-              {formatUsd(unit * line.quantity)}
+              {formatUsd((unit + warrantyUsd) * line.quantity)}
             </span>
             {onSale && (
               <s className="block text-xs font-normal text-muted-foreground">
-                {formatUsd(quoted!.listUsdCents * line.quantity)}
+                {formatUsd((quoted!.listUsdCents + warrantyUsd) * line.quantity)}
               </s>
             )}
           </span>
@@ -86,6 +90,24 @@ function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
             <span className="ml-1.5 font-medium text-destructive">-{quoted!.salePercent}% sale</span>
           )}
         </span>
+        {quoted?.available && quoted.warrantyOptions.length > 0 && (
+          <label className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="size-3.5 text-primary" />
+            Warranty:
+            <select
+              value={warranty?.planId ?? ""}
+              onChange={(e) => setWarranty(line.productId, e.target.value)}
+              className="h-7 rounded-md border border-input bg-transparent px-1.5 text-xs text-foreground dark:bg-input/30"
+              aria-label={`Warranty for ${line.name}`}
+            >
+              {quoted.warrantyOptions.map((o) => (
+                <option key={o.planId} value={o.planId}>
+                  {o.name} ({warrantyLength(o.days)}){o.usdCents > 0 ? ` +${formatUsd(o.usdCents)}` : " free"}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center rounded-lg border">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { orderLineTotalCents, warrantySummary } from "@/lib/warranty";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MessageCircleWarning } from "lucide-react";
@@ -131,6 +132,9 @@ export default async function AdminOrderDetailPage({
               <span className="text-muted-foreground">
                 {item.productName}
                 {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                {warrantySummary(item) && (
+                  <span className="block text-xs">Warranty: {warrantySummary(item)}</span>
+                )}
                 {item.discountPercent !== null && (
                   <span className="ml-1.5 text-xs font-medium text-destructive">
                     {item.discountName} -{item.discountPercent}%
@@ -138,7 +142,7 @@ export default async function AdminOrderDetailPage({
                 )}
               </span>
               <span className="tabular-nums">
-                {formatMoney(item.unitPriceCents * item.quantity, order.currency.toUpperCase())}
+                {formatMoney(orderLineTotalCents(item), order.currency.toUpperCase())}
               </span>
             </li>
           ))}

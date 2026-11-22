@@ -1,7 +1,9 @@
-{{!-- {{> keyGroup name="Windows 11 Pro" keys=keys}} - each key in a copy-friendly box --}}
+{{!-- {{> keyGroup name="Windows 11 Pro" keys=keys warranty="1 year warranty, until 22 Nov 2027"}}
+      Each key in a copy-friendly box; warranty is optional. --}}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;border:1px solid {{theme.border}};border-radius:12px">
   <tr><td style="padding:14px 16px">
-    <div style="font-size:15px;font-weight:600;color:{{theme.ink}};margin-bottom:6px">{{name}}</div>
+    <div style="font-size:15px;font-weight:600;color:{{theme.ink}};margin-bottom:{{#if warranty}}2px{{else}}6px{{/if}}">{{name}}</div>
+    {{#if warranty}}<div style="font-size:12px;color:{{theme.muted}};margin-bottom:8px">&#10003; Warranty: {{warranty}}</div>{{/if}}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       {{#each keys}}
       <tr><td style="padding:4px 0">

@@ -10,7 +10,7 @@ import type { CartLine } from "@/lib/cart-store";
  */
 export function useCartQuote(lines: CartLine[]) {
   const key = useMemo(
-    () => lines.map((l) => `${l.productId}:${l.quantity}`).join(","),
+    () => lines.map((l) => `${l.productId}:${l.quantity}:${l.warrantyPlanId ?? ""}`).join(","),
     [lines],
   );
   const [state, setState] = useState<{ key: string; quote: CartQuote } | null>(null);
@@ -19,8 +19,8 @@ export function useCartQuote(lines: CartLine[]) {
     let cancelled = false;
     const items = key
       ? key.split(",").map((s) => {
-          const [productId, qty] = s.split(":");
-          return { productId, quantity: Number(qty) };
+          const [productId, qty, plan] = s.split(":");
+          return { productId, quantity: Number(qty), warrantyPlanId: plan || null };
         })
       : [];
     quoteCart(items)
@@ -39,8 +39,8 @@ export function useCartQuote(lines: CartLine[]) {
   const refresh = useCallback(async (): Promise<CartQuote | null> => {
     const items = key
       ? key.split(",").map((s) => {
-          const [productId, qty] = s.split(":");
-          return { productId, quantity: Number(qty) };
+          const [productId, qty, plan] = s.split(":");
+          return { productId, quantity: Number(qty), warrantyPlanId: plan || null };
         })
       : [];
     try {

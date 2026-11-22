@@ -10,6 +10,7 @@ import {
 } from "@/lib/alerts";
 import { formatMoney } from "@/lib/money";
 import { RESOLVED_DELIVERED } from "@/lib/payment-issue";
+import { warrantyExpiry } from "@/lib/warranty";
 
 const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
@@ -155,6 +156,17 @@ export async function fulfillOrder(
           }),
       },
     });
+    // Warranties start when the keys are delivered.
+    const now = new Date();
+    for (const item of await tx.orderItem.findMany({
+      where: { orderId, warrantyName: { not: null }, warrantyDays: { not: null } },
+      select: { id: true, warrantyDays: true },
+    })) {
+      await tx.orderItem.update({
+        where: { id: item.id },
+        data: { warrantyExpiresAt: warrantyExpiry(item.warrantyDays, now) },
+      });
+    }
     return { status: "FULFILLED", orderNumber: order.orderNumber, alreadyFulfilled: false };
   });
 
