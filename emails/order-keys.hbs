@@ -1,0 +1,13 @@
+{{!-- Sent when an order is delivered. Data: orderNumber, total, keyCount, groups[{name, keys[]}], accountUrl --}}
+{{> heading text="Your keys are ready"}}
+{{#> para}}Thanks for shopping with {{site.name}}. Here {{#if (eq keyCount 1)}}is your license key{{else}}are your license keys{{/if}} for order <strong>{{orderNumber}}</strong>.{{/para}}
+
+{{> details rows=detailRows}}
+
+{{#each groups}}
+  {{> keyGroup name=name keys=keys theme=../theme}}
+{{/each}}
+
+{{#> callout tone="info"}}<strong>Keep this email safe.</strong> Anyone with a key can activate it. You can also see your keys any time in <a href="{{accountUrl}}" style="color:{{theme.primary}}">your account</a> or with <a href="{{site.url}}/order-lookup" style="color:{{theme.primary}}">Find my order</a>.{{/callout}}
+
+{{#> para small=true}}Need help activating? Just reply to this email.{{/para}}

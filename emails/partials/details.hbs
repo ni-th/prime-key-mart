@@ -1,0 +1,9 @@
+{{!-- {{> details rows=rows}} where rows = [{ label, value }] --}}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 18px;border-top:1px solid {{theme.border}};border-bottom:1px solid {{theme.border}}">
+  {{#each rows}}
+  <tr>
+    <td style="padding:8px 0;font-size:14px;color:{{../theme.muted}};width:40%">{{label}}</td>
+    <td style="padding:8px 0;font-size:14px;color:{{../theme.ink}};font-weight:600;text-align:right">{{value}}</td>
+  </tr>
+  {{/each}}
+</table>

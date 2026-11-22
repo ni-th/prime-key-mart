@@ -121,7 +121,7 @@ export async function sendAlert(alert: {
     }
 
     try {
-      await sendAdminAlertEmail({ subject: alert.subject, lines: alert.lines, to: recipients });
+      await sendAdminAlertEmail({ subject: alert.subject, lines: alert.lines, type: alert.type, to: recipients });
       await log("SENT");
       return "sent";
     } catch (err) {

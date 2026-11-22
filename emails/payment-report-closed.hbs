@@ -1,0 +1,7 @@
+{{!-- Admin closed a "paid but no keys" report as not paid. Data: orderNumber, message --}}
+{{> heading text="An update on your payment"}}
+{{#> para}}We looked into order <strong>{{orderNumber}}</strong>. Here's what we found:{{/para}}
+
+{{> quote text=message}}
+
+{{#> para small=true}}You can reply to this email, or send us more details from <a href="{{site.url}}/order-lookup" style="color:{{theme.primary}}">Find my order</a>.{{/para}}

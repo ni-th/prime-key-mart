@@ -1,0 +1,3 @@
+{{!-- {{#> para}}Body text{{/para}}   {{#> para small=true}}Fine print{{/para}}
+      {{#> para muted=true}}Secondary text{{/para}} --}}
+<p style="margin:0 0 14px;font-size:{{#if small}}13{{else}}15{{/if}}px;line-height:1.6;color:{{#if small}}{{theme.muted}}{{else if muted}}{{theme.muted}}{{else}}{{theme.ink}}{{/if}}">{{> @partial-block}}</p>
