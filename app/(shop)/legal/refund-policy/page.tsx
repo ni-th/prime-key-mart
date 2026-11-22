@@ -4,6 +4,7 @@ import { BUSINESS } from "@/lib/business";
 import { LegalPage, SupportEmail } from "@/components/shop/legal-page";
 import { getFreeCheckHours } from "@/lib/warranty-claims";
 import { checkPeriod } from "@/lib/warranty-claim-shared";
+import { ACTIVATION_LIMIT, ACTIVATION_REPLY_TIME } from "@/lib/delivery";
 
 export const metadata: Metadata = { title: "Refund and warranty policy" };
 
@@ -23,7 +24,8 @@ export default async function RefundPolicyPage() {
             Please activate every key as soon as you receive it. Every key,
             with or without a warranty, can be reported within{" "}
             <strong>{period} of delivery</strong> if it does not activate. After
-            that, only keys with a warranty are covered.
+            that, only keys with a warranty are covered. The same applies to
+            accounts (username and password).
           </p>
         ) : (
           <p>
@@ -33,6 +35,21 @@ export default async function RefundPolicyPage() {
           </p>
         )}
       </section>
+
+      {hours > 0 && (
+        <section>
+          <h2>Keys activated by phone</h2>
+          <p>
+            Some keys (for example Office 2019) are activated by phone. After
+            you enter the key, the software shows an Installation ID. Send it
+            from your order page and we reply with the Confirmation ID,{" "}
+            {ACTIVATION_REPLY_TIME}. For these keys the {period} check period
+            starts when we send the Confirmation ID, not at delivery. Each key
+            includes {ACTIVATION_LIMIT} activation requests (for example after
+            reinstalling); contact us if you need more.
+          </p>
+        </section>
+      )}
 
       <section>
         <h2>2. Warranty</h2>

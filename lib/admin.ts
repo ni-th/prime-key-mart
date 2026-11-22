@@ -30,7 +30,7 @@ export type CurrencyTotals = {
 };
 
 export async function getAdminStats() {
-  const [fulfilled, statusCounts, keysSold, productCount, openReports, openClaims, claimCosts] = await Promise.all([
+  const [fulfilled, statusCounts, keysSold, productCount, openReports, openClaims, claimCosts, openActivations] = await Promise.all([
     prisma.order.findMany({
       where: { status: "FULFILLED" },
       select: {
@@ -60,6 +60,7 @@ export async function getAdminStats() {
         orderItem: { select: { order: { select: { currency: true } } } },
       },
     }),
+    prisma.activationRequest.count({ where: { status: "OPEN" } }),
   ]);
 
   const byStatus = Object.fromEntries(
@@ -95,6 +96,8 @@ export async function getAdminStats() {
     openReports,
     /** Warranty claims waiting for a decision. */
     openClaims,
+    /** Phone activation requests waiting for a Confirmation ID. */
+    openActivations,
     totalOrders: statusCounts.reduce((n, s) => n + s._count, 0),
     keysSold,
     productCount,

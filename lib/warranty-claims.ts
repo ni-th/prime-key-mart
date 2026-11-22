@@ -8,6 +8,7 @@ import { asCurrency, convertCost } from "@/lib/profit";
 import { warrantySummary } from "@/lib/warranty";
 import { formatMoney } from "@/lib/money";
 import type { ClaimStatus, KeyCover, OrderKeyItem } from "@/lib/warranty-claim-shared";
+import { ACTIVATION_LIMIT, activationStepList, asDeliveryType, parseSecret, secretLabel } from "@/lib/delivery";
 
 /** Covered right now: lifetime (no end) or not yet expired. */
 export function warrantyActive(item: {
@@ -27,16 +28,42 @@ export async function getFreeCheckHours(): Promise<number> {
 }
 
 /**
+ * When a key's free check period starts. Normally at delivery; for phone
+ * activation keys only once we've sent the first Confirmation ID (before that
+ * the customer can't know whether the key works).
+ */
+export function checkStart(
+  deliveryType: string,
+  soldAt: Date | null,
+  activations: { status: string; resolvedAt: Date | null }[],
+): { start: Date | null; awaitingActivation: boolean } {
+  if (deliveryType !== "PHONE") return { start: soldAt, awaitingActivation: false };
+  const first = activations
+    .filter((a) => a.status === "DONE" && a.resolvedAt)
+    .map((a) => a.resolvedAt!.getTime())
+    .sort((a, b) => a - b)[0];
+  return first === undefined
+    ? { start: null, awaitingActivation: true }
+    : { start: new Date(first), awaitingActivation: false };
+}
+
+/**
  * Whether a key can be reported now. A paid warranty covers until its end
  * date; without one (or after it ends) every key still gets the free check
- * period counted from when that key was delivered. Whichever ends later wins.
+ * period counted from `soldAt` (see checkStart). Whichever ends later wins.
+ * A phone activation key that hasn't been activated yet stays covered: its
+ * check period hasn't started.
  */
 export function keyCover(
   item: { warrantyName: string | null; warrantyDays: number | null; warrantyExpiresAt: Date | null },
   soldAt: Date | null,
   freeCheckHours: number,
   now = new Date(),
+  opts: { awaitingActivation?: boolean } = {},
 ): KeyCover | null {
+  if (opts.awaitingActivation && !warrantyActive(item)) {
+    return freeCheckHours > 0 ? { kind: "FREE_CHECK", endsAt: null } : null;
+  }
   const free =
     soldAt && freeCheckHours > 0 ? new Date(soldAt.getTime() + freeCheckHours * 3_600_000) : null;
   const freeOpen = free !== null && free > now;
@@ -76,9 +103,11 @@ async function keyItems(where: Prisma.OrderItemWhereInput): Promise<OrderKeyItem
     orderBy: { order: { createdAt: "desc" } },
     include: {
       order: { select: { orderNumber: true, createdAt: true } },
+      product: { select: { deliveryType: true, activationSteps: true } },
       licenseKeys: {
         where: { status: "SOLD", replacedAt: null },
         orderBy: { soldAt: "asc" },
+        include: { activations: { orderBy: { createdAt: "asc" } } },
       },
       warrantyClaims: { orderBy: { createdAt: "desc" } },
     },
@@ -92,14 +121,34 @@ async function keyItems(where: Prisma.OrderItemWhereInput): Promise<OrderKeyItem
     warrantyName: item.warrantyName,
     summary: item.warrantyName ? (warrantySummary(item) ?? item.warrantyName) : null,
     active: warrantyActive(item),
+    deliveryType: asDeliveryType(item.product.deliveryType),
+    steps: activationStepList(item.product.activationSteps),
     keys: item.licenseKeys.map((k) => {
       const plain = decryptSecret({ ciphertext: k.secretCiphertext, iv: k.secretIv, authTag: k.secretAuthTag });
+      const secret = parseSecret(plain);
       const claim = item.warrantyClaims.find((c) => c.keyId === k.id);
+      const phone = item.product.deliveryType === "PHONE";
+      const { start, awaitingActivation } = checkStart(item.product.deliveryType, k.soldAt, k.activations);
       return {
         id: k.id,
-        label: `...${plain.replace(/[^A-Za-z0-9]/g, "").slice(-5)}`,
-        value: plain,
-        cover: keyCover(item, k.soldAt, freeHours, now),
+        label: secretLabel(plain),
+        value: secret.kind === "key" ? secret.key : "",
+        account: secret.kind === "account" ? { username: secret.username, password: secret.password } : null,
+        activation: phone
+          ? {
+              limit: ACTIVATION_LIMIT + k.extraActivations,
+              used: k.activations.filter((a) => a.status !== "REJECTED").length,
+              requests: k.activations.map((a) => ({
+                id: a.id,
+                status: a.status as "OPEN" | "DONE" | "REJECTED",
+                installationId: a.installationId,
+                confirmationId: a.confirmationId,
+                note: a.note,
+                createdAt: a.createdAt.toISOString(),
+              })),
+            }
+          : null,
+        cover: keyCover(item, start, freeHours, now, { awaitingActivation }),
         isReplacement: item.warrantyClaims.some((c) => c.replacementKeyId === k.id),
         claim: claim
           ? {
@@ -149,7 +198,7 @@ export async function resolveClaim(opts: {
 
   const claim = await prisma.warrantyClaim.findUnique({
     where: { id: claimId },
-    include: { orderItem: { include: { order: true } } },
+    include: { orderItem: { include: { order: true, product: { select: { deliveryType: true } } } } },
   });
   if (!claim) return { ok: false, orderNumber: null, error: "Claim not found." };
   if (claim.status !== "OPEN") return { ok: false, orderNumber: null, error: "This claim is already closed." };
@@ -255,6 +304,7 @@ export async function resolveClaim(opts: {
       productName: item.productName,
       outcome,
       newKey,
+      phone: item.product.deliveryType === "PHONE",
       refund: refundCents !== null ? formatMoney(refundCents, order.currency.toUpperCase()) : null,
       warrantyNote: warrantySummary(item),
       note: note || null,

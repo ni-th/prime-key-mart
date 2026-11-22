@@ -10,7 +10,7 @@ import { sendAlert } from "@/lib/alerts";
 import { sendWarrantyClaimReceivedEmail } from "@/lib/mailer";
 import { rateLimit } from "@/lib/rate-limit";
 import { warrantySummary } from "@/lib/warranty";
-import { getFreeCheckHours, keyCover, resolveClaim } from "@/lib/warranty-claims";
+import { checkStart, getFreeCheckHours, keyCover, resolveClaim } from "@/lib/warranty-claims";
 import { CLAIM_REASONS, type ClaimReason } from "@/lib/warranty-claim-shared";
 
 export type ClaimResult = { ok: true; message: string } | { ok: false; error: string };
@@ -51,7 +51,12 @@ export async function createWarrantyClaim(input: {
   if (!item || !key || key.status !== "SOLD" || key.replacedAt) {
     return { ok: false, error: "That key isn't part of this order." };
   }
-  const cover = keyCover(item, key.soldAt, await getFreeCheckHours());
+  const [product, activations] = await Promise.all([
+    prisma.product.findUnique({ where: { id: item.productId }, select: { deliveryType: true } }),
+    prisma.activationRequest.findMany({ where: { keyId: key.id }, select: { status: true, resolvedAt: true } }),
+  ]);
+  const { start, awaitingActivation } = checkStart(product?.deliveryType ?? "KEY", key.soldAt, activations);
+  const cover = keyCover(item, start, await getFreeCheckHours(), new Date(), { awaitingActivation });
   if (!cover) {
     return {
       ok: false,

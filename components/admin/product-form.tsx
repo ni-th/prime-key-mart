@@ -26,6 +26,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { saveProduct, type FormResult } from "@/app/actions/admin";
+import { ACTIVATION_REPLY_TIME, DELIVERY_TYPES, type DeliveryType } from "@/lib/delivery";
 
 type Category = { id: string; name: string };
 
@@ -50,10 +51,85 @@ export type ProductFormValues = {
   /** Custom selection: planId -> percent override (null = store %). */
   warrantyOverrides: Record<string, number | null>;
   categoryId: string;
+  deliveryType: DeliveryType;
+  /** "How to activate" steps, one per line. */
+  activationSteps: string | null;
   imageUrl: string | null;
   published: boolean;
   featured: boolean;
 };
+
+const DELIVERY_HINT: Record<DeliveryType, string> = {
+  KEY: "The customer gets a license key.",
+  ACCOUNT: "The customer gets a username and password. Add stock as \"username, password\", one per line.",
+  PHONE: `The customer gets a key. When the software shows an Installation ID, they send it from their order page and you reply with the Confirmation ID (we promise: ${ACTIVATION_REPLY_TIME}).`,
+};
+
+function DeliveryFields({
+  type,
+  steps,
+  error,
+}: {
+  type: DeliveryType;
+  steps: string | null;
+  error?: string;
+}) {
+  const [value, setValue] = useState<DeliveryType>(type);
+  return (
+    <>
+      <Field label="Delivery" htmlFor="deliveryType" hint={DELIVERY_HINT[value]}>
+        <Select
+          name="deliveryType"
+          value={value}
+          onValueChange={(v) => setValue((v as DeliveryType) ?? "KEY")}
+          items={(Object.keys(DELIVERY_TYPES) as DeliveryType[]).map((t) => ({ value: t, label: DELIVERY_TYPES[t] }))}
+        >
+          <SelectTrigger id="deliveryType" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(DELIVERY_TYPES) as DeliveryType[]).map((t) => (
+              <SelectItem key={t} value={t}>
+                {DELIVERY_TYPES[t]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field
+        label="How to activate (optional)"
+        htmlFor="activationSteps"
+        error={error}
+        hint="One step per line. Shown with the keys on the order page and in the keys email."
+      >
+        <Textarea
+          id="activationSteps"
+          name="activationSteps"
+          rows={6}
+          defaultValue={steps ?? ""}
+          placeholder={
+            value === "PHONE"
+              ? [
+                  "Install Office 2019.",
+                  "Enter your product key.",
+                  "Choose phone activation; Office shows an Installation ID.",
+                  "Send the Installation ID from your order page.",
+                  "Enter the Confirmation ID we send you.",
+                ].join("\n")
+              : value === "ACCOUNT"
+                ? [
+                    "Go to office.com and sign in with the username and password.",
+                    "Install the apps from your account page.",
+                  ].join("\n")
+                : ["Open Settings > System > Activation.", "Choose Change product key and enter your key."].join(
+                    "\n",
+                  )
+          }
+        />
+      </Field>
+    </>
+  );
+}
 
 function Field({
   label,
@@ -566,6 +642,15 @@ export function ProductForm({
             invalid={Boolean(fe.imageUrl)}
           />
         </Field>
+      </Card>
+
+      <Card className="space-y-4 p-5">
+        <h2 className="font-medium">Delivery and activation</h2>
+        <DeliveryFields
+          type={product?.deliveryType ?? "KEY"}
+          steps={product?.activationSteps ?? null}
+          error={fe.activationSteps}
+        />
       </Card>
 
       <Card className="space-y-3 p-5">

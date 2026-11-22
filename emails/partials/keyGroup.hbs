@@ -1,5 +1,6 @@
-{{!-- {{> keyGroup name="Windows 11 Pro" keys=keys warranty="1 year warranty, until 22 Nov 2027"}}
-      Each key in a copy-friendly box; warranty is optional. --}}
+{{!-- {{> keyGroup name="Windows 11 Pro" keys=keys warranty="1 year warranty, until 22 Nov 2027" phone=false steps=steps}}
+      Each key in a copy-friendly box; a key may also be an account {username, password}.
+      warranty, phone (needs a Confirmation ID) and steps ("How to activate") are optional. --}}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;border:1px solid {{theme.border}};border-radius:12px">
   <tr><td style="padding:14px 16px">
     <div style="font-size:15px;font-weight:600;color:{{theme.ink}};margin-bottom:{{#if warranty}}2px{{else}}6px{{/if}}">{{name}}</div>
@@ -7,9 +8,25 @@
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       {{#each keys}}
       <tr><td style="padding:4px 0">
+        {{#if this.username}}
+        <div style="padding:10px 12px;background:{{../theme.accent}};border:1px dashed #b9bdf5;border-radius:8px;font-family:{{../theme.mono}};font-size:14px;color:{{../theme.ink}};word-break:break-all">
+          <div><span style="color:{{../theme.muted}}">Username:</span> {{this.username}}</div>
+          <div style="margin-top:4px"><span style="color:{{../theme.muted}}">Password:</span> {{this.password}}</div>
+        </div>
+        {{else}}
         <div style="padding:10px 12px;background:{{../theme.accent}};border:1px dashed #b9bdf5;border-radius:8px;font-family:{{../theme.mono}};font-size:15px;letter-spacing:0.5px;color:{{../theme.ink}};word-break:break-all">{{this}}</div>
+        {{/if}}
       </td></tr>
       {{/each}}
     </table>
+    {{#if phone}}
+    <div style="margin-top:8px;font-size:13px;line-height:20px;color:{{theme.ink}}"><strong>Phone activation:</strong> when the software shows an Installation ID, open your order page and tap "Get confirmation ID". We'll send the Confirmation ID back, {{replyTime}}.</div>
+    {{/if}}
+    {{#if steps.length}}
+    <div style="margin-top:10px;font-size:13px;font-weight:600;color:{{theme.ink}}">How to activate</div>
+    <ol style="margin:4px 0 0;padding-left:20px;font-size:13px;line-height:20px;color:{{theme.muted}}">
+      {{#each steps}}<li>{{this}}</li>{{/each}}
+    </ol>
+    {{/if}}
   </td></tr>
 </table>

@@ -1,15 +1,15 @@
-{{!-- Sent when an order is delivered. Data: orderNumber, total, keyCount, groups[{name, keys[], warranty?}], viewUrl, freeCheck?, policyUrl --}}
+{{!-- Sent when an order is delivered. Data: orderNumber, total, keyCount, groups[{name, keys[] (string or {username, password}), warranty?, phone, steps[]}], replyTime, viewUrl, freeCheck?, policyUrl --}}
 {{> heading text="Your keys are ready"}}
 {{#> para}}Thanks for shopping with {{site.name}}. Here {{#if (eq keyCount 1)}}is your license key{{else}}are your license keys{{/if}} for order <strong>{{orderNumber}}</strong>.{{/para}}
 
 {{> details rows=detailRows}}
 
 {{#each groups}}
-  {{> keyGroup name=name keys=keys warranty=warranty theme=../theme}}
+  {{> keyGroup name=name keys=keys warranty=warranty phone=phone steps=steps replyTime=../replyTime theme=../theme}}
 {{/each}}
 
-{{#> callout tone="warning"}}<strong>Activate your {{#if (eq keyCount 1)}}key{{else}}keys{{/if}} now.</strong> {{#if freeCheck}}If a key doesn't work, report it within {{freeCheck}} using "Key not working?" under it on <a href="{{viewUrl}}" style="color:{{theme.primary}}">your order page</a>. Keys with a warranty can be reported until the warranty ends.{{else}}If a key doesn't work, report it straight away using "Key not working?" under it on <a href="{{viewUrl}}" style="color:{{theme.primary}}">your order page</a>.{{/if}} <a href="{{policyUrl}}" style="color:{{theme.primary}}">What's covered</a>{{/callout}}
+{{#> callout tone="warning"}}<strong>Activate your {{#if (eq keyCount 1)}}key{{else}}keys{{/if}} now.</strong> {{#if freeCheck}}If a key doesn't work{{#if anyPhone}} (for phone activation keys: after we send the Confirmation ID){{/if}}, report it within {{freeCheck}} using "Key not working?" under it on <a href="{{viewUrl}}" style="color:{{theme.primary}}">your order page</a>. Keys with a warranty can be reported until the warranty ends.{{else}}If a key doesn't work, report it straight away using "Key not working?" under it on <a href="{{viewUrl}}" style="color:{{theme.primary}}">your order page</a>.{{/if}} <a href="{{policyUrl}}" style="color:{{theme.primary}}">What's covered</a>{{/callout}}
 
-{{#> callout tone="info"}}<strong>Keep this email safe.</strong> Anyone with a key can activate it. You can see them again any time on <a href="{{viewUrl}}" style="color:{{theme.primary}}">your order page</a> (a private link, so please don't share it).{{/callout}}
+{{#> callout tone="info"}}<strong>Keep this email safe.</strong> Anyone with a key{{#if anyAccount}} or account password{{/if}} can use it. You can see them again any time on <a href="{{viewUrl}}" style="color:{{theme.primary}}">your order page</a> (a private link, so please don't share it).{{/callout}}
 
 {{#> para small=true}}Need help activating? Just reply to this email.{{/para}}

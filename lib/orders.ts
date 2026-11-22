@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { Session } from "next-auth";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
+import { secretText } from "@/lib/delivery";
 import { verifyOrderToken } from "@/lib/order-token";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -75,11 +76,13 @@ export function decryptOrderKeys(order: OrderWithDetail) {
       // Keys replaced under warranty no longer count; the replacement does.
       .filter((k) => k.status === "SOLD" && !k.replacedAt)
       .map((k) =>
-        decryptSecret({
-          ciphertext: k.secretCiphertext,
-          iv: k.secretIv,
-          authTag: k.secretAuthTag,
-        }),
+        secretText(
+          decryptSecret({
+            ciphertext: k.secretCiphertext,
+            iv: k.secretIv,
+            authTag: k.secretAuthTag,
+          }),
+        ),
       ),
   }));
 }

@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   /// Direct (non-pooled) connection for migrations. Neon: the URL without "-pooler".
   directUrl = env("DIRECT_URL")
@@ -32,26 +32,26 @@ enum OrderStatus {
 }
 
 model User {
-  id             String               @id @default(cuid())
-  email          String               @unique
-  name           String?
-  passwordHash   String?
-  role           Role                 @default(USER)
-  suspended      Boolean              @default(false)
-  suspendedAt    DateTime?
-  suspensionNote String?
+  id              String               @id @default(cuid())
+  email           String               @unique
+  name            String?
+  passwordHash    String?
+  role            Role                 @default(USER)
+  suspended       Boolean              @default(false)
+  suspendedAt     DateTime?
+  suspensionNote  String?
   // Two-factor auth (authenticator app). Required for ADMIN users.
   // totpSecret is a JSON-encoded EncryptedSecret (AES-256-GCM, see lib/crypto.ts).
-  totpSecret     String?
-  totpEnabled    Boolean              @default(false)
-  totpLastStep   Int? // last accepted 30s time-step; blocks code replay
+  totpSecret      String?
+  totpEnabled     Boolean              @default(false)
+  totpLastStep    Int? // last accepted 30s time-step; blocks code replay
   /// Set once the customer confirms they own this email (via an emailed link).
   /// Guest orders placed with this email are then linked to the account.
   emailVerifiedAt DateTime?
-  orders         Order[]
-  passwordResets PasswordResetToken[]
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  orders          Order[]
+  passwordResets  PasswordResetToken[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }
 
 /// One-time "forgot password" link. Only a SHA-256 of the token is stored, so a
@@ -227,6 +227,28 @@ model WarrantyClaim {
   @@index([keyId])
 }
 
+/// Phone activation: the customer sends the Installation ID shown by the
+/// software, the store replies with the Confirmation ID.
+model ActivationRequest {
+  id             String     @id @default(cuid())
+  keyId          String
+  key            LicenseKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  /// Digits only, as entered by the customer (54 or 63 digits).
+  installationId String
+  /// OPEN, DONE (confirmation ID sent) or REJECTED.
+  status         String     @default("OPEN")
+  /// Digits only (42 or 48 digits), set when DONE.
+  confirmationId String?
+  /// Admin's note to the customer (required when rejecting).
+  note           String?
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  createdAt      DateTime   @default(now())
+
+  @@index([status, createdAt])
+  @@index([keyId])
+}
+
 model BlockedEmail {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -284,6 +306,12 @@ model Product {
   /// percentages) set in ProductWarranty.
   warrantyMode      String            @default("NONE")
   warrantyOverrides ProductWarranty[]
+  /// How it's delivered: "KEY" (license key), "ACCOUNT" (username + password)
+  /// or "PHONE" (key + phone activation: the customer sends an Installation
+  /// ID and the store replies with a Confirmation ID).
+  deliveryType      String            @default("KEY")
+  /// Optional "How to activate" steps, one per line, shown with the keys.
+  activationSteps   String?
   imageUrl          String?
   categoryId        String
   category          Category          @relation(fields: [categoryId], references: [id])
@@ -301,24 +329,27 @@ model Product {
 
 model LicenseKey {
   // The license key itself is encrypted at rest with AES-256-GCM (see lib/crypto.ts).
-  id               String          @id @default(cuid())
+  id               String              @id @default(cuid())
   productId        String
-  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product          Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   secretCiphertext String
   secretIv         String
   secretAuthTag    String
-  fingerprint      String          @unique // sha256 of the normalized plaintext, used to dedupe uploads
-  status           KeyStatus       @default(AVAILABLE)
+  fingerprint      String              @unique // sha256 of the normalized plaintext, used to dedupe uploads
+  status           KeyStatus           @default(AVAILABLE)
   orderItemId      String?
-  orderItem        OrderItem?      @relation(fields: [orderItemId], references: [id])
+  orderItem        OrderItem?          @relation(fields: [orderItemId], references: [id])
   reservedAt       DateTime?
   soldAt           DateTime?
   /// Set when a warranty claim replaced this key (it no longer counts as
   /// delivered; the customer sees the replacement instead).
   replacedAt       DateTime?
-  claims           WarrantyClaim[] @relation("ClaimedKey")
-  replacementFor   WarrantyClaim[] @relation("ReplacementKey")
-  createdAt        DateTime        @default(now())
+  claims           WarrantyClaim[]     @relation("ClaimedKey")
+  replacementFor   WarrantyClaim[]     @relation("ReplacementKey")
+  /// Phone activation: requests allowed on top of the standard limit (admin).
+  extraActivations Int                 @default(0)
+  activations      ActivationRequest[]
+  createdAt        DateTime            @default(now())
 
   @@index([productId, status])
   @@index([orderItemId])

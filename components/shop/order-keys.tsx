@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Loader2, ShieldCheck, ShieldX } from "lucide-react";
+import { Loader2, PhoneCall, ShieldCheck, ShieldX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createWarrantyClaim, type ClaimResult } from "@/app/actions/warranty-claims";
+import { requestActivation } from "@/app/actions/activation";
+import { ACTIVATION_REPLY_TIME, formatActivationId } from "@/lib/delivery";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -103,6 +105,140 @@ function ClaimForm({
   );
 }
 
+/** An account (username + password) instead of a key. Both hidden until the eye is tapped. */
+function AccountDetails({ account }: { account: { username: string; password: string } }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="w-20 shrink-0 text-xs text-muted-foreground">Username</span>
+        <CopyKey value={account.username} what="Username" />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="w-20 shrink-0 text-xs text-muted-foreground">Password</span>
+        <CopyKey value={account.password} hide="full" what="Password" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Phone activation: Confirmation IDs we've sent, the request waiting for one,
+ * and the form to send a new Installation ID.
+ */
+function Activation({
+  orderNumber,
+  token,
+  keyId,
+  activation,
+}: {
+  orderNumber: string;
+  token: string | null;
+  keyId: string;
+  activation: NonNullable<OrderKeyItem["keys"][number]["activation"]>;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  const reqs = activation.requests;
+  const waiting = reqs.find((r) => r.status === "OPEN");
+  const doneList = reqs.filter((r) => r.status === "DONE");
+  const last = reqs[reqs.length - 1];
+  const canRequest = !waiting && !sent && activation.used < activation.limit;
+
+  return (
+    <div className="space-y-2 rounded-lg border border-dashed p-3">
+      <div className="flex items-center gap-1.5 text-xs font-medium">
+        <PhoneCall className="size-3.5" />
+        Phone activation
+      </div>
+      {doneList.map((r) => (
+        <div key={r.id} className="space-y-1">
+          <div className="text-xs text-muted-foreground">
+            Confirmation ID for Installation ID ending {r.installationId.slice(-7)}
+          </div>
+          <CopyKey value={formatActivationId(r.confirmationId ?? "")} size="sm" hide="none" what="Confirmation ID" />
+        </div>
+      ))}
+      {waiting || sent ? (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          {sent ?? `We're getting your Confirmation ID, ${ACTIVATION_REPLY_TIME}. We'll email it to you.`}
+        </p>
+      ) : last?.status === "REJECTED" ? (
+        <p className="text-xs text-muted-foreground">
+          We couldn&apos;t activate with your last Installation ID{last.note ? `: ${last.note}` : "."}
+        </p>
+      ) : doneList.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Enter the key in the software and choose phone activation. When it shows an Installation ID,
+          send it here and we&apos;ll reply with the Confirmation ID.
+        </p>
+      ) : null}
+
+      {open ? (
+        <form
+          className="space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setError(null);
+            start(async () => {
+              const r = await requestActivation({ orderNumber, token, keyId, installationId: value });
+              if (!r.ok) setError(r.error);
+              else {
+                setSent(r.message);
+                setOpen(false);
+                setValue("");
+                router.refresh();
+              }
+            });
+          }}
+        >
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <Label htmlFor={`iid-${keyId}`}>Installation ID</Label>
+          <Textarea
+            id={`iid-${keyId}`}
+            rows={2}
+            inputMode="numeric"
+            autoComplete="off"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="1234567 1234567 1234567 1234567 1234567 1234567 1234567 1234567 1234567"
+            className="font-mono text-sm"
+            required
+          />
+          <p className="text-xs text-muted-foreground">
+            Type all 9 groups exactly as shown. Spaces or dashes are fine.
+          </p>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={pending}>
+              {pending && <Loader2 className="size-4 animate-spin" />}
+              Send Installation ID
+            </Button>
+            <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : canRequest ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
+          {doneList.length > 0 ? "Reinstalled? Get a new Confirmation ID" : "Get confirmation ID"}
+        </Button>
+      ) : !waiting && !sent ? (
+        <p className="text-xs text-muted-foreground">
+          You&apos;ve used all activation requests for this key. Reply to your order email and we&apos;ll help.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** Small line under a key: the claim link, or where its claim stands. */
 function KeyStatus({
   k,
@@ -135,12 +271,18 @@ function KeyStatus({
     ) : null;
   // Keys without a (running) warranty: say how long the free check lasts.
   const freeCheck =
-    k.cover?.kind === "FREE_CHECK" && k.cover.endsAt && !lastClaim ? (
-      <p className="text-xs text-muted-foreground">
-        Check it now: you can report a problem until{" "}
-        {/* Local time differs from the server's, so the client renders its own. */}
-        <span suppressHydrationWarning>{coverEnd.format(new Date(k.cover.endsAt))}</span>.
-      </p>
+    k.cover?.kind === "FREE_CHECK" && !lastClaim ? (
+      k.cover.endsAt ? (
+        <p className="text-xs text-muted-foreground">
+          Check it now: you can report a problem until{" "}
+          {/* Local time differs from the server's, so the client renders its own. */}
+          <span suppressHydrationWarning>{coverEnd.format(new Date(k.cover.endsAt))}</span>.
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          The check period starts when we send your Confirmation ID.
+        </p>
+      )
     ) : null;
   const claimLink =
     k.cover && !open ? (
@@ -219,8 +361,15 @@ export function OrderKeys({
           <ul className="space-y-3">
             {item.keys.map((k) => (
               <li key={k.id} className="space-y-1.5">
-                {k.isReplacement && <div className="text-xs text-muted-foreground">Replacement key</div>}
-                <CopyKey value={k.value} />
+                {k.isReplacement && (
+                  <div className="text-xs text-muted-foreground">
+                    {k.account ? "Replacement account" : "Replacement key"}
+                  </div>
+                )}
+                {k.account ? <AccountDetails account={k.account} /> : <CopyKey value={k.value} />}
+                {k.activation && (
+                  <Activation orderNumber={item.orderNumber} token={token} keyId={k.id} activation={k.activation} />
+                )}
                 <KeyStatus
                   k={k}
                   done={done[k.id]}
@@ -243,6 +392,16 @@ export function OrderKeys({
               </li>
             ))}
           </ul>
+          {item.steps.length > 0 && (
+            <details className="group rounded-lg bg-muted/50 px-3 py-2 text-sm">
+              <summary className="cursor-pointer text-xs font-medium">How to activate</summary>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+                {item.steps.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+            </details>
+          )}
         </Card>
       ))}
       {anyCover && (

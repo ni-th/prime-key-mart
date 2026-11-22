@@ -22,6 +22,7 @@ export const ALERT_TYPES = {
   CUSTOMER_REPORT: "Customer says they paid",
   SECURITY: "Security",
   WARRANTY_CLAIM: "Warranty claim",
+  ACTIVATION_REQUEST: "Phone activation request",
   TEST: "Test",
 } as const;
 export type AlertType = keyof typeof ALERT_TYPES;
@@ -33,7 +34,10 @@ export type AlertSettings = {
   /** True when recipients come from settings (not the ADMIN_EMAIL fallback). */
   customRecipients: boolean;
   lowStockThreshold: number;
-  enabled: Record<Exclude<AlertType, "TEST" | "CUSTOMER_REPORT" | "SECURITY" | "WARRANTY_CLAIM">, boolean>;
+  enabled: Record<
+    Exclude<AlertType, "TEST" | "CUSTOMER_REPORT" | "SECURITY" | "WARRANTY_CLAIM" | "ACTIVATION_REQUEST">,
+    boolean
+  >;
 };
 
 /** Split a comma/space/newline separated list into lower-case emails. */
@@ -88,7 +92,7 @@ export async function sendAlert(alert: {
     // Customer reports follow the "Order not delivered" switch; security
     // notices (e.g. blocked lookups) follow "Payment problems".
     const toggle =
-      alert.type === "CUSTOMER_REPORT" || alert.type === "WARRANTY_CLAIM"
+      alert.type === "CUSTOMER_REPORT" || alert.type === "WARRANTY_CLAIM" || alert.type === "ACTIVATION_REQUEST"
         ? "FAILED_DELIVERY"
         : alert.type === "SECURITY"
           ? "PAYMENT_PROBLEM"

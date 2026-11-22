@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ResolveClaimForm } from "@/components/admin/resolve-claim-form";
 import { decryptSecret } from "@/lib/crypto";
+import { secretText } from "@/lib/delivery";
 import { warrantySummary } from "@/lib/warranty";
 import { formatMoney } from "@/lib/money";
 import { perKeyPaidCents } from "@/lib/warranty-claims";
@@ -52,7 +53,7 @@ export default async function WarrantyClaimsPage({ searchParams }: { searchParam
     prisma.warrantyClaim.count({ where: { status: "OPEN" } }),
   ]);
   const plain = (k: { secretCiphertext: string; secretIv: string; secretAuthTag: string }) =>
-    decryptSecret({ ciphertext: k.secretCiphertext, iv: k.secretIv, authTag: k.secretAuthTag });
+    secretText(decryptSecret({ ciphertext: k.secretCiphertext, iv: k.secretIv, authTag: k.secretAuthTag }));
 
   return (
     <div className="space-y-6">

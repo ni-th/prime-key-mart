@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { ProductForm } from "@/components/admin/product-form";
+import { asDeliveryType } from "@/lib/delivery";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import { getPricingSettings } from "@/lib/pricing";
 import { getAlertSettings } from "@/lib/alerts";
@@ -83,6 +84,8 @@ export default async function EditProductPage({
           imageUrl: product.imageUrl,
           published: product.published,
           featured: product.featured,
+          deliveryType: asDeliveryType(product.deliveryType),
+          activationSteps: product.activationSteps,
         }}
       />
 

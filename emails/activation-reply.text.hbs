@@ -1,0 +1,29 @@
+{{#if done}}
+Your confirmation ID
+
+Here is the Confirmation ID for your {{productName}} key from order {{orderNumber}}:
+
+{{confirmationId}}
+
+For Installation ID: {{installationIdFormatted}}
+{{#if note}}
+
+{{note}}
+{{/if}}
+
+It only works for that Installation ID. If you reinstall, send the new Installation ID from your order page.{{#if freeCheck}} If activation fails, report it within {{freeCheck}} using "Key not working?" under the key.{{/if}}
+{{else}}
+About your activation request
+
+We couldn't create a Confirmation ID for your {{productName}} key from order {{orderNumber}}.
+{{#if note}}
+
+{{note}}
+{{/if}}
+
+You can send a new Installation ID from your order page.
+{{/if}}
+
+Open your order: {{viewUrl}}
+
+Questions? Just reply to this email.

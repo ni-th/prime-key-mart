@@ -9,6 +9,7 @@ import {
   orderStatusEmail,
   warrantyClaimReceivedEmail,
   warrantyClaimResolvedEmail,
+  activationReplyEmail,
   type EmailContent,
 } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/email/render";
@@ -31,7 +32,19 @@ export const EMAIL_SAMPLES: {
         currency: "lkr",
         groups: [
           { name: "Windows 11 Pro", keys: ["VK7JG-NPHTM-C97JM-9MPGT-3V66T"], warranty: "Premium (1 year), until 22 Nov 2027" },
-          { name: "Microsoft Office 2021 Pro Plus", keys: ["XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99", "NMMKJ-6RK4F-KMJVX-8D9MJ-6MWKP"] },
+          {
+            name: "Microsoft Office 2019 Pro Plus",
+            keys: ["XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99"],
+            phone: true,
+            steps: [
+              "Install Office 2019.",
+              "Enter your product key.",
+              "Choose phone activation; Office shows an Installation ID.",
+              "Send the Installation ID from your order page.",
+              "Enter the Confirmation ID we send you.",
+            ],
+          },
+          { name: "Microsoft 365 Family", keys: ['{"u":"keysby.user01@outlook.com","p":"Xr7#mQ2!vL"}'] },
         ],
         freeCheck: "24 hours",
       }),
@@ -61,6 +74,32 @@ export const EMAIL_SAMPLES: {
         newKey: "W269N-WFGWX-YVC9B-4J6C9-T83GX",
         warrantyNote: "Plus (3 months), until 20 Feb 2027",
         note: "Sorry about that! Here's a fresh key.",
+      }),
+  },
+  {
+    id: "activation-reply",
+    name: "Phone activation: confirmation ID",
+    when: "When you send the Confirmation ID for a phone activation request.",
+    render: () =>
+      activationReplyEmail({
+        orderNumber: "KM-8F3K2Q",
+        productName: "Microsoft Office 2019 Pro Plus",
+        installationId: "123456712345671234567123456712345671234567123456712345671234567",
+        confirmationId: "123456123456123456123456123456123456123456123456",
+        freeCheck: "24 hours",
+      }),
+  },
+  {
+    id: "activation-reply-rejected",
+    name: "Phone activation: couldn't activate",
+    when: "When you can't create a Confirmation ID (e.g. wrong Installation ID).",
+    render: () =>
+      activationReplyEmail({
+        orderNumber: "KM-8F3K2Q",
+        productName: "Microsoft Office 2019 Pro Plus",
+        installationId: "123456712345671234567123456712345671234567123456712345671234567",
+        confirmationId: null,
+        note: "The Installation ID looks incomplete. Please copy all 9 groups and send it again.",
       }),
   },
   {

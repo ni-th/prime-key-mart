@@ -31,9 +31,22 @@ export function maskKey(value: string, visible = 5): string {
  * A license key, hidden by default (safe to open in a public place). The eye
  * shows it; copy works either way.
  */
-export function CopyKey({ value, size = "default" }: { value: string; size?: "default" | "sm" }) {
+export function CopyKey({
+  value,
+  size = "default",
+  hide = "partial",
+  what = "Key",
+}: {
+  value: string;
+  size?: "default" | "sm";
+  /** partial = keep the last 5 characters; full = hide everything (passwords); none = always shown. */
+  hide?: "partial" | "full" | "none";
+  /** For labels and toasts: "Key", "Password", "Installation ID"... */
+  what?: string;
+}) {
   const [copied, setCopied] = useState(false);
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(hide === "none");
+  const masked = hide === "full" ? "•".repeat(10) : maskKey(value);
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       <code
@@ -41,30 +54,32 @@ export function CopyKey({ value, size = "default" }: { value: string; size?: "de
           "min-w-0 flex-1 truncate rounded-md bg-muted font-mono",
           size === "sm" ? "px-2 py-1 text-xs" : "px-2.5 py-1.5 text-sm",
         )}
-        aria-label={shown ? undefined : "Hidden key"}
+        aria-label={shown ? undefined : `Hidden ${what.toLowerCase()}`}
       >
-        {shown ? value : maskKey(value)}
+        {shown ? value : masked}
       </code>
+      {hide !== "none" && (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          aria-label={shown ? `Hide ${what.toLowerCase()}` : `Show ${what.toLowerCase()}`}
+          aria-pressed={shown}
+          onClick={() => setShown((s) => !s)}
+        >
+          {shown ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+        </Button>
+      )}
       <Button
         type="button"
         variant="outline"
         size="icon-sm"
-        aria-label={shown ? "Hide key" : "Show key"}
-        aria-pressed={shown}
-        onClick={() => setShown((s) => !s)}
-      >
-        {shown ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label="Copy key"
+        aria-label={`Copy ${what.toLowerCase()}`}
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(value);
             setCopied(true);
-            toast.success("Key copied");
+            toast.success(`${what} copied`);
             setTimeout(() => setCopied(false), 1500);
           } catch {
             toast.error("Couldn't copy");

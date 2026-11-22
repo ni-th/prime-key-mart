@@ -1,0 +1,32 @@
+{{!-- Phone activation request answered. Data: orderNumber, productName, done (bool), confirmationId?, installationId, note?, freeCheck?, viewUrl --}}
+{{#if done}}
+{{> heading text="Your confirmation ID"}}
+{{#> para}}Here is the Confirmation ID for your <strong>{{productName}}</strong> key from order <strong>{{orderNumber}}</strong>. Enter it in the activation window, in the same order as shown.{{/para}}
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px">
+  <tr><td style="padding:12px 14px;background:{{theme.accent}};border:1px dashed #b9bdf5;border-radius:8px;font-family:{{theme.mono}};font-size:16px;letter-spacing:0.5px;color:{{theme.ink}};word-break:break-all">{{confirmationId}}</td></tr>
+</table>
+
+{{> details rows=detailRows}}
+
+{{#if note}}
+  {{> quote text=note}}
+{{/if}}
+
+{{#> callout tone="warning"}}It only works for the Installation ID above. If you reinstall, you'll get a new Installation ID: send it from your order page.{{#if freeCheck}} If activation fails, report it within {{freeCheck}} using "Key not working?" under the key.{{/if}}{{/callout}}
+{{else}}
+{{> heading text="About your activation request"}}
+{{#> para}}We couldn't create a Confirmation ID for your <strong>{{productName}}</strong> key from order <strong>{{orderNumber}}</strong>.{{/para}}
+
+{{> details rows=detailRows}}
+
+{{#if note}}
+  {{> quote text=note}}
+{{/if}}
+
+{{#> para}}You can send a new Installation ID from your order page.{{/para}}
+{{/if}}
+
+{{> button url=viewUrl label="Open your order"}}
+
+{{#> para small=true}}Questions? Just reply to this email.{{/para}}

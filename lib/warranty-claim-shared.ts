@@ -21,8 +21,23 @@ export type ClaimStatus = keyof typeof CLAIM_STATUS;
 export type KeyCover = {
   /** WARRANTY = paid plan; FREE_CHECK = the short period every key gets after delivery. */
   kind: "WARRANTY" | "FREE_CHECK";
-  /** When cover ends (ISO); null = lifetime warranty. */
+  /**
+   * When cover ends (ISO). null = lifetime warranty, or (FREE_CHECK) a phone
+   * activation key whose check period starts once its Confirmation ID is sent.
+   */
   endsAt: string | null;
+};
+
+/** A phone activation request as the customer sees it. */
+export type ActivationView = {
+  id: string;
+  status: "OPEN" | "DONE" | "REJECTED";
+  /** Digits only. */
+  installationId: string;
+  /** Digits only, once sent. */
+  confirmationId: string | null;
+  note: string | null;
+  createdAt: string;
 };
 
 /** One delivered product line on the customer's order page: its keys, warranty and claims. */
@@ -39,12 +54,20 @@ export type OrderKeyItem = {
   summary: string | null;
   /** Covered right now (claims allowed). */
   active: boolean;
+  /** KEY, ACCOUNT or PHONE (see lib/delivery). */
+  deliveryType: "KEY" | "ACCOUNT" | "PHONE";
+  /** "How to activate" steps for this product (may be empty). */
+  steps: string[];
   keys: {
     id: string;
-    /** Last characters of the key, to tell keys apart. */
+    /** Last characters of the key (or the account username), to tell keys apart. */
     label: string;
-    /** The full key (only sent to the order's owner; hidden until they tap the eye). */
+    /** The full key (only sent to the order's owner; hidden until they tap the eye). Empty for accounts. */
     value: string;
+    /** Account products: the username and password instead of a key. */
+    account: { username: string; password: string } | null;
+    /** Phone activation products: requests so far and how many are allowed. */
+    activation: { limit: number; used: number; requests: ActivationView[] } | null;
     /** Can be reported now, and why (null = not covered any more). */
     cover: KeyCover | null;
     /** This key was sent as a warranty replacement. */

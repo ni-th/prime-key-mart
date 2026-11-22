@@ -3,7 +3,7 @@
 {{#> para}}About your <strong>{{productName}}</strong> key from order <strong>{{orderNumber}}</strong>:{{/para}}
 
 {{#if newKey}}
-  {{> keyGroup name=productName keys=newKeys warranty=warrantyNote theme=theme}}
+  {{> keyGroup name=productName keys=newKeys warranty=warrantyNote phone=phone replyTime=replyTime theme=theme}}
   {{#> callout tone="success"}}Your old key has been replaced by this one. Use the new key to activate; the old one no longer applies.{{/callout}}
 {{/if}}
 

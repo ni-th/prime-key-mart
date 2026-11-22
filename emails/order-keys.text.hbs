@@ -5,14 +5,28 @@ Order {{orderNumber}} - {{total}}
 {{#each groups}}
 {{name}}{{#if warranty}} (warranty: {{warranty}}){{/if}}
 {{#each keys}}
+{{#if this.username}}
+  Username: {{this.username}}
+  Password: {{this.password}}
+{{else}}
   {{this}}
+{{/if}}
 {{/each}}
+{{#if phone}}
+Phone activation: when the software shows an Installation ID, open your order page and tap "Get confirmation ID". We'll send the Confirmation ID back, {{../replyTime}}.
+{{/if}}
+{{#if steps.length}}
+How to activate:
+{{#each steps}}
+  {{@index}}. {{this}}
+{{/each}}
+{{/if}}
 
 {{/each}}
-Activate your {{#if (eq keyCount 1)}}key{{else}}keys{{/if}} now. {{#if freeCheck}}If a key doesn't work, report it within {{freeCheck}} using "Key not working?" on your order page. Keys with a warranty can be reported until the warranty ends.{{else}}If a key doesn't work, report it straight away using "Key not working?" on your order page.{{/if}}
+Activate your {{#if (eq keyCount 1)}}key{{else}}keys{{/if}} now. {{#if freeCheck}}If a key doesn't work{{#if anyPhone}} (phone activation keys: after we send the Confirmation ID){{/if}}, report it within {{freeCheck}} using "Key not working?" on your order page. Keys with a warranty can be reported until the warranty ends.{{else}}If a key doesn't work, report it straight away using "Key not working?" on your order page.{{/if}}
 What's covered: {{policyUrl}}
 
-Keep this email safe: anyone with a key can activate it.
+Keep this email safe: anyone with a key{{#if anyAccount}} or account password{{/if}} can use it.
 See them again any time on your order page (private link, don't share it):
 {{viewUrl}}
 

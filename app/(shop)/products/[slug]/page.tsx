@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ProductThumb } from "@/components/shop/product-thumb";
 import { ProductBuyBox } from "@/components/shop/product-buy-box";
+import { asDeliveryType } from "@/lib/delivery";
 
 type Params = { slug: string };
 
@@ -140,6 +141,7 @@ export default async function ProductPage({
             warranties={warranties}
             unitLkrCents={price.lkrCents}
             freeCheckHours={freeCheckHours}
+            deliveryType={asDeliveryType(product.deliveryType)}
             product={{
               productId: product.id,
               slug: product.slug,

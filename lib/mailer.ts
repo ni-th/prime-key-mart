@@ -12,11 +12,13 @@ import {
   orderStatusEmail,
   warrantyClaimReceivedEmail,
   warrantyClaimResolvedEmail,
+  activationReplyEmail,
   type EmailContent,
 } from "@/lib/email/templates";
 import { EMAIL_LOGO } from "@/lib/email/render";
 import { warrantySummary } from "@/lib/warranty";
 import { checkPeriod } from "@/lib/warranty-claim-shared";
+import { activationStepList } from "@/lib/delivery";
 
 let cached: Transporter | null = null;
 let cachedIsEthereal = false;
@@ -175,17 +177,30 @@ export async function sendWarrantyClaimResolvedEmail(
   await send(to, warrantyClaimResolvedEmail(data));
 }
 
+export async function sendActivationReplyEmail(
+  to: string,
+  data: Parameters<typeof activationReplyEmail>[0],
+): Promise<void> {
+  await send(to, activationReplyEmail(data));
+}
+
 /** Sends the license keys for a fulfilled order. Safe to call more than once. */
 export async function sendOrderKeysEmail(orderNumber: string): Promise<void> {
   const order = await prisma.order.findUnique({
     where: { orderNumber },
-    include: { items: { include: { licenseKeys: true } } },
+    include: {
+      items: {
+        include: { licenseKeys: true, product: { select: { deliveryType: true, activationSteps: true } } },
+      },
+    },
   });
   if (!order) return;
 
   const groups = order.items.map((item) => ({
     name: item.productName,
     warranty: warrantySummary(item),
+    phone: item.product.deliveryType === "PHONE",
+    steps: activationStepList(item.product.activationSteps),
     keys: item.licenseKeys
       .filter((k) => k.status === "SOLD" && !k.replacedAt)
       .map((k) =>

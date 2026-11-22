@@ -124,6 +124,8 @@ export const productSchema = z.object({
     .max(1000)
     .nullable(),
   categoryId: z.string().min(1, "Pick a category"),
+  deliveryType: z.enum(["KEY", "ACCOUNT", "PHONE"]).default("KEY"),
+  activationSteps: z.string().trim().max(3000, "Keep the steps under 3000 characters"),
   imageUrl: z.union([z.url(), z.literal("")]).optional(),
   published: z.boolean().default(true),
   featured: z.boolean().default(false),

@@ -1,6 +1,7 @@
 import { BRAND } from "@/lib/brand";
 import { formatMoney } from "@/lib/money";
 import { SITE_URL, renderEmail, type RenderedEmail, type Tone } from "@/lib/email/render";
+import { ACTIVATION_REPLY_TIME, formatActivationId, parseSecret } from "@/lib/delivery";
 import { orderViewUrl } from "@/lib/order-token";
 
 /**
@@ -12,11 +13,18 @@ export type EmailContent = RenderedEmail;
 
 // --- Customer emails ---------------------------------------------------------------
 
+/** A decrypted secret as the key templates expect it: a key string, or {username, password}. */
+function emailKey(plain: string): string | { username: string; password: string } {
+  const s = parseSecret(plain);
+  return s.kind === "account" ? { username: s.username, password: s.password } : s.key;
+}
+
 export function orderKeysEmail(o: {
   orderNumber: string;
   totalCents: number;
   currency: string;
-  groups: { name: string; keys: string[]; warranty?: string | null }[];
+  /** keys are decrypted secrets (keys or encoded accounts). */
+  groups: { name: string; keys: string[]; warranty?: string | null; phone?: boolean; steps?: string[] }[];
   /** Free check period, e.g. "24 hours"; null when it's turned off. */
   freeCheck?: string | null;
 }): EmailContent {
@@ -28,7 +36,10 @@ export function orderKeysEmail(o: {
       orderNumber: o.orderNumber,
       total,
       keyCount,
-      groups: o.groups,
+      groups: o.groups.map((g) => ({ ...g, keys: g.keys.map(emailKey), phone: g.phone ?? false, steps: g.steps ?? [] })),
+      anyPhone: o.groups.some((g) => g.phone),
+      anyAccount: o.groups.some((g) => g.keys.some((k) => parseSecret(k).kind === "account")),
+      replyTime: ACTIVATION_REPLY_TIME,
       detailRows: [
         { label: "Order", value: o.orderNumber },
         { label: "Total paid", value: total },
@@ -176,7 +187,10 @@ export function warrantyClaimResolvedEmail(o: {
   orderNumber: string;
   productName: string;
   outcome: keyof typeof CLAIM_OUTCOME;
+  /** The decrypted replacement secret (key or encoded account). */
   newKey?: string | null;
+  /** The replacement is a phone activation key. */
+  phone?: boolean;
   warrantyNote?: string | null;
   note?: string | null;
   /** Formatted amount refunded for this key, e.g. "LKR 1,250". */
@@ -188,7 +202,9 @@ export function warrantyClaimResolvedEmail(o: {
     {
       ...o,
       ...copy,
-      newKeys: o.newKey ? [o.newKey] : [],
+      newKeys: o.newKey ? [emailKey(o.newKey)] : [],
+      phone: o.phone ?? false,
+      replyTime: ACTIVATION_REPLY_TIME,
       viewUrl: orderViewUrl(o.orderNumber),
     },
     {
@@ -201,6 +217,42 @@ export function warrantyClaimResolvedEmail(o: {
   );
 }
 
+export function activationReplyEmail(o: {
+  orderNumber: string;
+  productName: string;
+  /** Digits only. */
+  installationId: string;
+  /** Digits only; null when we couldn't create one. */
+  confirmationId: string | null;
+  note?: string | null;
+  /** Free check period, e.g. "24 hours" (starts with the first Confirmation ID). */
+  freeCheck?: string | null;
+}): EmailContent {
+  const done = o.confirmationId !== null;
+  return renderEmail(
+    "activation-reply",
+    {
+      ...o,
+      done,
+      confirmationId: o.confirmationId ? formatActivationId(o.confirmationId) : null,
+      installationIdFormatted: formatActivationId(o.installationId),
+      detailRows: [
+        { label: "Order", value: o.orderNumber },
+        { label: "Installation ID", value: formatActivationId(o.installationId) },
+      ],
+      viewUrl: orderViewUrl(o.orderNumber),
+    },
+    {
+      subject: done
+        ? `Your confirmation ID for order ${o.orderNumber}`
+        : `About your activation request (order ${o.orderNumber})`,
+      preheader: done
+        ? `Enter it in the ${o.productName} activation window.`
+        : `We couldn't create a Confirmation ID for your ${o.productName} key.`,
+    },
+  );
+}
+
 // --- Admin alerts ----------------------------------------------------------------------
 
 const ALERT_STYLE: Record<string, { tone: Tone; label: string }> = {
@@ -209,6 +261,7 @@ const ALERT_STYLE: Record<string, { tone: Tone; label: string }> = {
   CUSTOMER_REPORT: { tone: "warning", label: "Customer report" },
   SECURITY: { tone: "warning", label: "Security" },
   WARRANTY_CLAIM: { tone: "warning", label: "Warranty claim" },
+  ACTIVATION_REQUEST: { tone: "warning", label: "Activation request" },
   OUT_OF_STOCK: { tone: "danger", label: "Out of stock" },
   LOW_STOCK: { tone: "warning", label: "Low stock" },
   NEW_ORDER: { tone: "success", label: "New order" },

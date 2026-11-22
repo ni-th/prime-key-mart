@@ -19,7 +19,7 @@ function SubmitButton() {
   );
 }
 
-export function AddKeysForm({ productId }: { productId: string }) {
+export function AddKeysForm({ productId, accounts = false }: { productId: string; accounts?: boolean }) {
   const [state, formAction] = useActionState<FormResult, FormData>(
     addLicenseKeys,
     { ok: false, error: "" },
@@ -31,19 +31,24 @@ export function AddKeysForm({ productId }: { productId: string }) {
         <input type="hidden" name="productId" value={productId} />
         <div className="space-y-1.5">
           <label htmlFor="raw" className="text-sm font-medium">
-            Paste license keys - one per line
+            {accounts ? "Paste accounts - one per line: username, password" : "Paste license keys - one per line"}
           </label>
           <Textarea
             id="raw"
             name="raw"
             rows={6}
-            placeholder={"XXXXX-XXXXX-XXXXX-XXXXX-XXXXX\nYYYYY-YYYYY-YYYYY-YYYYY-YYYYY"}
+            placeholder={
+              accounts
+                ? "user1@example.com, Passw0rd!\nuser2@example.com, An0ther,pass"
+                : "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX\nYYYYY-YYYYY-YYYYY-YYYYY-YYYYY"
+            }
             className="font-mono text-sm"
             required
           />
           <p className="text-xs text-muted-foreground">
-            Keys are encrypted before they touch the database. Exact duplicates
-            are skipped automatically.
+            {accounts
+              ? "Only the first comma separates the username from the password, so passwords may contain commas. Accounts are encrypted; a username that's already in stock is skipped."
+              : "Keys are encrypted before they touch the database. Exact duplicates are skipped automatically."}
           </p>
         </div>
 

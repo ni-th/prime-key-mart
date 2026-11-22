@@ -9,6 +9,7 @@ import { sendOrderKeysEmail, sendPaymentReportClosedEmail } from "@/lib/mailer";
 import { fulfillOrder, releaseOrderReservation } from "@/lib/inventory";
 import { productSchema, slugify } from "@/lib/validation";
 import { queueStockCheck } from "@/lib/alerts";
+import { asDeliveryType, encodeAccount, parseAccountLine } from "@/lib/delivery";
 
 export type FormResult =
   | { ok: true; message?: string }
@@ -71,6 +72,8 @@ export async function saveProduct(
     costCurrency: formData.get("costCurrency") === "LKR" ? "LKR" : "USD",
     lowStockThreshold: thresholdRaw === "" ? null : Number(thresholdRaw),
     categoryId: (formData.get("categoryId") as string) ?? "",
+    deliveryType: asDeliveryType(formData.get("deliveryType")),
+    activationSteps: ((formData.get("activationSteps") as string) ?? "").trim(),
     imageUrl: ((formData.get("imageUrl") as string) ?? "").trim(),
     published: formData.get("published") === "on",
     featured: formData.get("featured") === "on",
@@ -112,6 +115,8 @@ export async function saveProduct(
     costCurrency: data.costCurrency,
     lowStockThreshold: data.lowStockThreshold,
     categoryId: data.categoryId,
+    deliveryType: data.deliveryType,
+    activationSteps: data.activationSteps || null,
     imageUrl: data.imageUrl ? data.imageUrl : null,
     published: data.published,
     featured: data.featured,
@@ -197,15 +202,43 @@ export async function addLicenseKeys(
     return { ok: false, error: "Paste at least one key." };
   }
 
-  const fingerprints = lines.map((l) => keyFingerprint(l));
+  const product = await prisma.product.findUnique({ where: { id: productId }, select: { deliveryType: true } });
+  if (!product) return { ok: false, error: "Missing product." };
+
+  // Accounts: "username, password" per line, stored as one encrypted secret.
+  // Duplicates are matched on the username.
+  let entries: { plain: string; fingerprint: string }[];
+  if (product.deliveryType === "ACCOUNT") {
+    const bad: number[] = [];
+    entries = [];
+    lines.forEach((line, i) => {
+      const acc = parseAccountLine(line);
+      if (!acc) bad.push(i + 1);
+      else
+        entries.push({
+          plain: encodeAccount(acc.username, acc.password),
+          fingerprint: keyFingerprint(`ACCOUNT:${acc.username}`),
+        });
+    });
+    if (bad.length > 0) {
+      return {
+        ok: false,
+        error: `Line${bad.length === 1 ? "" : "s"} ${bad.slice(0, 5).join(", ")}${bad.length > 5 ? "..." : ""}: use "username, password". Nothing was added.`,
+      };
+    }
+    entries = [...new Map(entries.map((e) => [e.fingerprint, e])).values()];
+  } else {
+    entries = lines.map((plain) => ({ plain, fingerprint: keyFingerprint(plain) }));
+  }
+
+  const fingerprints = entries.map((e) => e.fingerprint);
   const existing = await prisma.licenseKey.findMany({
     where: { fingerprint: { in: fingerprints } },
     select: { fingerprint: true },
   });
   const existingSet = new Set(existing.map((e) => e.fingerprint));
 
-  const toInsert = lines
-    .map((plain) => ({ plain, fingerprint: keyFingerprint(plain) }))
+  const toInsert = entries
     .filter((x) => !existingSet.has(x.fingerprint))
     .map((x) => {
       const enc = encryptSecret(x.plain);
@@ -228,9 +261,10 @@ export async function addLicenseKeys(
   revalidateCatalog();
 
   const skipped = lines.length - toInsert.length;
+  const noun = product.deliveryType === "ACCOUNT" ? "account" : "key";
   return {
     ok: true,
-    message: `Added ${toInsert.length} key${toInsert.length === 1 ? "" : "s"}${
+    message: `Added ${toInsert.length} ${noun}${toInsert.length === 1 ? "" : "s"}${
       skipped ? `, skipped ${skipped} duplicate${skipped === 1 ? "" : "s"}` : ""
     }.`,
   };

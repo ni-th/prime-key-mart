@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
+import { DELIVERY_TYPES, asDeliveryType, secretText } from "@/lib/delivery";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -67,18 +68,18 @@ export default async function ProductKeysPage({
           Keys · {product.name}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {counts.available} available · {counts.reserved} reserved ·{" "}
+          {DELIVERY_TYPES[asDeliveryType(product.deliveryType)]} · {counts.available} available · {counts.reserved} reserved ·{" "}
           {counts.sold} sold
         </p>
       </div>
 
-      <AddKeysForm productId={id} />
+      <AddKeysForm productId={id} accounts={product.deliveryType === "ACCOUNT"} />
 
       <div className="rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Key</TableHead>
+              <TableHead>{product.deliveryType === "ACCOUNT" ? "Account" : "Key"}</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Order</TableHead>
               <TableHead>Added</TableHead>
@@ -96,11 +97,13 @@ export default async function ProductKeysPage({
             {keys.map((k) => (
               <TableRow key={k.id}>
                 <TableCell className="font-mono text-xs">
-                  {decryptSecret({
-                    ciphertext: k.secretCiphertext,
-                    iv: k.secretIv,
-                    authTag: k.secretAuthTag,
-                  })}
+                  {secretText(
+                    decryptSecret({
+                      ciphertext: k.secretCiphertext,
+                      iv: k.secretIv,
+                      authTag: k.secretAuthTag,
+                    }),
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[k.status] ?? "outline"}>
