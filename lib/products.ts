@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getActiveDiscounts } from "@/lib/pricing";
+import { bestDiscount, discountedUsdCents, type SaleInfo } from "@/lib/sale";
 
 export type ProductSort = "featured" | "price-asc" | "price-desc" | "newest";
 
@@ -61,11 +63,27 @@ export async function availableStockByProduct(
   return new Map(groups.map((g) => [g.productId, g._count._all]));
 }
 
-function withStock<T extends { id: string }>(
+/**
+ * Adds live stock and the current sale to each product. `salePriceCents` is
+ * the USD price after the sale (equal to priceCents when not on sale).
+ */
+async function withStockAndSale<T extends { id: string; categoryId: string; priceCents: number }>(
   products: T[],
-  stock: Map<string, number>,
 ) {
-  return products.map((p) => ({ ...p, stock: stock.get(p.id) ?? 0 }));
+  const [stock, discounts] = await Promise.all([
+    availableStockByProduct(products.map((p) => p.id)),
+    getActiveDiscounts(),
+  ]);
+  return products.map((p) => {
+    const d = bestDiscount(p, discounts);
+    const sale: SaleInfo | null = d ? { percent: d.percent, name: d.name, endsAt: d.endsAt } : null;
+    return {
+      ...p,
+      stock: stock.get(p.id) ?? 0,
+      sale,
+      salePriceCents: d ? discountedUsdCents(p.priceCents, d.percent) : p.priceCents,
+    };
+  });
 }
 
 export async function getProducts(
@@ -101,8 +119,7 @@ export async function getProducts(
     orderBy,
     include: { category: true },
   });
-  const stock = await availableStockByProduct(products.map((p) => p.id));
-  return withStock(products, stock);
+  return withStockAndSale(products);
 }
 
 export async function getFeaturedProducts(limit = 4) {
@@ -112,8 +129,7 @@ export async function getFeaturedProducts(limit = 4) {
     take: limit,
     include: { category: true },
   });
-  const stock = await availableStockByProduct(products.map((p) => p.id));
-  return withStock(products, stock);
+  return withStockAndSale(products);
 }
 
 export async function getProductBySlug(slug: string) {
@@ -122,6 +138,6 @@ export async function getProductBySlug(slug: string) {
     include: { category: true },
   });
   if (!product || !product.published) return null;
-  const stock = await availableStockByProduct([product.id]);
-  return { ...product, stock: stock.get(product.id) ?? 0 };
+  const [withSale] = await withStockAndSale([product]);
+  return withSale;
 }

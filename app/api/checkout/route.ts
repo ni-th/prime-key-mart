@@ -5,7 +5,7 @@ import { asCurrency, convertCost, gatewayFeeCents } from "@/lib/profit";
 import { checkoutSchema } from "@/lib/validation";
 import { generateOrderNumber } from "@/lib/orders";
 import { signOrderToken } from "@/lib/order-token";
-import { getPricingSettings, priceOf, unitPriceIn } from "@/lib/pricing";
+import { getActiveDiscounts, getPricingSettings, listPriceIn, priceOf, unitPriceIn } from "@/lib/pricing";
 import {
   InsufficientStockError,
   expireStaleReservations,
@@ -77,13 +77,16 @@ export async function POST(req: Request) {
   // set, else USD x admin exchange rate + margin). The total is the sum of the
   // line prices, so it always matches what the customer was shown.
   const currency = parsed.data.currency;
-  const settings = await getPricingSettings();
+  const [settings, discounts] = await Promise.all([getPricingSettings(), getActiveDiscounts()]);
   const lines = parsed.data.items.map((i) => {
     const product = byId.get(i.productId)!;
+    const price = priceOf(product, settings, discounts);
     return {
       product,
       quantity: i.quantity,
-      unitCents: unitPriceIn(priceOf(product, settings), currency),
+      unitCents: unitPriceIn(price, currency),
+      listCents: listPriceIn(price, currency),
+      sale: price.sale,
       unitCostCents:
         product.costCents === null
           ? null
@@ -115,6 +118,9 @@ export async function POST(req: Request) {
           productName: l.product.name,
           unitPriceCents: l.unitCents,
           unitCostCents: l.unitCostCents,
+          listPriceCents: l.listCents,
+          discountPercent: l.sale?.percent ?? null,
+          discountName: l.sale?.name ?? null,
           quantity: l.quantity,
         })),
       },

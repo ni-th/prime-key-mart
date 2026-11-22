@@ -78,6 +78,11 @@ export default async function AdminOrderDetailPage({
               <span className="text-muted-foreground">
                 {item.productName}
                 {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                {item.discountPercent !== null && (
+                  <span className="ml-1.5 text-xs font-medium text-destructive">
+                    {item.discountName} -{item.discountPercent}%
+                  </span>
+                )}
               </span>
               <span className="tabular-nums">
                 {formatMoney(item.unitPriceCents * item.quantity, order.currency.toUpperCase())}

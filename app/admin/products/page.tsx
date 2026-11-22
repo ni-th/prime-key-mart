@@ -14,7 +14,7 @@ import { oneOf, pageParam, paginate, param, type RawParams } from "@/lib/list-pa
 import { ListClear, ListSearch, ListSelect } from "@/components/admin/list-controls";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { formatMoney, formatUsd } from "@/lib/money";
-import { getPricingSettings, priceOf } from "@/lib/pricing";
+import { getActiveDiscounts, getPricingSettings, priceOf } from "@/lib/pricing";
 import { asCurrency, unitProfit } from "@/lib/profit";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,7 @@ export default async function AdminProductsPage({
   const stock = param(sp, "stock");
   const sort = oneOf(param(sp, "sort"), PRODUCT_SORTS, "newest");
 
-  const [products, categories, pricing] = await Promise.all([
+  const [products, categories, pricing, discounts] = await Promise.all([
     getAdminProducts({
       q: q || undefined,
       category: category || undefined,
@@ -52,6 +52,7 @@ export default async function AdminProductsPage({
     }),
     getAllCategories(),
     getPricingSettings(),
+    getActiveDiscounts(),
   ]);
   const filtered = Boolean(q || category || status || stock);
   const { page, items, total } = paginate(products, pageParam(sp), ADMIN_PAGE_SIZE);
@@ -164,9 +165,22 @@ export default async function AdminProductsPage({
                   {p.category.name}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatUsd(p.priceCents)}
+                  {(() => {
+                    const live = priceOf(p, pricing, discounts);
+                    return live.sale ? (
+                      <div>
+                        <span className="mr-1 text-xs font-medium text-destructive">
+                          -{live.sale.percent}%
+                        </span>
+                        {formatUsd(live.usdCents)}
+                        <s className="block text-xs text-muted-foreground">{formatUsd(p.priceCents)}</s>
+                      </div>
+                    ) : (
+                      formatUsd(p.priceCents)
+                    );
+                  })()}
                   <div className="text-xs text-muted-foreground">
-                    {formatMoney(priceOf(p, pricing).lkrCents, "LKR")}
+                    {formatMoney(priceOf(p, pricing, discounts).lkrCents, "LKR")}
                     {p.priceLkrCents !== null && (
                       <span className="ml-1 font-medium text-primary">fixed</span>
                     )}
@@ -182,7 +196,8 @@ export default async function AdminProductsPage({
                     </Link>
                   ) : (
                     (["USD", "LKR"] as const).map((currency, i) => {
-                      const price = priceOf(p, pricing);
+                      // Profit at today's price (after any live sale).
+                      const price = priceOf(p, pricing, discounts);
                       const profit = unitProfit({
                         priceCents: currency === "USD" ? price.usdCents : price.lkrCents,
                         currency,

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getPricingSettings, priceOf } from "@/lib/pricing";
+import { getActiveDiscounts, getPricingSettings, priceOf } from "@/lib/pricing";
 
 const quoteSchema = z
   .array(z.object({ productId: z.string().min(1).max(64), quantity: z.number().int().min(1).max(10) }))
@@ -11,8 +11,14 @@ const quoteSchema = z
 export type CartQuoteLine = {
   productId: string;
   quantity: number;
+  /** Unit prices the customer pays (after any sale). */
   usdCents: number;
   lkrCents: number;
+  /** Unit prices before the sale (same as above when not on sale). */
+  listUsdCents: number;
+  listLkrCents: number;
+  /** Percent off from a sale, or null. */
+  salePercent: number | null;
   available: boolean;
 };
 
@@ -31,20 +37,31 @@ export async function quoteCart(input: unknown): Promise<CartQuote> {
   if (!parsed.success) return { lines: [], totals: { USD: 0, LKR: 0 } };
 
   const ids = [...new Set(parsed.data.map((l) => l.productId))];
-  const [products, settings] = await Promise.all([
+  const [products, settings, discounts] = await Promise.all([
     prisma.product.findMany({
       where: { id: { in: ids }, published: true },
-      select: { id: true, priceCents: true, priceLkrCents: true },
+      select: { id: true, categoryId: true, priceCents: true, priceLkrCents: true },
     }),
     getPricingSettings(),
+    getActiveDiscounts(),
   ]);
   const byId = new Map(products.map((p) => [p.id, p]));
 
   const lines = parsed.data.map((l): CartQuoteLine => {
     const p = byId.get(l.productId);
-    if (!p) return { ...l, usdCents: 0, lkrCents: 0, available: false };
-    const price = priceOf(p, settings);
-    return { ...l, usdCents: price.usdCents, lkrCents: price.lkrCents, available: true };
+    if (!p) {
+      return { ...l, usdCents: 0, lkrCents: 0, listUsdCents: 0, listLkrCents: 0, salePercent: null, available: false };
+    }
+    const price = priceOf(p, settings, discounts);
+    return {
+      ...l,
+      usdCents: price.usdCents,
+      lkrCents: price.lkrCents,
+      listUsdCents: price.listUsdCents,
+      listLkrCents: price.listLkrCents,
+      salePercent: price.sale?.percent ?? null,
+      available: true,
+    };
   });
 
   const totals = lines.reduce(

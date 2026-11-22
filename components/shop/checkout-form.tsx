@@ -42,6 +42,15 @@ export function CheckoutForm({
     return (currency === "LKR" ? q.lkrCents : q.usdCents) * qty;
   };
   const total = quote ? quote.totals[currency] : null;
+  const savings = quote
+    ? quote.lines.reduce(
+        (n, l) =>
+          n +
+          ((currency === "LKR" ? l.listLkrCents - l.lkrCents : l.listUsdCents - l.usdCents) *
+            l.quantity),
+        0,
+      )
+    : 0;
   const unavailable = quote?.lines.some((l) => !l.available) ?? false;
 
   if (!hydrated) {
@@ -185,6 +194,11 @@ export function CheckoutForm({
                 <span className="text-muted-foreground">
                   {l.name}
                   {l.quantity > 1 ? ` × ${l.quantity}` : ""}
+                  {byId.get(l.productId)?.salePercent && (
+                    <span className="ml-1.5 text-xs font-medium text-destructive">
+                      -{byId.get(l.productId)!.salePercent}%
+                    </span>
+                  )}
                 </span>
                 <span className="tabular-nums">
                   {!quote ? (
@@ -199,6 +213,12 @@ export function CheckoutForm({
             ))}
           </ul>
           <Separator className="my-4" />
+          {savings > 0 && (
+            <div className="mb-2 flex justify-between text-sm text-destructive">
+              <span>You save</span>
+              <span className="tabular-nums">{formatMoney(savings, currency)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-medium">
             <span>Total</span>
             <span className={cn("tabular-nums", loading && "opacity-60")}>

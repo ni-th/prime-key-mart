@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatMoney, formatUsd } from "@/lib/money";
 import { useCartQuote } from "@/lib/use-cart-quote";
+import type { CartQuoteLine } from "@/app/actions/pricing";
 import {
   selectCartSubtotal,
   useCart,
@@ -19,9 +20,12 @@ import { ProductThumb } from "@/components/shop/product-thumb";
 
 const MAX_PER_LINE = 10;
 
-function CartRow({ line }: { line: CartLine }) {
+function CartRow({ line, quoted }: { line: CartLine; quoted?: CartQuoteLine }) {
   const setQty = useCart((s) => s.setQty);
   const remove = useCart((s) => s.remove);
+  // Live USD price from the server; the price saved when added is a fallback.
+  const unit = quoted?.available ? quoted.usdCents : line.priceCents;
+  const onSale = Boolean(quoted?.available && quoted.salePercent);
 
   return (
     <div className="flex gap-4 py-4">
@@ -40,12 +44,22 @@ function CartRow({ line }: { line: CartLine }) {
           >
             {line.name}
           </Link>
-          <span className="shrink-0 font-medium tabular-nums">
-            {formatUsd(line.priceCents * line.quantity)}
+          <span className="shrink-0 text-right font-medium tabular-nums">
+            <span className={onSale ? "text-destructive" : undefined}>
+              {formatUsd(unit * line.quantity)}
+            </span>
+            {onSale && (
+              <s className="block text-xs font-normal text-muted-foreground">
+                {formatUsd(quoted!.listUsdCents * line.quantity)}
+              </s>
+            )}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {line.brand} · {formatUsd(line.priceCents)} each
+          {line.brand} · {formatUsd(unit)} each
+          {onSale && (
+            <span className="ml-1.5 font-medium text-destructive">-{quoted!.salePercent}% sale</span>
+          )}
         </span>
 
         <div className="mt-auto flex items-center justify-between pt-2">
@@ -96,9 +110,12 @@ export function CartView() {
   const clear = useCart((s) => s.clear);
   const snapshotSubtotal = useCart(selectCartSubtotal);
   // Live prices from the server; the stored snapshot is only a placeholder.
-  const { quote } = useCartQuote(lines);
+  const { quote, byId } = useCartQuote(lines);
   const usdTotal = quote?.totals.USD ?? snapshotSubtotal;
   const lkrTotal = quote?.totals.LKR ?? null;
+  const usdSavings = quote
+    ? quote.lines.reduce((n, l) => n + (l.listUsdCents - l.usdCents) * l.quantity, 0)
+    : 0;
 
   if (!hydrated) {
     return (
@@ -130,7 +147,7 @@ export function CartView() {
     <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
       <div className="divide-y">
         {lines.map((line) => (
-          <CartRow key={line.productId} line={line} />
+          <CartRow key={line.productId} line={line} quoted={byId.get(line.productId)} />
         ))}
         <div className="flex justify-end pt-4">
           <Button
@@ -148,7 +165,13 @@ export function CartView() {
       <div className="lg:sticky lg:top-20 lg:self-start">
         <Card className="p-5">
           <h2 className="font-medium">Order summary</h2>
-          <div className="mt-4 flex justify-between font-medium">
+          {usdSavings > 0 && (
+            <div className="mt-4 flex justify-between text-sm text-destructive">
+              <span>Sale savings</span>
+              <span className="tabular-nums">-{formatUsd(usdSavings)}</span>
+            </div>
+          )}
+          <div className={cn("flex justify-between font-medium", usdSavings > 0 ? "mt-2" : "mt-4")}>
             <span>Total</span>
             <span className="tabular-nums">{formatUsd(usdTotal)}</span>
           </div>

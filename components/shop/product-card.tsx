@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { ProductListItem } from "@/lib/products";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { ProductThumb } from "@/components/shop/product-thumb";
+import { SaleBadge } from "@/components/shop/sale-badge";
 
 export function ProductCard({ product }: { product: ProductListItem }) {
   const inStock = product.stock > 0;
@@ -22,6 +23,9 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           imageUrl={product.imageUrl}
           className="transition-transform duration-300 group-hover/card:scale-[1.03]"
         />
+        {product.sale && (
+          <SaleBadge percent={product.sale.percent} className="absolute top-2 left-2 shadow-sm" />
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
@@ -45,8 +49,15 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         </p>
 
         <div className="mt-auto flex items-center justify-between pt-2">
-          <span className="text-lg font-semibold">
-            {formatUsd(product.priceCents)}
+          <span className="flex flex-wrap items-baseline gap-x-2">
+            <span className={cn("text-lg font-semibold", product.sale && "text-destructive")}>
+              {formatUsd(product.salePriceCents)}
+            </span>
+            {product.sale && (
+              <s className="text-sm text-muted-foreground tabular-nums">
+                {formatUsd(product.priceCents)}
+              </s>
+            )}
           </span>
           <AddToCartButton
             size="sm"
@@ -55,7 +66,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
               productId: product.id,
               slug: product.slug,
               name: product.name,
-              priceCents: product.priceCents,
+              priceCents: product.salePriceCents,
               brand: product.brand,
             }}
           />

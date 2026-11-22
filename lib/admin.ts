@@ -216,6 +216,34 @@ export async function getAdminCategories() {
   });
 }
 
+/** Every sale with what it covers, newest first, for the admin Discounts page. */
+export async function getAdminDiscounts() {
+  return prisma.discount.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      categories: { select: { id: true, name: true } },
+      _count: { select: { products: true } },
+    },
+  });
+}
+
+/** Products for the sale form, with costs (admin only) for the below-cost check. */
+export async function getDiscountFormProducts() {
+  return prisma.product.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      brand: true,
+      categoryId: true,
+      priceCents: true,
+      priceLkrCents: true,
+      costCents: true,
+      costCurrency: true,
+    },
+  });
+}
+
 /** Saved fee + per-line costs of one order, for the admin order page. */
 export async function getOrderProfit(orderId: string) {
   const order = await prisma.order.findUnique({

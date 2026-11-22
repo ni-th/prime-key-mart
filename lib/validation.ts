@@ -132,3 +132,43 @@ export const categorySchema = z.object({
 
 /** New display order: every category id, first to last. */
 export const categoryOrderSchema = z.array(z.string().min(1)).min(1).max(500);
+
+const optionalDate = z
+  .string()
+  .trim()
+  .transform((v, ctx) => {
+    if (!v) return null;
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) {
+      ctx.addIssue({ code: "custom", message: "Enter a valid date and time" });
+      return z.NEVER;
+    }
+    return d;
+  });
+
+export const discountSchema = z
+  .object({
+    name: z.string().trim().min(2, "Give the sale a name").max(60),
+    percent: z
+      .number({ error: "Enter the percent off" })
+      .min(1, "At least 1% off")
+      .max(90, "At most 90% off")
+      .refine((n) => Math.round(n * 10) === n * 10, "Use at most one decimal place"),
+    scope: z.enum(["ALL", "CATEGORIES", "PRODUCTS"]),
+    categoryIds: z.array(z.string().min(1)).max(200),
+    productIds: z.array(z.string().min(1)).max(2000),
+    active: z.boolean(),
+    startsAt: optionalDate,
+    endsAt: optionalDate,
+  })
+  .superRefine((d, ctx) => {
+    if (d.scope === "CATEGORIES" && d.categoryIds.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["categoryIds"], message: "Pick at least one category" });
+    }
+    if (d.scope === "PRODUCTS" && d.productIds.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["productIds"], message: "Pick at least one product" });
+    }
+    if (d.startsAt && d.endsAt && d.endsAt <= d.startsAt) {
+      ctx.addIssue({ code: "custom", path: ["endsAt"], message: "The end must be after the start" });
+    }
+  });

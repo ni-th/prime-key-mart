@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import { ChevronRight, Mail, ShieldCheck, Zap } from "lucide-react";
 import { getProductBySlug } from "@/lib/products";
 import { formatMoney, formatUsd } from "@/lib/money";
-import { getPricingSettings, priceOf } from "@/lib/pricing";
+import { getActiveDiscounts, getPricingSettings, priceOf } from "@/lib/pricing";
+import { endsInText } from "@/lib/sale";
+import { SaleBadge } from "@/components/shop/sale-badge";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ProductThumb } from "@/components/shop/product-thumb";
@@ -35,7 +37,9 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const price = priceOf(product, await getPricingSettings());
+  const [settings, discounts] = await Promise.all([getPricingSettings(), getActiveDiscounts()]);
+  const price = priceOf(product, settings, discounts);
+  const endsIn = price.sale ? endsInText(price.sale.endsAt) : null;
 
   const inStock = product.stock > 0;
 
@@ -82,12 +86,28 @@ export default async function ProductPage({
             <p className="text-muted-foreground">{product.shortDescription}</p>
           </div>
 
+          {price.sale && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <SaleBadge percent={price.sale.percent} />
+              <span className="font-medium">{price.sale.name}</span>
+              {endsIn && <span className="text-muted-foreground">· {endsIn}</span>}
+            </div>
+          )}
+
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="text-3xl font-semibold">
+            <span className={price.sale ? "text-3xl font-semibold text-destructive" : "text-3xl font-semibold"}>
               {formatUsd(price.usdCents)}
             </span>
+            {price.sale && (
+              <s className="text-lg text-muted-foreground tabular-nums">
+                {formatUsd(price.listUsdCents)}
+              </s>
+            )}
             <span className="text-base text-muted-foreground tabular-nums">
               {formatMoney(price.lkrCents, "LKR")}
+              {price.sale && (
+                <s className="ml-1.5 text-sm">{formatMoney(price.listLkrCents, "LKR")}</s>
+              )}
             </span>
             <span
               className={
@@ -106,7 +126,7 @@ export default async function ProductPage({
               productId: product.id,
               slug: product.slug,
               name: product.name,
-              priceCents: product.priceCents,
+              priceCents: price.usdCents,
               brand: product.brand,
             }}
           />

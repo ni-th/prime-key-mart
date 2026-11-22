@@ -87,6 +87,31 @@ model CategorySlugRedirect {
   @@index([categoryId])
 }
 
+enum DiscountScope {
+  ALL
+  CATEGORIES
+  PRODUCTS
+}
+
+/// A sale: percent off a set of products, optionally between two dates. When
+/// several sales cover a product, the biggest one wins (they never stack).
+model Discount {
+  id         String        @id @default(cuid())
+  name       String
+  /// Percent off, e.g. 20 = 20% off. Applies to USD and LKR alike.
+  percent    Float
+  scope      DiscountScope @default(ALL)
+  categories Category[]
+  products   Product[]
+  active     Boolean       @default(true)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([active])
+}
+
 model BlockedEmail {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -112,6 +137,7 @@ model Category {
   products        Product[]
   /// Old slugs that redirect here (kept when the slug is changed).
   slugRedirects   CategorySlugRedirect[]
+  discounts       Discount[]
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @default(now()) @updatedAt
 }
@@ -140,6 +166,7 @@ model Product {
   featured         Boolean      @default(false)
   licenseKeys      LicenseKey[]
   orderItems       OrderItem[]
+  discounts        Discount[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -193,18 +220,23 @@ model Order {
 }
 
 model OrderItem {
-  id             String       @id @default(cuid())
-  orderId        String
-  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId      String
-  product        Product      @relation(fields: [productId], references: [id])
-  productName    String
-  unitPriceCents Int
+  id              String       @id @default(cuid())
+  orderId         String
+  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product      @relation(fields: [productId], references: [id])
+  productName     String
+  unitPriceCents  Int
+  /// Price before any sale (order currency). Null on orders from before sales existed.
+  listPriceCents  Int?
+  /// Sale applied at checkout, if any (kept for order history and reports).
+  discountPercent Float?
+  discountName    String?
   /// ADMIN ONLY. Cost per key at checkout, converted to the order currency.
   /// Null when the product had no cost price set.
-  unitCostCents  Int?
-  quantity       Int
-  licenseKeys    LicenseKey[]
+  unitCostCents   Int?
+  quantity        Int
+  licenseKeys     LicenseKey[]
 
   @@index([orderId])
 }
