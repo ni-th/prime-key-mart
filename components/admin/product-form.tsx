@@ -42,6 +42,8 @@ export type ProductFormValues = {
   /** Admin only: purchase cost per key. */
   costCents: number | null;
   costCurrency: Currency;
+  /** Low stock alert level for this product; null = store default. */
+  lowStockThreshold: number | null;
   categoryId: string;
   imageUrl: string | null;
   published: boolean;
@@ -314,6 +316,7 @@ export function ProductForm({
   product,
   uploadsEnabled = false,
   pricing,
+  defaultLowStock,
 }: {
   categories: Category[];
   product?: ProductFormValues;
@@ -321,6 +324,8 @@ export function ProductForm({
   uploadsEnabled?: boolean;
   /** Current exchange rate, margin and gateway fee, for the price/profit previews. */
   pricing: Pricing;
+  /** Store-wide low stock level (Admin -> Settings), shown as the placeholder. */
+  defaultLowStock: number;
 }) {
   const initial: FormResult = { ok: false, error: "" };
   const [state, formAction] = useActionState(saveProduct, initial);
@@ -437,6 +442,24 @@ export function ProductForm({
       </Card>
 
       <Card className="space-y-3 p-5">
+        <Field
+          label="Low stock alert (optional)"
+          htmlFor="lowStockThreshold"
+          error={fe.lowStockThreshold}
+          hint={`Email me when fewer than this many keys are left. Empty = store default (${defaultLowStock}), set in Settings.`}
+        >
+          <Input
+            id="lowStockThreshold"
+            name="lowStockThreshold"
+            type="number"
+            min={1}
+            max={1000}
+            step={1}
+            placeholder={String(defaultLowStock)}
+            defaultValue={product?.lowStockThreshold ?? ""}
+            className="sm:max-w-40"
+          />
+        </Field>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

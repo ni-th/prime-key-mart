@@ -115,14 +115,20 @@ function renderEmail(order: OrderForEmail) {
 }
 
 /**
- * Plain-text alert to the store owner (ADMIN_EMAIL, falling back to SMTP_USER).
- * Used when something needs a human, e.g. an order was paid but is out of stock.
+ * Plain-text alert to the store owner. Use sendAlert() in lib/alerts.ts rather
+ * than calling this directly: it adds the on/off settings, de-duplication and
+ * the alert log.
  */
 export async function sendAdminAlertEmail(alert: {
   subject: string;
   lines: string[];
+  /** Recipients; defaults to ADMIN_EMAIL, then SMTP_USER. */
+  to?: string[];
 }): Promise<void> {
-  const to = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+  const to =
+    alert.to && alert.to.length > 0
+      ? alert.to.join(", ")
+      : process.env.ADMIN_EMAIL || process.env.SMTP_USER;
   const text = alert.lines.join("\n");
   const transport = to ? await getTransport() : null;
 

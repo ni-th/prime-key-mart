@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
-import { getAdminOrders, getAdminProducts, getAdminStats, LOW_STOCK_THRESHOLD } from "@/lib/admin";
+import { getAdminOrders, getAdminProducts, getAdminStats } from "@/lib/admin";
 import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
@@ -17,7 +17,7 @@ export default async function AdminDashboardPage() {
     getAdminOrders(),
   ]);
 
-  const lowStock = products.filter((p) => p.stock < LOW_STOCK_THRESHOLD);
+  const lowStock = products.filter((p) => p.stock === 0 || p.isLow);
   const recentOrders = orders.slice(0, 6);
 
   const perCurrency = (pick: (t: (typeof stats.byCurrency)[number]) => number) =>
@@ -67,7 +67,7 @@ export default async function AdminDashboardPage() {
         <div className="mb-3 flex items-center gap-2">
           <AlertTriangle className="size-4 text-amber-500" />
           <h2 className="font-medium">
-            Low stock ({"<"} {LOW_STOCK_THRESHOLD} available)
+            Low or out of stock
           </h2>
         </div>
         {lowStock.length === 0 ? (

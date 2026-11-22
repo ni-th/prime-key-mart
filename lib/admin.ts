@@ -2,13 +2,13 @@ import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { ADMIN_COST_FIELDS, prisma } from "@/lib/db";
 import { orderProfit } from "@/lib/profit";
+import { getAlertSettings } from "@/lib/alerts";
 import { availableStockByProduct } from "@/lib/products";
 import { clampPage } from "@/lib/list-params";
 
 /** Rows per page on the admin Products and Users lists. */
 export const ADMIN_PAGE_SIZE = 20;
 
-export const LOW_STOCK_THRESHOLD = 3;
 
 /**
  * The current session, only if it is an admin who signed in with their
@@ -117,24 +117,32 @@ export async function getAdminProducts(filters: AdminProductFilters = {}) {
     include: { category: true },
     omit: ADMIN_COST_FIELDS.product,
   });
-  const [available, sold] = await Promise.all([
+  const [available, sold, alertSettings] = await Promise.all([
     availableStockByProduct(products.map((p) => p.id)),
     prisma.licenseKey.groupBy({
       by: ["productId"],
       where: { status: "SOLD", productId: { in: products.map((p) => p.id) } },
       _count: { _all: true },
     }),
+    getAlertSettings(),
   ]);
   const soldMap = new Map(sold.map((s) => [s.productId, s._count._all]));
 
-  let rows = products.map((p) => ({
-    ...p,
-    stock: available.get(p.id) ?? 0,
-    sold: soldMap.get(p.id) ?? 0,
-  }));
+  let rows = products.map((p) => {
+    const stock = available.get(p.id) ?? 0;
+    // Same level the low stock email uses (per product, else store default).
+    const lowAt = p.lowStockThreshold ?? alertSettings.lowStockThreshold;
+    return {
+      ...p,
+      stock,
+      sold: soldMap.get(p.id) ?? 0,
+      lowAt,
+      isLow: stock > 0 && stock < lowAt,
+    };
+  });
 
   if (stock === "out") rows = rows.filter((p) => p.stock === 0);
-  else if (stock === "low") rows = rows.filter((p) => p.stock > 0 && p.stock < LOW_STOCK_THRESHOLD);
+  else if (stock === "low") rows = rows.filter((p) => p.isLow);
   else if (stock === "in") rows = rows.filter((p) => p.stock > 0);
 
   if (sort === "stock-asc") rows.sort((a, b) => a.stock - b.stock);

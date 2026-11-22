@@ -1,6 +1,16 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { sendAdminAlertEmail, sendOrderKeysEmail } from "@/lib/mailer";
+import { sendOrderKeysEmail } from "@/lib/mailer";
+import {
+  checkStockAlerts,
+  productIdsOfOrder,
+  queueStockCheck,
+  runAfterResponse,
+  sendAlert,
+} from "@/lib/alerts";
+import { formatMoney } from "@/lib/money";
+
+const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 /** How long an unpaid checkout may hold its keys before they go back to stock. */
 export const RESERVATION_TTL_MINUTES = 30;
@@ -65,6 +75,8 @@ export async function reserveKeysForOrder(orderId: string): Promise<void> {
       if (claimed < need) throw new InsufficientStockError(item.productName);
     }
   });
+  // Reserved keys can't be sold to anyone else: check for low/out of stock.
+  queueStockCheck(await productIdsOfOrder(orderId));
 }
 
 export type FulfillOutcome =
@@ -135,32 +147,81 @@ export async function fulfillOrder(
     return { status: "FULFILLED", orderNumber: order.orderNumber, alreadyFulfilled: false };
   });
 
+  const orderUrl = `${SITE_URL}/admin/orders/${result.orderNumber}`;
+
   if (result.status === "FULFILLED" && !result.alreadyFulfilled) {
     try {
       await sendOrderKeysEmail(result.orderNumber);
     } catch (err) {
       console.error(`[fulfillOrder] email failed for ${result.orderNumber}`, err);
+      // The keys are in the customer's account, but they don't know that.
+      await sendAlert({
+        type: "FAILED_DELIVERY",
+        subject: `Keys email failed: order ${result.orderNumber}`,
+        lines: [
+          `Order ${result.orderNumber} is paid and its keys are assigned, but the email with the keys could not be sent.`,
+          ``,
+          `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ``,
+          `Use "Resend keys email" on the order once email is working: ${orderUrl}`,
+        ],
+        dedupeKey: `email-failed:${result.orderNumber}`,
+      });
     }
+    runAfterResponse(async () => {
+      await notifyNewOrder(orderId);
+      await checkStockAlertsForOrder(orderId);
+    });
   } else if (result.status === "PAID") {
     console.error(
       `[fulfillOrder] ${result.orderNumber} is paid but short on stock: ${result.missing.join(", ")}`,
     );
-    try {
-      await sendAdminAlertEmail({
-        subject: `Action needed: order ${result.orderNumber} paid but out of stock`,
-        lines: [
-          `Order ${result.orderNumber} was paid${opts.paymentRef ? ` (payment ${opts.paymentRef})` : ""}, but there were not enough keys to deliver it.`,
-          ``,
-          `Missing: ${result.missing.join(", ")}`,
-          ``,
-          `Add keys and use "Mark as paid & deliver keys" on the order, or refund the customer through PayHere.`,
-        ],
-      });
-    } catch (err) {
-      console.error(`[fulfillOrder] admin alert failed for ${result.orderNumber}`, err);
-    }
+    await sendAlert({
+      type: "FAILED_DELIVERY",
+      subject: `Action needed: order ${result.orderNumber} paid but out of stock`,
+      lines: [
+        `Order ${result.orderNumber} was paid${opts.paymentRef ? ` (payment ${opts.paymentRef})` : ""}, but there were not enough keys to deliver it.`,
+        ``,
+        `Missing: ${result.missing.join(", ")}`,
+        ``,
+        `Add keys and use "Mark as paid & deliver keys" on the order, or refund the customer through PayHere.`,
+        orderUrl,
+      ],
+      dedupeKey: `paid-no-stock:${result.orderNumber}`,
+    });
+    queueStockCheck(await productIdsOfOrder(orderId));
   }
   return result;
+}
+
+async function checkStockAlertsForOrder(orderId: string) {
+  await checkStockAlerts(await productIdsOfOrder(orderId));
+}
+
+/** "New order" email (off by default; switch on in Admin -> Settings). */
+async function notifyNewOrder(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      orderNumber: true,
+      email: true,
+      totalCents: true,
+      currency: true,
+      items: { select: { productName: true, quantity: true } },
+    },
+  });
+  if (!order) return;
+  await sendAlert({
+    type: "NEW_ORDER",
+    subject: `New order ${order.orderNumber}: ${formatMoney(order.totalCents, order.currency.toUpperCase())}`,
+    lines: [
+      `${order.email} paid ${formatMoney(order.totalCents, order.currency.toUpperCase())}.`,
+      ``,
+      ...order.items.map((i) => `- ${i.productName}${i.quantity > 1 ? ` x ${i.quantity}` : ""}`),
+      ``,
+      `${SITE_URL}/admin/orders/${order.orderNumber}`,
+    ],
+  });
 }
 
 /**
@@ -173,7 +234,7 @@ export async function releaseOrderReservation(
   orderId: string,
   finalStatus: "EXPIRED" | "FAILED" = "EXPIRED",
 ): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
+  const released = await prisma.$transaction(async (tx) => {
     // Conditional flip doubles as the lock: a concurrent fulfillOrder holding
     // the row makes this wait, then see a non-PENDING status and do nothing.
     const { count } = await tx.order.updateMany({
@@ -195,6 +256,9 @@ export async function releaseOrderReservation(
     });
     return true;
   });
+  // Keys are back in stock: re-arm the stock alert if it recovered.
+  if (released) queueStockCheck(await productIdsOfOrder(orderId));
+  return released;
 }
 
 /**

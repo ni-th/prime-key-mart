@@ -4,7 +4,6 @@ import { Plus } from "lucide-react";
 import {
   ADMIN_PAGE_SIZE,
   getAdminProducts,
-  LOW_STOCK_THRESHOLD,
   PRODUCT_SORTS,
   PRODUCT_STATUS_FILTERS,
   PRODUCT_STOCK_FILTERS,
@@ -107,7 +106,7 @@ export default async function AdminProductsPage({
           options={[
             { value: "", label: "Any stock" },
             { value: "in", label: "In stock" },
-            { value: "low", label: `Low (< ${LOW_STOCK_THRESHOLD})` },
+            { value: "low", label: "Low stock" },
             { value: "out", label: "Out of stock" },
           ]}
         />
@@ -229,7 +228,7 @@ export default async function AdminProductsPage({
                     "text-right tabular-nums",
                     p.stock === 0
                       ? "text-destructive"
-                      : p.stock < LOW_STOCK_THRESHOLD
+                      : p.isLow
                         ? "text-amber-600 dark:text-amber-400"
                         : "",
                   )}

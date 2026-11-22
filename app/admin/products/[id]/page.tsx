@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { ProductForm } from "@/components/admin/product-form";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import { getPricingSettings } from "@/lib/pricing";
+import { getAlertSettings } from "@/lib/alerts";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
 
 export const metadata: Metadata = { title: "Edit product · Admin" };
@@ -20,10 +21,11 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [product, categories, pricing] = await Promise.all([
+  const [product, categories, pricing, alerts] = await Promise.all([
     prisma.product.findUnique({ where: { id }, omit: ADMIN_COST_FIELDS.product }),
     getAllCategories(),
     getPricingSettings(),
+    getAlertSettings(),
   ]);
   if (!product) notFound();
 
@@ -44,6 +46,7 @@ export default async function EditProductPage({
 
       <ProductForm
         uploadsEnabled={isCloudinaryConfigured}
+        defaultLowStock={alerts.lowStockThreshold}
         pricing={{
           rate: pricing.rate,
           marginPercent: pricing.marginPercent,
@@ -63,6 +66,7 @@ export default async function EditProductPage({
           priceLkrCents: product.priceLkrCents,
           costCents: product.costCents,
           costCurrency: product.costCurrency === "LKR" ? "LKR" : "USD",
+          lowStockThreshold: product.lowStockThreshold,
           categoryId: product.categoryId,
           imageUrl: product.imageUrl,
           published: product.published,

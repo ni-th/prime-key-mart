@@ -8,6 +8,7 @@ import { encryptSecret, keyFingerprint } from "@/lib/crypto";
 import { sendOrderKeysEmail } from "@/lib/mailer";
 import { fulfillOrder, releaseOrderReservation } from "@/lib/inventory";
 import { productSchema, slugify } from "@/lib/validation";
+import { queueStockCheck } from "@/lib/alerts";
 
 export type FormResult =
   | { ok: true; message?: string }
@@ -48,6 +49,8 @@ export async function saveProduct(
   // Empty = no fixed LKR price (calculated from USD). Whole rupees only.
   const lkrRaw = ((formData.get("priceLkr") as string) ?? "").trim();
   const lkrInput = lkrRaw === "" ? null : parseFloat(lkrRaw);
+  // Empty = use the store-wide low stock level.
+  const thresholdRaw = ((formData.get("lowStockThreshold") as string) ?? "").trim();
   // Empty = cost not tracked for this product.
   const costRaw = ((formData.get("cost") as string) ?? "").trim();
   const costInput = costRaw === "" ? null : parseFloat(costRaw);
@@ -66,6 +69,7 @@ export async function saveProduct(
     costCents:
       costInput === null ? null : Number.isFinite(costInput) ? Math.round(costInput * 100) : NaN,
     costCurrency: formData.get("costCurrency") === "LKR" ? "LKR" : "USD",
+    lowStockThreshold: thresholdRaw === "" ? null : Number(thresholdRaw),
     categoryId: (formData.get("categoryId") as string) ?? "",
     imageUrl: ((formData.get("imageUrl") as string) ?? "").trim(),
     published: formData.get("published") === "on",
@@ -106,6 +110,7 @@ export async function saveProduct(
     priceLkrCents: data.priceLkrCents,
     costCents: data.costCents,
     costCurrency: data.costCurrency,
+    lowStockThreshold: data.lowStockThreshold,
     categoryId: data.categoryId,
     imageUrl: data.imageUrl ? data.imageUrl : null,
     published: data.published,
@@ -114,6 +119,8 @@ export async function saveProduct(
 
   if (id) {
     await prisma.product.update({ where: { id }, data: values });
+    // The alert level may have changed (or the product was just published).
+    queueStockCheck([id]);
   } else {
     await prisma.product.create({ data: values });
   }
@@ -194,6 +201,8 @@ export async function addLicenseKeys(
 
   if (toInsert.length > 0) {
     await prisma.licenseKey.createMany({ data: toInsert, skipDuplicates: true });
+    // Restocked: re-arms the low/out of stock alert.
+    queueStockCheck([productId]);
   }
 
   revalidatePath(`/admin/products/${productId}/keys`);
@@ -217,6 +226,7 @@ export async function deleteLicenseKey(formData: FormData): Promise<void> {
   if (!key || key.status === "SOLD") return;
 
   await prisma.licenseKey.delete({ where: { id } });
+  queueStockCheck([key.productId]);
   revalidatePath(`/admin/products/${key.productId}/keys`);
   revalidateCatalog();
 }

@@ -65,15 +65,26 @@ model PasswordResetToken {
 
 /// Store-wide settings editable in the admin panel. A single row, id "default".
 model StoreSettings {
-  id                String   @id @default("default")
+  id                String @id @default("default")
   /// LKR per 1 USD (market rate). Null = fall back to PAYHERE_USD_TO_LKR_RATE.
   usdToLkrRate      Float?
   /// Added on top of the market rate for calculated LKR prices (e.g. 2.5 = +2.5%).
-  lkrMarginPercent  Float    @default(0)
+  lkrMarginPercent  Float  @default(0)
   /// Payment gateway (PayHere) fee as a percent of each payment, for profit reports.
-  gatewayFeePercent Float    @default(0)
-  updatedAt         DateTime @updatedAt
-  updatedBy         String?
+  gatewayFeePercent Float  @default(0)
+
+  // --- Admin alerts (emails to the store owner) ---
+  /// Comma-separated recipients. Empty = ADMIN_EMAIL from the environment.
+  alertEmails         String?
+  /// Default "low stock" level: alert when available keys fall below this.
+  lowStockThreshold   Int      @default(5)
+  alertLowStock       Boolean  @default(true)
+  alertOutOfStock     Boolean  @default(true)
+  alertFailedDelivery Boolean  @default(true)
+  alertPaymentProblem Boolean  @default(true)
+  alertNewOrder       Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
+  updatedBy           String?
 }
 
 /// An old category slug that permanently redirects to the category's current
@@ -112,6 +123,24 @@ model Discount {
   @@index([active])
 }
 
+/// Every admin alert we tried to send (shown in Admin -> Settings).
+model AlertLog {
+  id         String   @id @default(cuid())
+  type       String
+  subject    String
+  body       String
+  recipients String
+  /// SENT, FAILED (email error) or SUPPRESSED (duplicate within the cool-down).
+  status     String
+  error      String?
+  /// Same key within the cool-down = not sent again (stops alert floods).
+  dedupeKey  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([dedupeKey, createdAt])
+}
+
 model BlockedEmail {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -143,32 +172,37 @@ model Category {
 }
 
 model Product {
-  id               String       @id @default(cuid())
-  slug             String       @unique
-  name             String
-  shortDescription String
-  description      String
-  brand            String
-  platform         String
-  region           String       @default("Global")
-  priceCents       Int // USD cents: the main price, required
+  id                String       @id @default(cuid())
+  slug              String       @unique
+  name              String
+  shortDescription  String
+  description       String
+  brand             String
+  platform          String
+  region            String       @default("Global")
+  priceCents        Int // USD cents: the main price, required
   /// Optional fixed LKR price (cents). When null, LKR is calculated from
   /// priceCents with the exchange rate + margin in StoreSettings.
-  priceLkrCents    Int?
+  priceLkrCents     Int?
   /// ADMIN ONLY. What the store pays per key (cents, in costCurrency). Hidden
   /// from every query by default (global omit in lib/db.ts).
-  costCents        Int?
-  costCurrency     String       @default("USD")
-  imageUrl         String?
-  categoryId       String
-  category         Category     @relation(fields: [categoryId], references: [id])
-  published        Boolean      @default(true)
-  featured         Boolean      @default(false)
-  licenseKeys      LicenseKey[]
-  orderItems       OrderItem[]
-  discounts        Discount[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  costCents         Int?
+  costCurrency      String       @default("USD")
+  /// Per-product low stock level; null = the store default (StoreSettings).
+  lowStockThreshold Int?
+  /// Last stock alert level sent: null (fine), "LOW" or "OUT". Lets each drop
+  /// alert once; restocking re-arms it.
+  stockAlertState   String?
+  imageUrl          String?
+  categoryId        String
+  category          Category     @relation(fields: [categoryId], references: [id])
+  published         Boolean      @default(true)
+  featured          Boolean      @default(false)
+  licenseKeys       LicenseKey[]
+  orderItems        OrderItem[]
+  discounts         Discount[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@index([categoryId])
   @@index([published])

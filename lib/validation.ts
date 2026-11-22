@@ -88,6 +88,13 @@ export const productSchema = z.object({
     .max(5_000_000_00, "That cost looks too high")
     .nullable(),
   costCurrency: z.enum(["USD", "LKR"]).default("USD"),
+  /** Alert when available keys fall below this; null = store default. */
+  lowStockThreshold: z
+    .number({ error: "Enter a whole number, or leave it empty" })
+    .int("Use a whole number")
+    .min(1, "Use 1 or more")
+    .max(1000)
+    .nullable(),
   categoryId: z.string().min(1, "Pick a category"),
   imageUrl: z.union([z.url(), z.literal("")]).optional(),
   published: z.boolean().default(true),
