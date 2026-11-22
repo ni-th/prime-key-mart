@@ -1,6 +1,11 @@
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { availableStockByProduct } from "@/lib/products";
+import { clampPage } from "@/lib/list-params";
+
+/** Rows per page on the admin Products and Users lists. */
+export const ADMIN_PAGE_SIZE = 20;
 
 export const LOW_STOCK_THRESHOLD = 3;
 
@@ -41,9 +46,49 @@ export async function getAdminStats() {
   };
 }
 
-export async function getAdminProducts() {
+export const PRODUCT_STATUS_FILTERS = ["published", "hidden", "featured"] as const;
+export const PRODUCT_STOCK_FILTERS = ["in", "low", "out"] as const;
+export const PRODUCT_SORTS = ["newest", "name", "price-asc", "price-desc", "stock-asc", "best-selling"] as const;
+
+export type AdminProductFilters = {
+  q?: string;
+  /** Category slug. */
+  category?: string;
+  status?: (typeof PRODUCT_STATUS_FILTERS)[number];
+  stock?: (typeof PRODUCT_STOCK_FILTERS)[number];
+  sort?: (typeof PRODUCT_SORTS)[number];
+};
+
+/**
+ * Products with live stock + sold counts. Text/category/status filters run in
+ * the database; stock filters and stock/sales sorting need the computed counts
+ * so they run afterwards (the catalog is small enough for that).
+ */
+export async function getAdminProducts(filters: AdminProductFilters = {}) {
+  const { q, category, status, stock, sort = "newest" } = filters;
   const products = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
+    where: {
+      ...(q && {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { brand: { contains: q, mode: "insensitive" } },
+          { slug: { contains: q, mode: "insensitive" } },
+          { platform: { contains: q, mode: "insensitive" } },
+        ],
+      }),
+      ...(category && { category: { slug: category } }),
+      ...(status === "published" && { published: true }),
+      ...(status === "hidden" && { published: false }),
+      ...(status === "featured" && { featured: true }),
+    },
+    orderBy:
+      sort === "name"
+        ? { name: "asc" }
+        : sort === "price-asc"
+          ? { priceCents: "asc" }
+          : sort === "price-desc"
+            ? { priceCents: "desc" }
+            : { createdAt: "desc" },
     include: { category: true },
   });
   const [available, sold] = await Promise.all([
@@ -56,11 +101,76 @@ export async function getAdminProducts() {
   ]);
   const soldMap = new Map(sold.map((s) => [s.productId, s._count._all]));
 
-  return products.map((p) => ({
+  let rows = products.map((p) => ({
     ...p,
     stock: available.get(p.id) ?? 0,
     sold: soldMap.get(p.id) ?? 0,
   }));
+
+  if (stock === "out") rows = rows.filter((p) => p.stock === 0);
+  else if (stock === "low") rows = rows.filter((p) => p.stock > 0 && p.stock < LOW_STOCK_THRESHOLD);
+  else if (stock === "in") rows = rows.filter((p) => p.stock > 0);
+
+  if (sort === "stock-asc") rows.sort((a, b) => a.stock - b.stock);
+  else if (sort === "best-selling") rows.sort((a, b) => b.sold - a.sold);
+
+  return rows;
+}
+
+export const ORDER_SORTS = ["newest", "oldest", "total-desc", "total-asc"] as const;
+export const ORDERS_PAGE_SIZE = 25;
+
+export type AdminOrderFilters = {
+  /** Order number, customer email or product name. */
+  q?: string;
+  status?: string;
+  from?: Date | null;
+  /** Inclusive: orders placed on this day are included. */
+  to?: Date | null;
+  sort?: (typeof ORDER_SORTS)[number];
+  page?: number;
+};
+
+/** Paginated, filtered order list for the admin Orders page. */
+export async function searchAdminOrders(filters: AdminOrderFilters = {}) {
+  const { q, status, from, to, sort = "newest", page = 1 } = filters;
+  const toExclusive = to ? new Date(to.getTime() + 24 * 60 * 60 * 1000) : null;
+
+  const where: Prisma.OrderWhereInput = {
+    ...(status && { status: status as Prisma.OrderWhereInput["status"] }),
+    ...((from || toExclusive) && {
+      createdAt: { ...(from && { gte: from }), ...(toExclusive && { lt: toExclusive }) },
+    }),
+    ...(q && {
+      OR: [
+        { orderNumber: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { user: { name: { contains: q, mode: "insensitive" } } },
+        { items: { some: { productName: { contains: q, mode: "insensitive" } } } },
+      ],
+    }),
+  };
+
+  const orderBy: Prisma.OrderOrderByWithRelationInput =
+    sort === "oldest"
+      ? { createdAt: "asc" }
+      : sort === "total-desc"
+        ? { totalCents: "desc" }
+        : sort === "total-asc"
+          ? { totalCents: "asc" }
+          : { createdAt: "desc" };
+
+  // Count first so an out-of-range ?page= lands on the last page, not empty.
+  const total = await prisma.order.count({ where });
+  const current = clampPage(page, total, ORDERS_PAGE_SIZE);
+  const orders = await prisma.order.findMany({
+    where,
+    orderBy: [orderBy, { id: "desc" }],
+    skip: (current - 1) * ORDERS_PAGE_SIZE,
+    take: ORDERS_PAGE_SIZE,
+    include: { items: { select: { quantity: true } } },
+  });
+  return { orders, total, page: current, pageSize: ORDERS_PAGE_SIZE };
 }
 
 export async function getAdminOrders(status?: string) {
@@ -91,6 +201,7 @@ export type UserListRow = {
 
 export async function getUsersList(
   filter: UserFilter = "all",
+  q = "",
 ): Promise<UserListRow[]> {
   const [users, guestGroups, blocked, spentByUser, ordersByUser, spentByGuest] =
     await Promise.all([
@@ -163,6 +274,15 @@ export async function getUsersList(
   if (filter === "registered") rows = rows.filter((r) => r.kind === "registered");
   else if (filter === "guests") rows = rows.filter((r) => r.kind === "guest");
   else if (filter === "flagged") rows = rows.filter((r) => r.suspended);
+
+  const needle = q.trim().toLowerCase();
+  if (needle) {
+    rows = rows.filter(
+      (r) =>
+        r.email.toLowerCase().includes(needle) ||
+        (r.name ?? "").toLowerCase().includes(needle),
+    );
+  }
 
   rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return rows;

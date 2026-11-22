@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getUsersList, type UserFilter } from "@/lib/admin";
+import { ADMIN_PAGE_SIZE, getUsersList, type UserFilter } from "@/lib/admin";
+import { hrefWith, pageParam, paginate, param, type RawParams } from "@/lib/list-params";
+import { ListClear, ListSearch } from "@/components/admin/list-controls";
+import { ListPagination } from "@/components/admin/list-pagination";
 import { formatUsd } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -26,22 +29,41 @@ const FILTERS: { value: UserFilter; label: string }[] = [
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<RawParams>;
 }) {
-  const { filter } = await searchParams;
+  const sp = await searchParams;
+  const filter = param(sp, "filter");
+  const q = param(sp, "q");
   const active = (FILTERS.find((f) => f.value === filter)?.value ??
     "all") as UserFilter;
-  const rows = await getUsersList(active);
+  const all = await getUsersList(active, q);
+  const { page, items: rows, total } = paginate(all, pageParam(sp), ADMIN_PAGE_SIZE);
+  const pagination = (
+    <ListPagination
+      path="/admin/users"
+      params={sp}
+      page={page}
+      pageSize={ADMIN_PAGE_SIZE}
+      total={total}
+    />
+  );
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <ListSearch placeholder="Search name or email..." />
+        <ListClear keys={["q", "filter"]} />
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.value}
-            href={f.value === "all" ? "/admin/users" : `/admin/users?filter=${f.value}`}
+            href={hrefWith("/admin/users", sp, { filter: f.value === "all" ? null : f.value })}
+            scroll={false}
+            aria-current={active === f.value ? "true" : undefined}
             className={cn(
               buttonVariants({
                 variant: active === f.value ? "default" : "outline",
@@ -53,6 +75,8 @@ export default async function AdminUsersPage({
           </Link>
         ))}
       </div>
+
+      {pagination}
 
       <div className="rounded-xl border">
         <Table>
@@ -69,7 +93,7 @@ export default async function AdminUsersPage({
             {rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  No users match this filter.
+                  {q ? `No users match "${q}".` : "No users match this filter."}
                 </TableCell>
               </TableRow>
             )}
@@ -122,6 +146,8 @@ export default async function AdminUsersPage({
           </TableBody>
         </Table>
       </div>
+
+      {total > ADMIN_PAGE_SIZE && pagination}
     </div>
   );
 }

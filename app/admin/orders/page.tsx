@@ -1,6 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAdminOrders } from "@/lib/admin";
+import { ORDER_SORTS, searchAdminOrders } from "@/lib/admin";
+import {
+  dateParam,
+  hrefWith,
+  oneOf,
+  pageParam,
+  param,
+  type RawParams,
+} from "@/lib/list-params";
+import {
+  ListClear,
+  ListDateRange,
+  ListSearch,
+  ListSelect,
+} from "@/components/admin/list-controls";
+import { ListPagination } from "@/components/admin/list-pagination";
 import { formatMoney } from "@/lib/money";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -28,11 +43,34 @@ const FILTERS = [
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<RawParams>;
 }) {
-  const { status } = await searchParams;
+  const sp = await searchParams;
+  const status = param(sp, "status");
   const active = FILTERS.some((f) => f.value === status) ? status : "";
-  const orders = await getAdminOrders(active || undefined);
+  const q = param(sp, "q");
+  const from = dateParam(param(sp, "from"));
+  const to = dateParam(param(sp, "to"));
+  const sort = oneOf(param(sp, "sort"), ORDER_SORTS, "newest");
+
+  const { orders, total, page, pageSize } = await searchAdminOrders({
+    q: q || undefined,
+    status: active || undefined,
+    from,
+    to,
+    sort,
+    page: pageParam(sp),
+  });
+  const filtered = Boolean(q || active || from || to);
+  const pagination = (
+    <ListPagination
+      path="/admin/orders"
+      params={sp}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -42,7 +80,9 @@ export default async function AdminOrdersPage({
         {FILTERS.map((f) => (
           <Link
             key={f.label}
-            href={f.value ? `/admin/orders?status=${f.value}` : "/admin/orders"}
+            href={hrefWith("/admin/orders", sp, { status: f.value || null })}
+            scroll={false}
+            aria-current={active === f.value ? "true" : undefined}
             className={cn(
               buttonVariants({
                 variant: active === f.value ? "default" : "outline",
@@ -54,6 +94,25 @@ export default async function AdminOrdersPage({
           </Link>
         ))}
       </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <ListSearch placeholder="Order no., email or product..." />
+        <ListDateRange />
+        <ListSelect
+          param="sort"
+          label="Sort"
+          className="w-44"
+          options={[
+            { value: "", label: "Newest first" },
+            { value: "oldest", label: "Oldest first" },
+            { value: "total-desc", label: "Total: high to low" },
+            { value: "total-asc", label: "Total: low to high" },
+          ]}
+        />
+        <ListClear keys={["q", "status", "from", "to", "sort"]} />
+      </div>
+
+      {pagination}
 
       <div className="rounded-xl border">
         <Table>
@@ -70,8 +129,8 @@ export default async function AdminOrdersPage({
           <TableBody>
             {orders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  No orders.
+                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                  {filtered ? "No orders match these filters." : "No orders yet."}
                 </TableCell>
               </TableRow>
             )}
@@ -105,6 +164,8 @@ export default async function AdminOrdersPage({
           </TableBody>
         </Table>
       </div>
+
+      {total > pageSize && pagination}
     </div>
   );
 }
