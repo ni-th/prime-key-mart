@@ -61,7 +61,9 @@ export default async function ProductPage({
       </nav>
 
       <div className="grid gap-10 md:grid-cols-2">
-        <div className="overflow-hidden rounded-xl border ring-1 ring-foreground/10">
+        {/* self-start: don't stretch to the (taller) details column, which
+            left an empty band under the image. */}
+        <div className="self-start overflow-hidden rounded-xl border ring-1 ring-foreground/10">
           <div className="aspect-16/10">
             <ProductThumb
               name={product.name}
