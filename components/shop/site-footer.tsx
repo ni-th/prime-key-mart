@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { categoryPath } from "@/lib/category-url";
 import { Logo } from "@/components/brand/logo";
 import { BUSINESS } from "@/lib/business";
 import { getCategories } from "@/lib/products";
@@ -26,7 +27,7 @@ export async function SiteFooter() {
           {categories.map((c) => (
             <Link
               key={c.id}
-              href={`/products?category=${c.slug}`}
+              href={categoryPath(c.slug)}
               className="block text-muted-foreground hover:text-foreground"
             >
               {c.name}

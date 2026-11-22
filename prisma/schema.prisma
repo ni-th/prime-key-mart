@@ -76,6 +76,17 @@ model StoreSettings {
   updatedBy         String?
 }
 
+/// An old category slug that permanently redirects to the category's current
+/// page, so shared links and search results keep working after a rename.
+model CategorySlugRedirect {
+  slug       String   @id
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([categoryId])
+}
+
 model BlockedEmail {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -84,8 +95,8 @@ model BlockedEmail {
 }
 
 model Category {
-  id              String    @id @default(cuid())
-  slug            String    @unique
+  id              String                 @id @default(cuid())
+  slug            String                 @unique
   name            String
   /// Shown under the heading on the category page and used as its meta description.
   description     String?
@@ -94,13 +105,15 @@ model Category {
   /// Optional phone version of the banner (2:1, e.g. 1200 x 600). Falls back to bannerUrl.
   bannerMobileUrl String?
   /// Hidden categories disappear from the shop (navigation, home, category page).
-  visible         Boolean   @default(true)
+  visible         Boolean                @default(true)
   /// Listed in the header menu (keep it to a handful).
-  showInHeader    Boolean   @default(true)
-  sortOrder       Int       @default(0)
+  showInHeader    Boolean                @default(true)
+  sortOrder       Int                    @default(0)
   products        Product[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
+  /// Old slugs that redirect here (kept when the slug is changed).
+  slugRedirects   CategorySlugRedirect[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @default(now()) @updatedAt
 }
 
 model Product {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { categoryPath } from "@/lib/category-url";
 import { Search } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { auth } from "@/lib/auth";
@@ -16,7 +17,7 @@ export async function SiteHeader() {
   const navLinks = [
     { href: "/products", label: "All products" },
     ...categories.filter((c) => c.showInHeader).map((c) => ({
-      href: `/products?category=${c.slug}`,
+      href: categoryPath(c.slug),
       label: c.name,
     })),
   ];

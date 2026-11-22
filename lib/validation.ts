@@ -128,9 +128,7 @@ export const categorySchema = z.object({
   bannerMobileUrl: imageUrlField,
   visible: z.boolean(),
   showInHeader: z.boolean(),
-  sortOrder: z
-    .number({ error: "Enter a number" })
-    .int("Use a whole number")
-    .min(0, "Use 0 or more")
-    .max(999),
 });
+
+/** New display order: every category id, first to last. */
+export const categoryOrderSchema = z.array(z.string().min(1)).min(1).max(500);

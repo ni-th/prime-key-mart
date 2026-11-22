@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { categoryPath } from "@/lib/category-url";
 import { BadgeCheck, Mail, ShieldCheck, Zap } from "lucide-react";
 import { getCategories, getFeaturedProducts } from "@/lib/products";
 import { buttonVariants } from "@/components/ui/button";
@@ -35,7 +36,7 @@ export default async function HomePage() {
           </Link>
           {heroCategory && (
             <Link
-              href={`/products?category=${heroCategory.slug}`}
+              href={categoryPath(heroCategory.slug)}
               className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
               Shop {heroCategory.name}
@@ -89,7 +90,7 @@ export default async function HomePage() {
           {categories.map((category) => (
             <Link
               key={category.id}
-              href={`/products?category=${category.slug}`}
+              href={categoryPath(category.slug)}
               className="overflow-hidden rounded-xl border bg-card ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
             >
               {(category.bannerMobileUrl ?? category.bannerUrl) && (

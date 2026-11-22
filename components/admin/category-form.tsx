@@ -25,7 +25,6 @@ export type CategoryFormValues = {
   bannerMobileUrl: string | null;
   visible: boolean;
   showInHeader: boolean;
-  sortOrder: number;
 };
 
 function Hint({ error, children }: { error?: string; children?: React.ReactNode }) {
@@ -47,13 +46,10 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
 export function CategoryForm({
   category,
   uploadsEnabled,
-  nextSortOrder = 0,
 }: {
   category?: CategoryFormValues;
   /** Cloudinary configured: show the uploader instead of URL boxes. */
   uploadsEnabled: boolean;
-  /** Default display position for a new category (after the last one). */
-  nextSortOrder?: number;
 }) {
   const [state, formAction] = useActionState<FormResult, FormData>(saveCategory, {
     ok: false,
@@ -110,7 +106,7 @@ export function CategoryForm({
             <Hint error={fe.slug}>
               {effectiveSlug ? (
                 <>
-                  Page address: <span className="font-mono">/products?category={effectiveSlug}</span>
+                  Page address: <span className="font-mono">/category/{effectiveSlug}</span>
                 </>
               ) : (
                 "Generated from the name."
@@ -118,8 +114,8 @@ export function CategoryForm({
             </Hint>
             {slugChanged && !fe.slug && (
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                Changing the slug changes the page address. Old links (shared or indexed by
-                Google) will stop showing this category.
+                This changes the page address. The old address will keep working and
+                redirect here automatically.
               </p>
             )}
           </div>
@@ -178,20 +174,6 @@ export function CategoryForm({
       </Card>
 
       <Card className="space-y-4 p-5">
-        <div className="space-y-1.5 sm:max-w-48">
-          <Label htmlFor="sortOrder">Display order</Label>
-          <Input
-            id="sortOrder"
-            name="sortOrder"
-            type="number"
-            min={0}
-            max={999}
-            step={1}
-            defaultValue={category?.sortOrder ?? nextSortOrder}
-            aria-invalid={fe.sortOrder ? true : undefined}
-          />
-          <Hint error={fe.sortOrder}>Lower numbers come first.</Hint>
-        </div>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

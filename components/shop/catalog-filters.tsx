@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { categoryPath } from "@/lib/category-url";
 
 type Category = { slug: string; name: string };
 
@@ -24,15 +25,18 @@ const SORTS = [
 export function CatalogFilters({
   categories,
   brands,
+  activeCategory,
 }: {
   categories: Category[];
   brands: string[];
+  /** Slug of the category page being shown, or null on "All products". */
+  activeCategory: string | null;
 }) {
   const router = useRouter();
   const params = useSearchParams();
 
   const current = {
-    category: params.get("category") ?? "all",
+    category: activeCategory ?? "all",
     brand: params.get("brand") ?? "all",
     sort: params.get("sort") ?? "featured",
     q: params.get("q") ?? "",
@@ -43,14 +47,20 @@ export function CatalogFilters({
     current.sort !== "featured" ||
     current.q !== "";
 
+  // The category is part of the path (/category/x); everything else is a
+  // query param that carries over when switching category.
   const update = useCallback(
     (key: string, value: string | null) => {
       const next = new URLSearchParams(params.toString());
-      if (!value || value === "all") next.delete(key);
+      next.delete("category");
+      let category = activeCategory;
+      if (key === "category") category = !value || value === "all" ? null : value;
+      else if (!value || value === "all") next.delete(key);
       else next.set(key, value);
-      router.push(next.toString() ? `/products?${next}` : "/products");
+      const base = category ? categoryPath(category) : "/products";
+      router.push(next.toString() ? `${base}?${next}` : base);
     },
-    [params, router],
+    [params, router, activeCategory],
   );
 
   return (

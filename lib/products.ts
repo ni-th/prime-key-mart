@@ -26,6 +26,18 @@ export async function getCategoryBySlug(slug: string) {
   return category?.visible ? category : null;
 }
 
+/**
+ * Where an unknown category slug should go: the current slug of the category
+ * it used to belong to (if that category is still visible), else null.
+ */
+export async function resolveOldCategorySlug(slug: string): Promise<string | null> {
+  const redirect = await prisma.categorySlugRedirect.findUnique({
+    where: { slug },
+    select: { category: { select: { slug: true, visible: true } } },
+  });
+  return redirect?.category.visible ? redirect.category.slug : null;
+}
+
 export async function getBrands(): Promise<string[]> {
   const rows = await prisma.product.findMany({
     where: { published: true },

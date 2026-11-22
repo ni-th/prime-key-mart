@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { categoryPath } from "@/lib/category-url";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Mail, ShieldCheck, Zap } from "lucide-react";
@@ -46,7 +47,7 @@ export default async function ProductPage({
         </Link>
         <ChevronRight className="size-3" />
         <Link
-          href={`/products?category=${product.category.slug}`}
+          href={categoryPath(product.category.slug)}
           className="hover:text-foreground"
         >
           {product.category.name}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { categoryPath } from "@/lib/category-url";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
@@ -20,7 +21,10 @@ export default async function EditCategoryPage({
   const { id } = await params;
   const category = await prisma.category.findUnique({
     where: { id },
-    include: { _count: { select: { products: true } } },
+    include: {
+      _count: { select: { products: true } },
+      slugRedirects: { orderBy: { createdAt: "desc" }, select: { slug: true } },
+    },
   });
   if (!category) notFound();
 
@@ -37,7 +41,7 @@ export default async function EditCategoryPage({
           </Link>
           {category.visible && (
             <Link
-              href={`/products?category=${category.slug}`}
+              href={categoryPath(category.slug)}
               target="_blank"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
@@ -59,9 +63,24 @@ export default async function EditCategoryPage({
           bannerMobileUrl: category.bannerMobileUrl,
           visible: category.visible,
           showInHeader: category.showInHeader,
-          sortOrder: category.sortOrder,
         }}
       />
+
+      {category.slugRedirects.length > 0 && (
+        <div className="text-sm">
+          <h2 className="font-medium">Old addresses</h2>
+          <p className="mb-2 text-xs text-muted-foreground">
+            These used to be this category&apos;s address and now redirect here.
+          </p>
+          <ul className="space-y-1 font-mono text-xs text-muted-foreground">
+            {category.slugRedirects.map((r) => (
+              <li key={r.slug}>
+                {categoryPath(r.slug)} &rarr; {categoryPath(category.slug)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <Separator />
 
