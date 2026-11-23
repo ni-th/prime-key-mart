@@ -23,7 +23,7 @@ import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") || "/account";
+  const callbackUrl = params.get("callbackUrl") || "/";
 
   const justEnabled = params.get("twofa") === "enabled";
 

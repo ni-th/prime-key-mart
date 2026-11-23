@@ -29,7 +29,7 @@ type Details = { firstName: string; lastName: string; email: string; password: s
 export function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") || "/account";
+  const callbackUrl = params.get("callbackUrl") || "/";
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
