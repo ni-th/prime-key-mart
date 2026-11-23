@@ -18,13 +18,28 @@ export const loginSchema = z.object({
   ticket: z.string().max(200).optional(),
 });
 
+/** First / last name as PayHere wants them (also used at checkout). */
+export const personNameSchema = z.object({
+  firstName: z.string().trim().min(1, "Enter your first name").max(50),
+  lastName: z.string().trim().min(1, "Enter your last name").max(50),
+});
+
 export const registerSchema = z.object({
-  name: z.string().trim().min(1, "Enter your name").max(80),
+  ...personNameSchema.shape,
   email: z.email("Enter a valid email address"),
   password: z
     .string()
     .min(8, "Use at least 8 characters")
     .max(200, "That password is too long"),
+});
+
+/** The 6-digit code emailed at sign-up. */
+export const signupCodeSchema = z.object({
+  email: z.email("Enter a valid email address"),
+  code: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ""))
+    .pipe(z.string().length(6, "Enter the 6-digit code from the email")),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -47,8 +62,7 @@ export const resetPasswordSchema = z
  * checked loosely (customers worldwide), but must look real.
  */
 export const customerDetailsSchema = z.object({
-  firstName: z.string().trim().min(1, "Enter your first name").max(50),
-  lastName: z.string().trim().min(1, "Enter your last name").max(50),
+  ...personNameSchema.shape,
   phone: z
     .string()
     .trim()

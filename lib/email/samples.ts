@@ -2,6 +2,7 @@ import {
   adminAlertEmail,
   orderKeysEmail,
   confirmEmailEmail,
+  signupCodeEmail,
   passwordChangedEmail,
   passwordResetEmail,
   paymentReportClosedEmail,
@@ -107,6 +108,12 @@ export const EMAIL_SAMPLES: {
     name: "Password reset",
     when: "When someone uses \"Forgot password\".",
     render: () => passwordResetEmail({ resetUrl: `${SITE_URL}/reset-password?token=sample`, ttlMinutes: 30 }),
+  },
+  {
+    id: "signup-code",
+    name: "Sign-up code",
+    when: "When someone signs up, to confirm they own the email before the account is created.",
+    render: () => signupCodeEmail({ code: "042917", firstName: "Nimal", ttlMinutes: 15 }),
   },
   {
     id: "confirm-email",

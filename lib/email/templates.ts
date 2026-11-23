@@ -118,6 +118,13 @@ export function passwordResetEmail(o: { resetUrl: string; ttlMinutes: number }):
   });
 }
 
+export function signupCodeEmail(o: { code: string; firstName: string; ttlMinutes: number }): EmailContent {
+  return renderEmail("signup-code", o, {
+    subject: `${o.code} is your ${BRAND.name} sign-up code`,
+    preheader: `Enter it to finish creating your account. It expires in ${o.ttlMinutes} minutes.`,
+  });
+}
+
 export function confirmEmailEmail(o: { confirmUrl: string; orderCount: number; ttlHours: number }): EmailContent {
   return renderEmail(
     "confirm-email",

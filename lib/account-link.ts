@@ -4,10 +4,11 @@ import { prisma } from "@/lib/db";
 /**
  * Linking guest orders to an account.
  *
- * Accounts are created without checking the email, so we never hand someone
- * the orders (and keys) of an email address just because they typed it at
- * sign-up. First they confirm the address through an emailed link; after that
- * guest orders with that email are linked automatically.
+ * We never hand someone the orders (and keys) of an email address just
+ * because they typed it. New accounts confirm the address with a code at
+ * sign-up (emailVerifiedAt is set then); older accounts confirm it through an
+ * emailed link. After that, guest orders with that email are linked
+ * automatically.
  */
 
 /** How long a "confirm your email" link works. */

@@ -97,6 +97,13 @@ function OtpInput({
       commit(next)
       return
     }
+    // Several characters at once (not via onPaste) means browser autofill.
+    // Browsers sometimes fill a saved username/email here; only accept values
+    // that look like a code (digits, spaces, dashes), never "ab12@mail.com".
+    if (value.length > 2 && /[^\d\s-]/.test(value)) {
+      e.target.value = digits[i]
+      return
+    }
     // Box already held a digit and the new one was typed next to it: keep the
     // newest character. Several characters at once means autofill/paste.
     const typed = value.replace(/\D/g, "")

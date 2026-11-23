@@ -54,16 +54,46 @@ function FieldError({ state, name }: { state: AccountFormState; name: string }) 
   return msg ? <p className="text-xs text-destructive">{msg}</p> : null;
 }
 
-export function ProfileForm({ name, email }: { name: string; email: string }) {
+export function ProfileForm({
+  firstName,
+  lastName,
+  email,
+}: {
+  firstName: string;
+  lastName: string;
+  email: string;
+}) {
   const [state, action] = useActionState(updateProfile, IDLE);
   return (
     <form action={action} className="space-y-4">
       <Status state={state} />
-      <div className="space-y-1.5">
-        <Label htmlFor="name">Name</Label>
-        <Input id="name" name="name" defaultValue={name} maxLength={80} required autoComplete="name" />
-        <FieldError state={state} name="name" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="firstName">First name</Label>
+          <Input
+            id="firstName"
+            name="firstName"
+            defaultValue={firstName}
+            maxLength={50}
+            required
+            autoComplete="given-name"
+          />
+          <FieldError state={state} name="firstName" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="lastName">Last name</Label>
+          <Input
+            id="lastName"
+            name="lastName"
+            defaultValue={lastName}
+            maxLength={50}
+            required
+            autoComplete="family-name"
+          />
+          <FieldError state={state} name="lastName" />
+        </div>
       </div>
+      <p className="-mt-2 text-xs text-muted-foreground">Used for your payment details at checkout.</p>
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
         <Input id="email" value={email} disabled readOnly />

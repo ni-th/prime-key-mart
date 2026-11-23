@@ -5,6 +5,7 @@ import {
   adminAlertEmail,
   orderKeysEmail,
   confirmEmailEmail,
+  signupCodeEmail,
   passwordChangedEmail,
   passwordResetEmail,
   paymentReportClosedEmail,
@@ -135,6 +136,16 @@ export async function sendPasswordResetEmail(
   ttlMinutes: number,
 ): Promise<void> {
   await send(to, passwordResetEmail({ resetUrl, ttlMinutes }));
+}
+
+/** 6-digit code that confirms the email before a new account is created. */
+export async function sendSignupCodeEmail(
+  to: string,
+  code: string,
+  firstName: string,
+  ttlMinutes: number,
+): Promise<void> {
+  await send(to, signupCodeEmail({ code, firstName, ttlMinutes }));
 }
 
 /** "Confirm your email" link that adds the customer's guest orders to their account. */

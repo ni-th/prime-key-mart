@@ -10,7 +10,8 @@ import { rateLimit } from "@/lib/rate-limit";
 import { generateTotpSecret, openTotpSecret, sealTotpSecret, verifyTotp } from "@/lib/totp";
 import { LINK_TTL_HOURS, countGuestOrders, signLinkToken } from "@/lib/account-link";
 import { sendConfirmEmailEmail, sendPasswordChangedEmail } from "@/lib/mailer";
-import { registerSchema } from "@/lib/validation";
+import { personNameSchema, registerSchema } from "@/lib/validation";
+import { fullName } from "@/lib/signup-code";
 
 const SITE_URL = process.env.SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
 
@@ -36,20 +37,23 @@ function fieldErrorsOf(error: z.ZodError): Record<string, string> {
 
 /* ---------- Profile ---------- */
 
-const profileSchema = z.object({ name: registerSchema.shape.name });
-
 export async function updateProfile(_prev: AccountFormState, formData: FormData): Promise<AccountFormState> {
   const user = await currentUser();
   if (!user) return { status: "error", error: "Please sign in again." };
 
-  const parsed = profileSchema.safeParse({ name: formData.get("name") });
+  const parsed = personNameSchema.safeParse({
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+  });
   if (!parsed.success) {
     return { status: "error", error: "Please fix the highlighted fields.", fieldErrors: fieldErrorsOf(parsed.error) };
   }
 
-  await prisma.user.update({ where: { id: user.id }, data: { name: parsed.data.name } });
+  const { firstName, lastName } = parsed.data;
+  const name = fullName(firstName, lastName);
+  await prisma.user.update({ where: { id: user.id }, data: { firstName, lastName, name } });
   // Refresh the name stored in the sign-in session (header, greeting).
-  await unstable_update({ user: { name: parsed.data.name } });
+  await unstable_update({ user: { name } });
   revalidatePath("/", "layout");
   return { status: "done", message: "Name saved." };
 }

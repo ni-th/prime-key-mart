@@ -1,0 +1,9 @@
+{{!-- Sign-up email check. Data: code, firstName, ttlMinutes --}}
+{{> heading text="Confirm your email"}}
+{{#> para}}Hi {{firstName}}, enter this code on the sign-up page to finish creating your {{site.name}} account.{{/para}}
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 18px">
+  <tr><td align="center" style="padding:18px 14px;background:{{theme.soft}};border:1px solid {{theme.border}};border-radius:10px;font-family:{{{theme.mono}}};font-size:32px;line-height:1;font-weight:700;letter-spacing:8px;color:{{theme.ink}}">{{code}}</td></tr>
+</table>
+
+{{#> para small=true}}The code expires in {{ttlMinutes}} minutes. If you didn't try to sign up, ignore this email: no account will be created.{{/para}}

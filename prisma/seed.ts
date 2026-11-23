@@ -265,6 +265,9 @@ async function main() {
       data: {
         email: adminEmail,
         name: "Admin",
+        firstName: "Admin",
+        lastName: "User",
+        emailVerifiedAt: new Date(),
         role: "ADMIN",
         passwordHash: await bcrypt.hash(adminPassword, 10),
       },
@@ -279,10 +282,13 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "user@keymart.test" },
-    update: { name: "Test Customer" },
+    update: { name: "Test Customer", firstName: "Test", lastName: "Customer" },
     create: {
       email: "user@keymart.test",
       name: "Test Customer",
+      firstName: "Test",
+      lastName: "Customer",
+      emailVerifiedAt: new Date(),
       role: "USER",
       passwordHash: await bcrypt.hash(userPassword, 10),
     },

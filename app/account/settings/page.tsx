@@ -24,7 +24,7 @@ export default async function AccountSettingsPage() {
   const session = await auth();
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: session!.user.id },
-    select: { name: true, email: true, role: true, totpEnabled: true, totpSecret: true },
+    select: { firstName: true, lastName: true, email: true, role: true, totpEnabled: true, totpSecret: true },
   });
 
   // A secret without totpEnabled = setup started but not confirmed yet.
@@ -44,7 +44,7 @@ export default async function AccountSettingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
 
       <Section title="Profile">
-        <ProfileForm name={user.name ?? ""} email={user.email} />
+        <ProfileForm firstName={user.firstName ?? ""} lastName={user.lastName ?? ""} email={user.email} />
       </Section>
 
       <Section title="Password" description="Use at least 8 characters. We'll email you when it changes.">

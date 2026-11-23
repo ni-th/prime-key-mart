@@ -7,17 +7,24 @@ import type { CustomerDetails } from "@/lib/validation";
 
 export const metadata: Metadata = { title: "Checkout" };
 
-/** Signed in: prefill from the account name and the last order's details. */
-async function savedDetails(userId: string, name: string | null | undefined): Promise<Partial<CustomerDetails>> {
-  const last = await prisma.order.findFirst({
-    where: { userId, customerPhone: { not: null } },
-    orderBy: { createdAt: "desc" },
-    select: { customerName: true, customerPhone: true, customerCountry: true },
-  });
-  const [firstName = "", ...rest] = (last?.customerName ?? name ?? "").trim().split(/\s+/);
+/**
+ * Signed in: prefill the PayHere name from the account (first / last name
+ * given at sign-up), and phone / country from the last order.
+ */
+async function savedDetails(userId: string): Promise<Partial<CustomerDetails>> {
+  const [user, last] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, name: true } }),
+    prisma.order.findFirst({
+      where: { userId, customerPhone: { not: null } },
+      orderBy: { createdAt: "desc" },
+      select: { customerName: true, customerPhone: true, customerCountry: true },
+    }),
+  ]);
+  // Older accounts may lack the split name: fall back to splitting a full one.
+  const [splitFirst = "", ...rest] = (last?.customerName ?? user?.name ?? "").trim().split(/\s+/);
   return {
-    firstName,
-    lastName: rest.join(" "),
+    firstName: user?.firstName || splitFirst,
+    lastName: user?.firstName ? (user.lastName ?? "") : rest.join(" "),
     phone: last?.customerPhone ?? "",
     country: last?.customerCountry ?? "",
   };
@@ -25,7 +32,7 @@ async function savedDetails(userId: string, name: string | null | undefined): Pr
 
 export default async function CheckoutPage() {
   const session = await auth();
-  const defaults = session?.user?.id ? await savedDetails(session.user.id, session.user.name) : null;
+  const defaults = session?.user?.id ? await savedDetails(session.user.id) : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">

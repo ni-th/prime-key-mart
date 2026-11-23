@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { OtpInput } from "@/components/ui/otp-input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { registerUser } from "@/app/actions/auth";
+import { registerUser, resendSignupCode, verifySignupCode } from "@/app/actions/auth";
 import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
+
+/** Must match SIGNUP_CODE_RESEND_SECONDS on the server. */
+const RESEND_SECONDS = 60;
+
+type Details = { firstName: string; lastName: string; email: string; password: string };
 
 export function RegisterForm() {
   const router = useRouter();
@@ -27,12 +33,42 @@ export function RegisterForm() {
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
   const waitingForCaptcha = useTurnstileOn() && !captcha;
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  // Set once the code has been emailed: the form switches to the code step.
+  // The password stays in memory only, for the automatic sign-in at the end.
+  const [details, setDetails] = useState<Details | null>(null);
+  // What they typed, restored when they go back to fix the email.
+  const [draft, setDraft] = useState<Omit<Details, "password"> | null>(null);
+  const [code, setCode] = useState("");
+  // Bumped to clear the code boxes (wrong code, new code sent).
+  const [codeAttempt, setCodeAttempt] = useState(0);
+  const codeFormRef = useRef<HTMLFormElement>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  function clearCode() {
+    setCode("");
+    setCodeAttempt((n) => n + 1);
+  }
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  function fail(result: { error: string; fieldErrors?: Record<string, string> }) {
+    setPending(false);
+    setNotice(null);
+    setError(result.error);
+    setFieldErrors(result.fieldErrors ?? {});
+  }
+
+  async function onDetails(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (waitingForCaptcha) {
       setError("Please wait for the security check below to finish.");
@@ -43,24 +79,41 @@ export function RegisterForm() {
     setPending(true);
 
     const data = new FormData(e.currentTarget);
-    const payload = {
-      name: String(data.get("name") ?? ""),
+    const payload: Details = {
+      firstName: String(data.get("firstName") ?? ""),
+      lastName: String(data.get("lastName") ?? ""),
       email: String(data.get("email") ?? ""),
       password: String(data.get("password") ?? ""),
     };
 
     const result = await registerUser(payload, captcha);
+    // Turnstile tokens work once; get a fresh one either way.
+    setCaptchaReset((n) => n + 1);
+    if (!result.ok) return fail(result);
+
+    setPending(false);
+    setDetails({ ...payload, email: result.email });
+    clearCode();
+    setCooldown(RESEND_SECONDS);
+    setNotice(null);
+  }
+
+  async function onCode(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!details || pending || code.length !== 6) return;
+    setError(null);
+    setFieldErrors({});
+    setPending(true);
+
+    const result = await verifySignupCode({ email: details.email, code });
     if (!result.ok) {
-      setCaptchaReset((n) => n + 1);
-      setPending(false);
-      setError(result.error);
-      setFieldErrors(result.fieldErrors ?? {});
-      return;
+      clearCode();
+      return fail(result);
     }
 
     const res = await signIn("credentials", {
-      email: payload.email,
-      password: payload.password,
+      email: details.email,
+      password: details.password,
       ticket: result.ticket,
       redirect: false,
     });
@@ -75,6 +128,98 @@ export function RegisterForm() {
     router.refresh();
   }
 
+  async function onResend() {
+    if (!details || cooldown > 0) return;
+    setError(null);
+    setFieldErrors({});
+    setPending(true);
+    const result = await resendSignupCode(details.email);
+    if (!result.ok) return fail(result);
+    setPending(false);
+    clearCode();
+    setCooldown(RESEND_SECONDS);
+    setNotice("We sent a new code. Codes from earlier emails no longer work.");
+  }
+
+  function startOver() {
+    if (details) setDraft({ firstName: details.firstName, lastName: details.lastName, email: details.email });
+    setDetails(null);
+    setError(null);
+    setNotice(null);
+    setFieldErrors({});
+  }
+
+  const errorBox = error && (
+    <Alert variant="destructive">
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
+  );
+
+  if (details) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Check your email</CardTitle>
+          <CardDescription>
+            We sent a 6-digit code to <span className="font-medium text-foreground">{details.email}</span>.
+            Enter it to finish creating your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form ref={codeFormRef} onSubmit={onCode} className="space-y-4">
+            {errorBox}
+            {notice && (
+              <Alert>
+                <AlertDescription>{notice}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="code">Code</Label>
+              <OtpInput
+                key={codeAttempt}
+                className="justify-center"
+                id="code"
+                name="code"
+                autoFocus
+                disabled={pending}
+                invalid={Boolean(fieldErrors.code)}
+                onChange={setCode}
+                // Submit as soon as the 6th digit is entered.
+                onComplete={() => codeFormRef.current?.requestSubmit()}
+              />
+              {fieldErrors.code && <p className="text-xs text-destructive">{fieldErrors.code}</p>}
+              <p className="text-xs text-muted-foreground">
+                Can&apos;t find it? Check your spam folder. The code expires in 15 minutes.
+              </p>
+            </div>
+            <Button type="submit" className="w-full" disabled={pending || code.length !== 6}>
+              {pending && <Loader2 className="size-4 animate-spin" />}
+              Create account
+            </Button>
+          </form>
+
+          <div className="mt-4 flex items-center justify-between text-sm">
+            <button
+              type="button"
+              onClick={startOver}
+              className="text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Use a different email
+            </button>
+            <button
+              type="button"
+              onClick={onResend}
+              disabled={pending || cooldown > 0}
+              className="font-medium text-foreground hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+            >
+              {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -84,18 +229,23 @@ export function RegisterForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" name="name" autoComplete="name" required />
-            {fieldErrors.name && (
-              <p className="text-xs text-destructive">{fieldErrors.name}</p>
-            )}
+        <form onSubmit={onDetails} className="space-y-4">
+          {errorBox}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="firstName">First name</Label>
+              <Input id="firstName" name="firstName" autoComplete="given-name" defaultValue={draft?.firstName} maxLength={50} required />
+              {fieldErrors.firstName && (
+                <p className="text-xs text-destructive">{fieldErrors.firstName}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input id="lastName" name="lastName" autoComplete="family-name" defaultValue={draft?.lastName} maxLength={50} required />
+              {fieldErrors.lastName && (
+                <p className="text-xs text-destructive">{fieldErrors.lastName}</p>
+              )}
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
@@ -104,11 +254,13 @@ export function RegisterForm() {
               name="email"
               type="email"
               autoComplete="email"
+              defaultValue={draft?.email}
               required
             />
             {fieldErrors.email && (
               <p className="text-xs text-destructive">{fieldErrors.email}</p>
             )}
+            <p className="text-xs text-muted-foreground">We&apos;ll email you a code to confirm it.</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
@@ -126,7 +278,7 @@ export function RegisterForm() {
           <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
           <Button type="submit" className="w-full" disabled={pending || waitingForCaptcha}>
             {pending && <Loader2 className="size-4 animate-spin" />}
-            Sign up
+            Continue
           </Button>
         </form>
 
