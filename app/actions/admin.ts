@@ -31,6 +31,7 @@ function revalidateCatalog(slug?: string) {
   revalidatePath("/admin");
   revalidatePath("/products");
   revalidatePath("/");
+  revalidatePath("/sitemap.xml");
   if (slug) revalidatePath(`/products/${slug}`);
 }
 

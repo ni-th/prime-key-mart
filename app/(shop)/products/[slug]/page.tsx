@@ -16,6 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import { ProductThumb } from "@/components/shop/product-thumb";
 import { ProductBuyBox } from "@/components/shop/product-buy-box";
 import { asDeliveryType } from "@/lib/delivery";
+import { BRAND } from "@/lib/brand";
+import { absoluteUrl, jsonLdHtml } from "@/lib/seo";
 
 type Params = { slug: string };
 
@@ -27,9 +29,18 @@ export async function generateMetadata({
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) return { title: "Product not found" };
+  const path = `/products/${encodeURIComponent(product.slug)}`;
   return {
     title: product.name,
     description: product.shortDescription,
+    alternates: { canonical: path },
+    openGraph: {
+      type: "website",
+      url: path,
+      title: product.name,
+      description: product.shortDescription,
+      ...(product.imageUrl ? { images: [absoluteUrl(product.imageUrl)] } : {}),
+    },
   };
 }
 
@@ -57,8 +68,53 @@ export default async function ProductPage({
 
   const inStock = product.stock > 0;
 
+  // Structured data for search results (price, stock) and breadcrumbs.
+  const url = absoluteUrl(`/products/${encodeURIComponent(product.slug)}`);
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.name,
+      description: product.shortDescription,
+      sku: product.slug,
+      brand: { "@type": "Brand", name: product.brand },
+      category: product.category.name,
+      ...(product.imageUrl ? { image: absoluteUrl(product.imageUrl) } : {}),
+      offers: {
+        "@type": "Offer",
+        url,
+        price: (price.usdCents / 100).toFixed(2),
+        priceCurrency: "USD",
+        availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        itemCondition: "https://schema.org/NewCondition",
+        seller: { "@type": "Organization", name: BRAND.name },
+        ...(price.sale?.endsAt
+          ? { priceValidUntil: new Date(price.sale.endsAt).toISOString().slice(0, 10) }
+          : {}),
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Products", item: absoluteUrl("/products") },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: product.category.name,
+          item: absoluteUrl(categoryPath(product.category.slug)),
+        },
+        { "@type": "ListItem", position: 3, name: product.name, item: url },
+      ],
+    },
+  ];
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
+      />
       <nav className="mb-6 flex items-center gap-1 text-xs text-muted-foreground">
         <Link href="/products" className="hover:text-foreground">
           Products
