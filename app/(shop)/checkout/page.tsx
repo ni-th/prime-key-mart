@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { allowMockPayments } from "@/lib/payhere";
+import { getPaymentSettings } from "@/lib/payment-settings";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 import type { CustomerDetails } from "@/lib/validation";
 
@@ -32,7 +33,10 @@ async function savedDetails(userId: string): Promise<Partial<CustomerDetails>> {
 
 export default async function CheckoutPage() {
   const session = await auth();
-  const defaults = session?.user?.id ? await savedDetails(session.user.id) : null;
+  const [defaults, payment] = await Promise.all([
+    session?.user?.id ? savedDetails(session.user.id) : null,
+    getPaymentSettings(),
+  ]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -42,6 +46,8 @@ export default async function CheckoutPage() {
         emailLocked={Boolean(session?.user?.email)}
         defaultCustomer={defaults}
         mockMode={allowMockPayments}
+        usdEnabled={payment.usdEnabled}
+        limits={payment.limits}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getActiveDiscounts } from "@/lib/pricing";
+import { sweepStaleReservations } from "@/lib/inventory";
 import { bestDiscount, discountedUsdCents, type SaleInfo } from "@/lib/sale";
 
 export type ProductSort = "featured" | "price-asc" | "price-desc" | "newest";
@@ -55,6 +56,8 @@ export async function availableStockByProduct(
   productIds: string[],
 ): Promise<Map<string, number>> {
   if (productIds.length === 0) return new Map();
+  // Free keys held by checkouts whose time ran out, so they show as in stock.
+  await sweepStaleReservations();
   const groups = await prisma.licenseKey.groupBy({
     by: ["productId"],
     where: { productId: { in: productIds }, status: "AVAILABLE" },

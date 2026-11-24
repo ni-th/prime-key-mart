@@ -22,6 +22,9 @@ import { StockIssueDialog } from "@/components/shop/stock-issue-dialog";
 import { warrantyLength } from "@/lib/warranty";
 import { customerDetailsSchema, type CustomerDetails } from "@/lib/validation";
 import { CustomerDetailsFields, type CustomerDetailsErrors } from "@/components/shop/customer-details-fields";
+import { ReleaseAbandonedCheckout } from "@/components/shop/pending-checkout";
+import { rememberPendingCheckout } from "@/lib/pending-checkout";
+import { paymentLimitError, type PaymentLimits } from "@/lib/payment-limit";
 
 /** Guests' details are remembered on this device only, for their next order. */
 const DETAILS_KEY = "keysby-checkout-details";
@@ -52,12 +55,18 @@ export function CheckoutForm({
   emailLocked,
   defaultCustomer,
   mockMode,
+  usdEnabled = true,
+  limits = { LKR: null, USD: null },
 }: {
   defaultEmail?: string | null;
   emailLocked: boolean;
   /** Prefill for signed-in customers (account name, last order's phone). */
   defaultCustomer?: Partial<CustomerDetails> | null;
   mockMode: boolean;
+  /** Offer USD as a payment currency (Admin -> Settings). */
+  usdEnabled?: boolean;
+  /** Largest single payment per currency; null = no limit. */
+  limits?: PaymentLimits;
 }) {
   const router = useRouter();
   const hydrated = useHydrated();
@@ -97,6 +106,13 @@ export function CheckoutForm({
     return ((currency === "LKR" ? q.lkrCents : q.usdCents) + warranty) * qty;
   };
   const total = quote ? quote.totals[currency] : null;
+  const limitError = total === null ? null : paymentLimitError(total, currency, limits);
+  const currencies = usdEnabled ? (["LKR", "USD"] as const) : (["LKR"] as const);
+  // Back from PayHere without paying: the hold was just released; let them try again.
+  const onReturn = () => {
+    setPending(false);
+    void refresh();
+  };
   const savings = quote
     ? quote.lines.reduce(
         (n, l) =>
@@ -141,6 +157,10 @@ export function CheckoutForm({
       return;
     }
     setCustomerErrors({});
+    if (limitError) {
+      setError(limitError);
+      return;
+    }
     if (!agreed) {
       setError("Please tick the box to accept the terms and refund policy.");
       return;
@@ -176,6 +196,7 @@ export function CheckoutForm({
       const data = (await res.json()) as {
         url?: string;
         fields?: Record<string, string>;
+        order?: { orderNumber: string; token: string };
         error?: string;
       };
       if (!res.ok || !data.url) {
@@ -188,6 +209,7 @@ export function CheckoutForm({
         setPending(false);
         return;
       }
+      if (data.order) rememberPendingCheckout(data.order);
       if (data.fields) {
         const form = document.createElement("form");
         form.method = "POST";
@@ -260,8 +282,8 @@ export function CheckoutForm({
 
         <Card className="p-5">
           <h2 className="font-medium">Payment currency</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {(["LKR", "USD"] as const).map((option) => (
+          <div className={cn("mt-4 grid gap-3", currencies.length > 1 && "sm:grid-cols-2")}>
+            {currencies.map((option) => (
               <label
                 key={option}
                 className="flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm"
@@ -347,6 +369,7 @@ export function CheckoutForm({
               Some items are out of stock or no longer available.
             </p>
           )}
+          {limitError && <p className="mt-2 text-xs text-destructive">{limitError}</p>}
 
           <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
             <input
@@ -381,7 +404,7 @@ export function CheckoutForm({
             className="mt-4 w-full"
             size="lg"
             disabled={
-              pending || total === null || (!emailLocked && !email.trim())
+              pending || total === null || Boolean(limitError) || (!emailLocked && !email.trim())
             }
             onClick={pay}
           >
@@ -400,6 +423,7 @@ export function CheckoutForm({
         </Card>
       </div>
       <StockIssueDialog issues={dialogIssues} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ReleaseAbandonedCheckout onReturn={onReturn} />
     </div>
   );
 }

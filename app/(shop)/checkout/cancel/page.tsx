@@ -6,6 +6,7 @@ import { releaseOrderReservation } from "@/lib/inventory";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ForgetPendingCheckout } from "@/components/shop/pending-checkout";
 
 export const metadata: Metadata = { title: "Payment cancelled" };
 
@@ -32,6 +33,7 @@ export default async function CheckoutCancelPage({
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 text-center">
+      <ForgetPendingCheckout />
       <Card className="p-8">
         <h1 className="text-lg font-semibold">Payment cancelled</h1>
         <p className="mt-2 text-sm text-muted-foreground">

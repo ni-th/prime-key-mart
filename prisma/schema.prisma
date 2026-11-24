@@ -108,6 +108,14 @@ model StoreSettings {
   /// Every key (warranty or not) can be reported this many hours after delivery. 0 = off.
   freeCheckHours    Int    @default(24)
 
+  // --- Payments ---
+  /// Largest single payment PayHere accepts, in LKR cents (USD orders are
+  /// converted at the market rate). Bigger orders are refused at checkout,
+  /// before any keys are reserved. Null = no limit.
+  maxPaymentLkrCents Int?
+  /// Offer "International (USD)" at checkout. Off = LKR only.
+  usdPaymentsEnabled Boolean @default(true)
+
   // --- Admin alerts (emails to the store owner) ---
   /// Comma-separated recipients. Empty = ADMIN_EMAIL from the environment.
   alertEmails         String?

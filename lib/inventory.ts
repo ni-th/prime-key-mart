@@ -16,7 +16,7 @@ import { assignInvoiceNumber } from "@/lib/invoice";
 const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 /** How long an unpaid checkout may hold its keys before they go back to stock. */
-export const RESERVATION_TTL_MINUTES = 30;
+export const RESERVATION_TTL_MINUTES = 15;
 
 export class InsufficientStockError extends Error {
   constructor(public readonly productName: string) {
@@ -305,5 +305,47 @@ export async function expireStaleReservations(limit = 50): Promise<number> {
     if (await releaseOrderReservation(id, "EXPIRED")) released++;
   }
   if (released > 0) console.log(`[inventory] expired ${released} stale reservation(s)`);
+  return released;
+}
+
+/** At most one stale-reservation sweep per server instance per this long. */
+const SWEEP_INTERVAL_MS = 60_000;
+let lastSweep = 0;
+
+/**
+ * expireStaleReservations, at most once a minute. Called wherever stock is
+ * shown, so an abandoned checkout's keys reappear within a minute of its hold
+ * running out, not only when the next customer checks out. Never throws.
+ */
+export async function sweepStaleReservations(): Promise<void> {
+  const now = Date.now();
+  if (now - lastSweep < SWEEP_INTERVAL_MS) return;
+  lastSweep = now;
+  await expireStaleReservations().catch((err) =>
+    console.error("[inventory] stale reservation sweep failed", err),
+  );
+}
+
+/**
+ * Release this customer's unpaid (PENDING) checkouts, matched by email or
+ * account. Used when they start a new checkout, so a retry after a failed
+ * payment doesn't hold a second set of keys. Returns how many were released.
+ */
+export async function releasePendingOrdersFor(who: {
+  email: string;
+  userId: string | null;
+}): Promise<number> {
+  const pending = await prisma.order.findMany({
+    where: {
+      status: "PENDING",
+      OR: [{ email: who.email }, ...(who.userId ? [{ userId: who.userId }] : [])],
+    },
+    select: { id: true },
+    take: 20,
+  });
+  let released = 0;
+  for (const { id } of pending) {
+    if (await releaseOrderReservation(id, "EXPIRED")) released++;
+  }
   return released;
 }

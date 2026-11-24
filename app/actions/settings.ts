@@ -67,3 +67,41 @@ export async function savePricingSettings(
   revalidatePath("/", "layout");
   return { ok: true, message: "Settings saved. New LKR prices apply immediately." };
 }
+
+/** Largest limit accepted, in LKR (a typo guard, not a business rule). */
+const MAX_LIMIT_LKR = 100_000_000;
+
+/** Save the PayHere per-payment limit and whether USD payments are offered. */
+export async function savePaymentSettings(
+  _prev: SettingsResult | null,
+  formData: FormData,
+): Promise<SettingsResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { ok: false, error: "Not authorized." };
+
+  const raw = String(formData.get("maxPayment") ?? "").replace(/,/g, "").trim();
+  let maxPaymentLkrCents: number | null = null;
+  if (raw !== "") {
+    const lkr = Number(raw);
+    if (!Number.isFinite(lkr) || lkr <= 0 || lkr > MAX_LIMIT_LKR) {
+      return {
+        ok: false,
+        error: "Please fix the highlighted fields.",
+        fieldErrors: { maxPayment: "Enter an amount in LKR, e.g. 100000, or leave it empty for no limit." },
+      };
+    }
+    maxPaymentLkrCents = Math.round(lkr * 100);
+  }
+  const usdPaymentsEnabled = formData.get("usdEnabled") === "on";
+
+  const values = { maxPaymentLkrCents, usdPaymentsEnabled, updatedBy: admin.user.email };
+  await prisma.storeSettings.upsert({
+    where: { id: "default" },
+    create: { id: "default", ...values },
+    update: values,
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/checkout");
+  return { ok: true, message: "Payment settings saved." };
+}

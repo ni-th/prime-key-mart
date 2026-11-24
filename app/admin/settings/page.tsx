@@ -6,6 +6,7 @@ import { PricingSettingsForm } from "@/components/admin/pricing-settings-form";
 import { FEE_MAX_PERCENT } from "@/lib/profit";
 import { ALERT_TYPES, getAlertSettings, type AlertType } from "@/lib/alerts";
 import { AlertSettingsForm } from "@/components/admin/alert-settings-form";
+import { PaymentSettingsForm } from "@/components/admin/payment-settings-form";
 import { Badge } from "@/components/ui/badge";
 
 const logTime = new Intl.DateTimeFormat("en-GB", {
@@ -62,6 +63,20 @@ export default async function AdminSettingsPage() {
           marginMax={MARGIN_MAX}
           fee={settings.gatewayFeePercent}
           feeMax={FEE_MAX_PERCENT}
+        />
+      </Card>
+
+      <Card className="p-6">
+        <div className="mb-5">
+          <h2 className="font-medium">Payments</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            What customers can pay with, and the largest payment PayHere will accept.
+          </p>
+        </div>
+        <PaymentSettingsForm
+          maxPaymentLkr={row?.maxPaymentLkrCents == null ? null : row.maxPaymentLkrCents / 100}
+          usdEnabled={row?.usdPaymentsEnabled ?? true}
+          rate={settings.rate}
         />
       </Card>
 

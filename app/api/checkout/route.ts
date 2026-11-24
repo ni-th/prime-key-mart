@@ -12,6 +12,7 @@ import {
   InsufficientStockError,
   expireStaleReservations,
   releaseOrderReservation,
+  releasePendingOrdersFor,
   reserveKeysForOrder,
 } from "@/lib/inventory";
 import {
@@ -21,6 +22,8 @@ import {
   payHereCheckoutUrl,
 } from "@/lib/payhere";
 import { checkoutBlockReason } from "@/lib/moderation";
+import { getPaymentSettings } from "@/lib/payment-settings";
+import { paymentLimitError } from "@/lib/payment-limit";
 
 export const runtime = "nodejs";
 
@@ -121,10 +124,29 @@ export async function POST(req: Request) {
     0,
   );
 
+  // Refuse payments PayHere would reject, before any keys are reserved:
+  // a rejected payment sends no notification back, so its keys would stay
+  // on hold until the reservation expired.
+  const payment = await getPaymentSettings();
+  if (currency === "USD" && !payment.usdEnabled) {
+    return NextResponse.json(
+      { error: "USD payments aren't available right now. Please pay in LKR." },
+      { status: 400 },
+    );
+  }
+  const limitError = paymentLimitError(paymentSubtotalCents, currency, payment.limits);
+  if (limitError) return NextResponse.json({ error: limitError }, { status: 400 });
+
   // Return keys held by abandoned checkouts to stock before we try to reserve.
   // Never let housekeeping block a sale.
   await expireStaleReservations().catch((err) =>
     console.error("[checkout] expiring stale reservations failed", err),
+  );
+  // A new checkout replaces this customer's unpaid ones (e.g. a retry after a
+  // failed payment), so a retry never holds keys twice. If one of those is
+  // paid after all, fulfillOrder re-reserves its keys.
+  await releasePendingOrdersFor({ email, userId: session?.user?.id ?? null }).catch((err) =>
+    console.error("[checkout] releasing earlier pending orders failed", err),
   );
 
   const orderNumber = generateOrderNumber();
@@ -184,6 +206,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       url: `/checkout/mock?order=${orderNumber}&t=${token}`,
       mock: true,
+      order: { orderNumber, token },
     });
   }
 
@@ -193,6 +216,8 @@ export async function POST(req: Request) {
     const amount = (paymentSubtotalCents / 100).toFixed(2);
     return NextResponse.json({
       url: payHereCheckoutUrl,
+      // Lets the browser release this checkout if the customer comes back unpaid.
+      order: { orderNumber, token },
       fields: {
         merchant_id: process.env.PAYHERE_MERCHANT_ID,
         return_url: `${SITE_URL}/checkout/success?order=${orderNumber}&t=${token}`,
