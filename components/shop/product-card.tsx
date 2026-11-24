@@ -7,6 +7,7 @@ import type { ProductListItem } from "@/lib/products";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { ProductThumb } from "@/components/shop/product-thumb";
 import { SaleBadge } from "@/components/shop/sale-badge";
+import { StockLabel } from "@/components/shop/stock-label";
 
 export function ProductCard({ product }: { product: ProductListItem }) {
   const inStock = product.stock > 0;
@@ -31,14 +32,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-center gap-2">
           <Badge variant="outline">{product.brand}</Badge>
-          <span
-            className={cn(
-              "text-xs",
-              inStock ? "text-success" : "text-muted-foreground",
-            )}
-          >
-            {inStock ? "In stock" : "Out of stock"}
-          </span>
+          <StockLabel productId={product.id} stock={product.stock} />
         </div>
 
         <Link href={`/products/${product.slug}`} className="font-medium hover:underline">
@@ -62,6 +56,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           <AddToCartButton
             size="sm"
             disabled={!inStock}
+            stock={product.stock}
             product={{
               productId: product.id,
               slug: product.slug,

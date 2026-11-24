@@ -16,7 +16,8 @@ export type CartLine = {
 
 type CartState = {
   lines: CartLine[];
-  add: (line: Omit<CartLine, "quantity">, qty?: number) => void;
+  /** Add `qty` (default 1). With `max` (e.g. the stock), the line never goes above it. */
+  add: (line: Omit<CartLine, "quantity">, qty?: number, max?: number) => void;
   setQty: (productId: string, qty: number) => void;
   setWarranty: (productId: string, planId: string | null) => void;
   remove: (productId: string) => void;
@@ -27,7 +28,7 @@ export const useCart = create<CartState>()(
   persist(
     (set) => ({
       lines: [],
-      add: (line, qty = 1) =>
+      add: (line, qty = 1, max = Infinity) =>
         set((state) => {
           const existing = state.lines.find(
             (l) => l.productId === line.productId,
@@ -38,7 +39,7 @@ export const useCart = create<CartState>()(
                 l.productId === line.productId
                   ? {
                       ...l,
-                      quantity: l.quantity + qty,
+                      quantity: Math.max(l.quantity, Math.min(l.quantity + qty, max)),
                       // A plan picked on the product page replaces the old one.
                       ...(line.warrantyPlanId !== undefined && { warrantyPlanId: line.warrantyPlanId }),
                     }
@@ -46,7 +47,9 @@ export const useCart = create<CartState>()(
               ),
             };
           }
-          return { lines: [...state.lines, { ...line, quantity: qty }] };
+          const quantity = Math.min(qty, max);
+          if (quantity <= 0) return state;
+          return { lines: [...state.lines, { ...line, quantity }] };
         }),
       setQty: (productId, qty) =>
         set((state) => ({

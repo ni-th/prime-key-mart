@@ -8,6 +8,7 @@ import { useCart, type CartLine } from "@/lib/cart-store";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { WarrantyPicker } from "@/components/shop/warranty-picker";
 import { BackInStockForm } from "@/components/shop/back-in-stock-form";
+import { useHydrated } from "@/lib/use-hydrated";
 import { formatMoney } from "@/lib/money";
 import { resolveWarranty, type PricedWarranty } from "@/lib/warranty";
 import { checkPeriod } from "@/lib/warranty-claim-shared";
@@ -33,19 +34,26 @@ export function ProductBuyBox({
 }) {
   const router = useRouter();
   const add = useCart((s) => s.add);
+  const hydrated = useHydrated();
+  const storedInCart = useCart((s) => s.lines.find((l) => l.productId === product.productId)?.quantity ?? 0);
+  const inCart = hydrated ? storedInCart : 0;
   const [qty, setQty] = useState(1);
   // Start on the included plan (or the first offered).
   const [planId, setPlanId] = useState<string | null>(resolveWarranty(warranties)?.planId ?? null);
-  const max = Math.min(stock, 10);
+  // Only what's left after what's already in the cart can be added.
+  const left = Math.max(0, stock - inCart);
+  const max = Math.max(1, Math.min(left, 10));
   const inStock = stock > 0;
+  const shownQty = Math.min(qty, max);
 
   const chosen = warranties.find((w) => w.planId === planId) ?? null;
   const line = { ...product, warrantyPlanId: planId };
-  const totalUsd = (product.priceCents + (chosen?.usdCents ?? 0)) * qty;
-  const totalLkr = (unitLkrCents + (chosen?.lkrCents ?? 0)) * qty;
+  const totalUsd = (product.priceCents + (chosen?.usdCents ?? 0)) * shownQty;
+  const totalLkr = (unitLkrCents + (chosen?.lkrCents ?? 0)) * shownQty;
 
   function buyNow() {
-    add(line, qty);
+    // Everything in stock already in the cart: just go and pay for it.
+    if (left > 0) add(line, shownQty, stock);
     router.push("/cart");
   }
 
@@ -63,27 +71,33 @@ export function ProductBuyBox({
               type="button"
               variant="ghost"
               size="icon-sm"
-              disabled={qty <= 1}
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              disabled={shownQty <= 1}
+              onClick={() => setQty(Math.max(1, shownQty - 1))}
             >
               <Minus className="size-3.5" />
             </Button>
-            <span className="w-8 text-center text-sm tabular-nums">{qty}</span>
+            <span className="w-8 text-center text-sm tabular-nums">{shownQty}</span>
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              disabled={qty >= max}
-              onClick={() => setQty((q) => Math.min(max, q + 1))}
+              disabled={shownQty >= max}
+              onClick={() => setQty(Math.min(max, shownQty + 1))}
             >
               <Plus className="size-3.5" />
             </Button>
           </div>
-          <span className="text-xs text-muted-foreground">{stock} available</span>
+          <span className={inCart > 0 && left === 0 ? "text-xs font-medium text-destructive" : "text-xs text-muted-foreground"}>
+            {inCart === 0
+              ? `${stock} available`
+              : left === 0
+                ? `All ${stock} in stock are in your cart`
+                : `${left} more available (${inCart} in your cart)`}
+          </span>
         </div>
       )}
 
-      {inStock && (chosen?.usdCents || qty > 1) ? (
+      {inStock && (chosen?.usdCents || shownQty > 1) ? (
         <div className="text-sm">
           <span className="text-muted-foreground">Total: </span>
           <span className="font-semibold tabular-nums">{formatMoney(totalUsd, "USD")}</span>
@@ -96,7 +110,7 @@ export function ProductBuyBox({
 
       {inStock ? (
         <div className="flex flex-wrap gap-3">
-          <AddToCartButton product={line} quantity={qty} size="lg" variant="outline" />
+          <AddToCartButton product={line} quantity={shownQty} stock={stock} size="lg" variant="outline" />
           <Button type="button" size="lg" onClick={buyNow}>
             Buy now
           </Button>
