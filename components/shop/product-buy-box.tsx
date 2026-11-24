@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart, type CartLine } from "@/lib/cart-store";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { WarrantyPicker } from "@/components/shop/warranty-picker";
+import { BackInStockForm } from "@/components/shop/back-in-stock-form";
 import { formatMoney } from "@/lib/money";
 import { resolveWarranty, type PricedWarranty } from "@/lib/warranty";
 import { checkPeriod } from "@/lib/warranty-claim-shared";
@@ -93,18 +94,16 @@ export function ProductBuyBox({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-3">
-        <AddToCartButton
-          product={line}
-          quantity={qty}
-          disabled={!inStock}
-          size="lg"
-          variant="outline"
-        />
-        <Button type="button" size="lg" disabled={!inStock} onClick={buyNow}>
-          Buy now
-        </Button>
-      </div>
+      {inStock ? (
+        <div className="flex flex-wrap gap-3">
+          <AddToCartButton product={line} quantity={qty} size="lg" variant="outline" />
+          <Button type="button" size="lg" onClick={buyNow}>
+            Buy now
+          </Button>
+        </div>
+      ) : (
+        <BackInStockForm productId={product.productId} />
+      )}
 
       {deliveryType === "ACCOUNT" && (
         <p className="flex gap-2 text-xs text-muted-foreground">

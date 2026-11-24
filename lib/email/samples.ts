@@ -5,6 +5,7 @@ import {
   signupCodeEmail,
   passwordChangedEmail,
   passwordResetEmail,
+  backInStockEmail,
   paymentReportClosedEmail,
   paymentReportReceivedEmail,
   orderStatusEmail,
@@ -126,6 +127,12 @@ export const EMAIL_SAMPLES: {
     name: "Password changed",
     when: "After a password is changed, as a security notice.",
     render: () => passwordChangedEmail(),
+  },
+  {
+    id: "back-in-stock",
+    name: "Back in stock",
+    when: "To everyone on a product's waiting list when it's restocked.",
+    render: () => backInStockEmail({ productName: "Windows 11 Pro", productSlug: "windows-11-pro" }),
   },
   {
     id: "payment-report-received",

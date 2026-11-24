@@ -148,6 +148,20 @@ export function passwordChangedEmail(): EmailContent {
   );
 }
 
+export function backInStockEmail(o: { productName: string; productSlug: string }): EmailContent {
+  return renderEmail(
+    "back-in-stock",
+    {
+      productName: o.productName,
+      productUrl: `${SITE_URL}/products/${encodeURIComponent(o.productSlug)}`,
+    },
+    {
+      subject: `${o.productName} is back in stock`,
+      preheader: `${o.productName} is available again. Stock is limited.`,
+    },
+  );
+}
+
 export function paymentReportReceivedEmail(o: { orderNumber: string }): EmailContent {
   return renderEmail("payment-report-received", o, {
     subject: `We're checking your payment for order ${o.orderNumber}`,

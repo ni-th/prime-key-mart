@@ -1,0 +1,8 @@
+{{!-- Back-in-stock notice to someone on a product's waiting list. Data: productName, productUrl --}}
+{{> heading text="It's back in stock"}}
+{{#> para}}Good news: <strong>{{productName}}</strong> is available again at {{site.name}}.{{/para}}
+{{#> para muted=true}}Stock is limited and sold first come, first served, so we can't hold one for you.{{/para}}
+
+{{> button url=productUrl label="View product"}}
+
+{{#> para muted=true}}You're getting this because you asked to be notified about this product. This is the only email you'll get about it.{{/para}}

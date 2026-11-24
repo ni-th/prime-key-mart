@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendAdminAlertEmail } from "@/lib/mailer";
+import { notifyBackInStock } from "@/lib/restock";
 
 /**
  * Admin alerts: emails to the store owner when something needs attention.
@@ -197,6 +198,11 @@ export async function checkStockAlerts(productIds: string[]): Promise<void> {
     }),
   ]);
   const available = new Map(counts.map((c) => [c.productId, c._count._all]));
+
+  // Customers on a waiting list: email them once the product has stock again.
+  await notifyBackInStock(
+    products.filter((p) => p.published && (available.get(p.id) ?? 0) > 0).map((p) => p.id),
+  );
 
   for (const p of products) {
     const stock = available.get(p.id) ?? 0;

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
+import { waitingCount } from "@/lib/restock";
 import { DELIVERY_TYPES, asDeliveryType, secretText } from "@/lib/delivery";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,6 +48,8 @@ export default async function ProductKeysPage({
     },
   });
 
+  const waiting = await waitingCount(id);
+
   const counts = {
     available: keys.filter((k) => k.status === "AVAILABLE").length,
     reserved: keys.filter((k) => k.status === "RESERVED").length,
@@ -71,6 +74,14 @@ export default async function ProductKeysPage({
           {DELIVERY_TYPES[asDeliveryType(product.deliveryType)]} · {counts.available} available · {counts.reserved} reserved ·{" "}
           {counts.sold} sold
         </p>
+        {waiting > 0 && (
+          <p className="mt-1 text-sm font-medium">
+            {waiting} {waiting === 1 ? "person is" : "people are"} waiting for this to be back in stock.
+            {counts.available > 0
+              ? " They're being emailed now."
+              : " They'll be emailed as soon as you add keys."}
+          </p>
+        )}
       </div>
 
       <AddKeysForm productId={id} accounts={product.deliveryType === "ACCOUNT"} />

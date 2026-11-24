@@ -7,6 +7,7 @@ import {
   confirmEmailEmail,
   signupCodeEmail,
   passwordChangedEmail,
+  backInStockEmail,
   passwordResetEmail,
   paymentReportClosedEmail,
   paymentReportReceivedEmail,
@@ -156,6 +157,14 @@ export async function sendConfirmEmailEmail(
   ttlHours: number,
 ): Promise<void> {
   await send(to, confirmEmailEmail({ confirmUrl, orderCount, ttlHours }));
+}
+
+/** To someone on a product's waiting list, once it's restocked. */
+export async function sendBackInStockEmail(
+  to: string,
+  product: { name: string; slug: string },
+): Promise<void> {
+  await send(to, backInStockEmail({ productName: product.name, productSlug: product.slug }));
 }
 
 /** Heads-up after a password change, so an owner notices an unexpected reset. */

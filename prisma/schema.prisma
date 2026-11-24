@@ -308,51 +308,67 @@ model Category {
 }
 
 model Product {
-  id                String            @id @default(cuid())
-  slug              String            @unique
-  name              String
-  shortDescription  String
-  description       String
-  brand             String
-  platform          String
-  region            String            @default("Global")
-  priceCents        Int // USD cents: the main price, required
+  id                 String              @id @default(cuid())
+  slug               String              @unique
+  name               String
+  shortDescription   String
+  description        String
+  brand              String
+  platform           String
+  region             String              @default("Global")
+  priceCents         Int // USD cents: the main price, required
   /// Optional fixed LKR price (cents). When null, LKR is calculated from
   /// priceCents with the exchange rate + margin in StoreSettings.
-  priceLkrCents     Int?
+  priceLkrCents      Int?
   /// ADMIN ONLY. What the store pays per key (cents, in costCurrency). Hidden
   /// from every query by default (global omit in lib/db.ts).
-  costCents         Int?
-  costCurrency      String            @default("USD")
+  costCents          Int?
+  costCurrency       String              @default("USD")
   /// Per-product low stock level; null = the store default (StoreSettings).
-  lowStockThreshold Int?
+  lowStockThreshold  Int?
   /// Last stock alert level sent: null (fine), "LOW" or "OUT". Lets each drop
   /// alert once; restocking re-arms it.
-  stockAlertState   String?
+  stockAlertState    String?
   /// "NONE" = no warranty offered (default); "STORE" = every active warranty
   /// plan at its store percentage; "CUSTOM" = only the plans (and
   /// percentages) set in ProductWarranty.
-  warrantyMode      String            @default("NONE")
-  warrantyOverrides ProductWarranty[]
+  warrantyMode       String              @default("NONE")
+  warrantyOverrides  ProductWarranty[]
   /// How it's delivered: "KEY" (license key), "ACCOUNT" (username + password)
   /// or "PHONE" (key + phone activation: the customer sends an Installation
   /// ID and the store replies with a Confirmation ID).
-  deliveryType      String            @default("KEY")
+  deliveryType       String              @default("KEY")
   /// Optional "How to activate" steps, one per line, shown with the keys.
-  activationSteps   String?
-  imageUrl          String?
-  categoryId        String
-  category          Category          @relation(fields: [categoryId], references: [id])
-  published         Boolean           @default(true)
-  featured          Boolean           @default(false)
-  licenseKeys       LicenseKey[]
-  orderItems        OrderItem[]
-  discounts         Discount[]
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  activationSteps    String?
+  imageUrl           String?
+  categoryId         String
+  category           Category            @relation(fields: [categoryId], references: [id])
+  published          Boolean             @default(true)
+  featured           Boolean             @default(false)
+  licenseKeys        LicenseKey[]
+  orderItems         OrderItem[]
+  discounts          Discount[]
+  stockNotifications StockNotification[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@index([categoryId])
   @@index([published])
+}
+
+/// "Email me when it's back in stock" sign-ups. One row per product + email;
+/// signing up again after a notification re-arms the same row.
+model StockNotification {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  email      String
+  createdAt  DateTime  @default(now())
+  /// When the back-in-stock email went out; null = still waiting.
+  notifiedAt DateTime?
+
+  @@unique([productId, email])
+  @@index([productId, notifiedAt])
 }
 
 model LicenseKey {
