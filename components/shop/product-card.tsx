@@ -8,6 +8,7 @@ import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { ProductThumb } from "@/components/shop/product-thumb";
 import { SaleBadge } from "@/components/shop/sale-badge";
 import { StockLabel } from "@/components/shop/stock-label";
+import { Stars } from "@/components/shop/stars";
 
 export function ProductCard({ product }: { product: ProductListItem }) {
   const inStock = product.stock > 0;
@@ -38,6 +39,17 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         <Link href={`/products/${product.slug}`} className="font-medium hover:underline">
           {product.name}
         </Link>
+        {product.rating.count > 0 && (
+          <Link
+            href={`/products/${product.slug}#reviews`}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Stars rating={product.rating.average} size="size-3.5" />
+            <span className="tabular-nums">
+              {product.rating.average.toFixed(1)} ({product.rating.count})
+            </span>
+          </Link>
+        )}
         <p className="line-clamp-2 text-sm text-muted-foreground">
           {product.shortDescription}
         </p>

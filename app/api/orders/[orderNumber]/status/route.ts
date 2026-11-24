@@ -4,6 +4,7 @@ import { reportView } from "@/lib/payment-issue";
 import { orderKeysForOwner } from "@/lib/warranty-claims";
 import { canViewOrder, getOrderByNumber } from "@/lib/orders";
 import { hasInvoice } from "@/lib/invoice";
+import { orderReviewItems } from "@/lib/reviews";
 
 export const runtime = "nodejs";
 
@@ -41,5 +42,7 @@ export async function GET(
     keys: fulfilled ? await orderKeysForOwner(order.id) : null,
     /** A PDF invoice can be downloaded (paid orders). */
     invoice: hasInvoice(order),
+    /** Products the owner can review, with their existing reviews (delivered orders). */
+    reviews: fulfilled ? await orderReviewItems(order) : [],
   });
 }

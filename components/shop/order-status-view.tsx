@@ -11,6 +11,8 @@ import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
 import { OrderKeys } from "@/components/shop/order-keys";
 import { InvoiceButton } from "@/components/shop/invoice-button";
 import type { OrderKeyItem } from "@/lib/warranty-claim-shared";
+import type { OrderReviewItem } from "@/lib/review-shared";
+import { OrderReviews } from "@/components/shop/order-reviews";
 
 /** After this long without a payment confirmation, offer the report form. */
 const SLOW_AFTER_MS = 45_000;
@@ -25,6 +27,7 @@ type StatusResponse = {
   canFollowUp: boolean;
   keys: OrderKeyItem[] | null;
   invoice: boolean;
+  reviews: OrderReviewItem[];
 };
 
 const DONE = new Set(["FULFILLED", "EXPIRED", "FAILED", "REFUNDED"]);
@@ -249,6 +252,8 @@ export function OrderStatusView({
       </Card>
 
       <OrderKeys token={token} items={data.keys ?? []} />
+
+      <OrderReviews orderNumber={data.orderNumber} token={token} items={data.reviews ?? []} />
 
       <div className="flex flex-wrap gap-3">
         {data.invoice && <InvoiceButton orderNumber={orderNumber} token={token} />}

@@ -24,6 +24,7 @@ export const ALERT_TYPES = {
   SECURITY: "Security",
   WARRANTY_CLAIM: "Warranty claim",
   ACTIVATION_REQUEST: "Phone activation request",
+  NEW_REVIEW: "New review",
   TEST: "Test",
 } as const;
 export type AlertType = keyof typeof ALERT_TYPES;
@@ -36,7 +37,10 @@ export type AlertSettings = {
   customRecipients: boolean;
   lowStockThreshold: number;
   enabled: Record<
-    Exclude<AlertType, "TEST" | "CUSTOMER_REPORT" | "SECURITY" | "WARRANTY_CLAIM" | "ACTIVATION_REQUEST">,
+    Exclude<
+      AlertType,
+      "TEST" | "CUSTOMER_REPORT" | "SECURITY" | "WARRANTY_CLAIM" | "ACTIVATION_REQUEST" | "NEW_REVIEW"
+    >,
     boolean
   >;
 };
@@ -97,7 +101,9 @@ export async function sendAlert(alert: {
         ? "FAILED_DELIVERY"
         : alert.type === "SECURITY"
           ? "PAYMENT_PROBLEM"
-          : alert.type;
+          : alert.type === "NEW_REVIEW"
+            ? "NEW_ORDER" // store activity notices share the "New order" switch
+            : alert.type;
     if (toggle !== "TEST" && !settings.enabled[toggle]) return "disabled";
 
     const recipients = settings.recipients;

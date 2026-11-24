@@ -357,6 +357,7 @@ model Product {
   orderItems         OrderItem[]
   discounts          Discount[]
   stockNotifications StockNotification[]
+  reviews            ProductReview[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -476,6 +477,38 @@ model OrderItem {
   unitCostCents     Int?
   quantity          Int
   licenseKeys       LicenseKey[]
+  reviews           ProductReview[]
 
   @@index([orderId])
+}
+
+/// A customer's review of a product they bought (verified purchase). One per
+/// product per customer email: reviewing again edits it. Shown in the shop
+/// only once an admin approves it; an edit sends it back for approval.
+model ProductReview {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// The purchase that proves it's a verified buyer.
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  /// Buyer's email (private; never shown).
+  email       String
+  /// Public name, e.g. "Nimal P.".
+  authorName  String
+  /// 1 to 5 stars.
+  rating      Int
+  title       String?
+  body        String
+  /// "PENDING" (waiting for an admin), "APPROVED" (shown) or "REJECTED" (hidden).
+  status      String    @default("PENDING")
+  /// Public reply from the store, shown under the review.
+  adminReply  String?
+  repliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([productId, email])
+  @@index([productId, status])
+  @@index([status, createdAt])
 }

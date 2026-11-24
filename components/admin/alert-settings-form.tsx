@@ -44,8 +44,8 @@ const TOGGLES: { name: keyof Toggles; label: string; hint: string }[] = [
   },
   {
     name: "alertNewOrder",
-    label: "New order",
-    hint: "An email for every paid order.",
+    label: "New orders and reviews",
+    hint: "An email for every paid order, and for new reviews to approve (at most one an hour).",
   },
 ];
 

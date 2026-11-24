@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getActiveDiscounts } from "@/lib/pricing";
 import { sweepStaleReservations } from "@/lib/inventory";
+import { ratingSummaries } from "@/lib/reviews";
 import { bestDiscount, discountedUsdCents, type SaleInfo } from "@/lib/sale";
 
 export type ProductSort = "featured" | "price-asc" | "price-desc" | "newest";
@@ -73,9 +74,10 @@ export async function availableStockByProduct(
 async function withStockAndSale<T extends { id: string; categoryId: string; priceCents: number }>(
   products: T[],
 ) {
-  const [stock, discounts] = await Promise.all([
+  const [stock, discounts, ratings] = await Promise.all([
     availableStockByProduct(products.map((p) => p.id)),
     getActiveDiscounts(),
+    ratingSummaries(products.map((p) => p.id)),
   ]);
   return products.map((p) => {
     const d = bestDiscount(p, discounts);
@@ -83,6 +85,8 @@ async function withStockAndSale<T extends { id: string; categoryId: string; pric
     return {
       ...p,
       stock: stock.get(p.id) ?? 0,
+      /** Published reviews (average 0 and count 0 when there are none). */
+      rating: ratings.get(p.id) ?? { average: 0, count: 0 },
       sale,
       salePriceCents: d ? discountedUsdCents(p.priceCents, d.percent) : p.priceCents,
     };

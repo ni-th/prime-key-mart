@@ -18,6 +18,9 @@ import { ProductBuyBox } from "@/components/shop/product-buy-box";
 import { asDeliveryType } from "@/lib/delivery";
 import { BRAND } from "@/lib/brand";
 import { absoluteUrl, jsonLdHtml } from "@/lib/seo";
+import { getProductReviews } from "@/lib/reviews";
+import { Stars } from "@/components/shop/stars";
+import { ProductReviews } from "@/components/shop/product-reviews";
 
 type Params = { slug: string };
 
@@ -52,11 +55,12 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [settings, discounts, warrantyOptions, freeCheckHours] = await Promise.all([
+  const [settings, discounts, warrantyOptions, freeCheckHours, { reviews, summary }] = await Promise.all([
     getPricingSettings(),
     getActiveDiscounts(),
     getWarrantyOptions([product.id]),
     getFreeCheckHours(),
+    getProductReviews(product.id),
   ]);
   const price = priceOf(product, settings, discounts);
   // Warranty is a percent of the normal price (sales don't discount it).
@@ -80,6 +84,26 @@ export default async function ProductPage({
       brand: { "@type": "Brand", name: product.brand },
       category: product.category.name,
       ...(product.imageUrl ? { image: absoluteUrl(product.imageUrl) } : {}),
+      // Star ratings in search results (published, verified-purchase reviews only).
+      ...(summary.count > 0
+        ? {
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: summary.average.toFixed(1),
+              reviewCount: summary.count,
+              bestRating: 5,
+              worstRating: 1,
+            },
+            review: reviews.slice(0, 5).map((r) => ({
+              "@type": "Review",
+              author: { "@type": "Person", name: r.authorName },
+              datePublished: r.createdAt.toISOString().slice(0, 10),
+              reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5, worstRating: 1 },
+              ...(r.title ? { name: r.title } : {}),
+              reviewBody: r.body,
+            })),
+          }
+        : {}),
       offers: {
         "@type": "Offer",
         url,
@@ -155,6 +179,14 @@ export default async function ProductPage({
             <h1 className="text-3xl font-semibold tracking-tight">
               {product.name}
             </h1>
+            {summary.count > 0 && (
+              <a href="#reviews" className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                <Stars rating={summary.average} />
+                <span className="tabular-nums">
+                  {summary.average.toFixed(1)} · {summary.count} review{summary.count === 1 ? "" : "s"}
+                </span>
+              </a>
+            )}
             <p className="text-muted-foreground">{product.shortDescription}</p>
           </div>
 
@@ -232,6 +264,8 @@ export default async function ProductPage({
           {product.description}
         </p>
       </section>
+
+      <ProductReviews reviews={reviews} summary={summary} />
     </div>
   );
 }

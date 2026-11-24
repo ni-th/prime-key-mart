@@ -12,6 +12,7 @@ import {
   Receipt,
   Settings,
   ShieldCheck,
+  Star,
   Users,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/admin/warranty", label: "Warranty", icon: ShieldCheck },
   { href: "/admin/orders", label: "Orders", icon: Receipt },
   { href: "/admin/activations", label: "Activations", icon: PhoneCall },
+  { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/emails", label: "Emails", icon: Mail },
   { href: "/admin/settings", label: "Settings", icon: Settings },
