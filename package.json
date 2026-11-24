@@ -14,7 +14,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "admin:reset-2fa": "tsx scripts/reset-2fa.ts"
+    "admin:reset-2fa": "tsx scripts/reset-2fa.ts",
+    "admin:create": "tsx scripts/create-admin.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
