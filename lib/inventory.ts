@@ -11,6 +11,7 @@ import {
 import { formatMoney } from "@/lib/money";
 import { RESOLVED_DELIVERED } from "@/lib/payment-issue";
 import { warrantyExpiry } from "@/lib/warranty";
+import { assignInvoiceNumber } from "@/lib/invoice";
 
 const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
@@ -127,6 +128,8 @@ export async function fulfillOrder(
 
     const paidAt = order.paidAt ?? new Date();
     const paymentRef = opts.paymentRef ?? order.stripePaymentIntentId;
+    // Money was taken: the order gets its bill number now (row is locked above).
+    await assignInvoiceNumber(tx, order, paidAt);
 
     if (missing.length > 0) {
       // Keep whatever we could reserve - it stays held for this paid customer.

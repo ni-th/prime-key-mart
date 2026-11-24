@@ -7,9 +7,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com"],
   // Email templates and the email logo (emails/) are read from disk at
   // runtime, which the build can't detect: ship them with every server route
-  // that may send mail.
+  // that may send mail. The same goes for the logo drawn on PDF invoices.
   outputFileTracingIncludes: {
-    "/**": ["./emails/**/*"],
+    "/**": ["./emails/**/*", "./public/images/brand/keysby-logo-light.png"],
   },
 };
 

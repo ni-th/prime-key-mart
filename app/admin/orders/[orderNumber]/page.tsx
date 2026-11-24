@@ -8,6 +8,8 @@ import { formatMoney } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
+import { InvoiceButton } from "@/components/shop/invoice-button";
+import { hasInvoice } from "@/lib/invoice";
 import { KeyList } from "@/components/shop/key-list";
 import { OrderActions } from "@/components/admin/order-actions";
 import { getOrderProfit } from "@/lib/admin";
@@ -77,7 +79,15 @@ export default async function AdminOrderDetailPage({
             </p>
           )}
         </div>
-        <OrderStatusBadge status={order.status} />
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
+            {hasInvoice(order) && <InvoiceButton orderNumber={order.orderNumber} />}
+            <OrderStatusBadge status={order.status} />
+          </div>
+          {order.invoiceNumber && (
+            <span className="text-xs text-muted-foreground">Invoice {order.invoiceNumber}</span>
+          )}
+        </div>
       </div>
 
       {order.issueReportedAt && (

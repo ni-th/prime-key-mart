@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
 import { OrderKeys } from "@/components/shop/order-keys";
+import { InvoiceButton } from "@/components/shop/invoice-button";
+import { hasInvoice } from "@/lib/invoice";
 import { orderKeysForOwner } from "@/lib/warranty-claims";
 import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
 import { canReportPaymentIssue, reportView } from "@/lib/payment-issue";
@@ -45,7 +47,10 @@ export default async function AccountOrderDetailPage({
             {order.createdAt.toLocaleString()} · {order.email}
           </p>
         </div>
-        <OrderStatusBadge status={order.status} />
+        <div className="flex items-center gap-3">
+          {hasInvoice(order) && <InvoiceButton orderNumber={order.orderNumber} />}
+          <OrderStatusBadge status={order.status} />
+        </div>
       </div>
 
       <Card className="p-5">

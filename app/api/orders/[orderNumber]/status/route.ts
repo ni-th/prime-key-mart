@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { reportView } from "@/lib/payment-issue";
 import { orderKeysForOwner } from "@/lib/warranty-claims";
 import { canViewOrder, getOrderByNumber } from "@/lib/orders";
+import { hasInvoice } from "@/lib/invoice";
 
 export const runtime = "nodejs";
 
@@ -38,5 +39,7 @@ export async function GET(
     })),
     /** Delivered keys per product, with warranty and claims (owner only). */
     keys: fulfilled ? await orderKeysForOwner(order.id) : null,
+    /** A PDF invoice can be downloaded (paid orders). */
+    invoice: hasInvoice(order),
   });
 }

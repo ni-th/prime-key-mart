@@ -90,6 +90,12 @@ model SignupCode {
   createdAt    DateTime @default(now())
 }
 
+/// Last invoice number used per year (invoice numbers restart each year).
+model InvoiceCounter {
+  year Int @id
+  last Int @default(0)
+}
+
 /// Store-wide settings editable in the admin panel. A single row, id "default".
 model StoreSettings {
   id                String @id @default("default")
@@ -408,6 +414,9 @@ model Order {
   items                 OrderItem[]
   createdAt             DateTime    @default(now())
   paidAt                DateTime?
+  /// Sequential bill number, e.g. INV-2026-000123. Given when the order is
+  /// paid (or on the first download, for orders paid before invoices).
+  invoiceNumber         String?     @unique
   updatedAt             DateTime    @updatedAt
 
   @@index([userId])

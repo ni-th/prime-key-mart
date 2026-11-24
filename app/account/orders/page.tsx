@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
+import { InvoiceButton } from "@/components/shop/invoice-button";
+import { hasInvoice } from "@/lib/invoice";
 
 export const metadata: Metadata = { title: "Your orders" };
 
@@ -34,10 +36,10 @@ export default async function AccountOrdersPage() {
       ) : (
         <div className="divide-y rounded-xl border">
           {orders.map((o) => (
+            <div key={o.id} className="flex items-center hover:bg-muted/40">
             <Link
-              key={o.id}
               href={`/account/orders/${o.orderNumber}`}
-              className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40"
+              className="flex min-w-0 flex-1 items-center justify-between gap-4 p-4"
             >
               <div className="min-w-0">
                 <div className="font-medium">{o.orderNumber}</div>
@@ -52,6 +54,15 @@ export default async function AccountOrdersPage() {
                 <ChevronRight className="size-4 text-muted-foreground" />
               </div>
             </Link>
+            {hasInvoice(o) && (
+              <InvoiceButton
+                orderNumber={o.orderNumber}
+                variant="ghost"
+                label="Invoice"
+                className="mr-3 shrink-0"
+              />
+            )}
+            </div>
           ))}
         </div>
       )}

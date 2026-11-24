@@ -2,7 +2,7 @@ import { BRAND } from "@/lib/brand";
 import { formatMoney } from "@/lib/money";
 import { SITE_URL, renderEmail, type RenderedEmail, type Tone } from "@/lib/email/render";
 import { ACTIVATION_REPLY_TIME, formatActivationId, parseSecret } from "@/lib/delivery";
-import { orderViewUrl } from "@/lib/order-token";
+import { orderInvoiceUrl, orderViewUrl } from "@/lib/order-token";
 
 /**
  * One function per email. Each prepares the data for its Handlebars template
@@ -46,6 +46,7 @@ export function orderKeysEmail(o: {
       ],
       viewUrl: orderViewUrl(o.orderNumber),
       freeCheck: o.freeCheck ?? null,
+      invoiceUrl: orderInvoiceUrl(o.orderNumber),
       policyUrl: `${SITE_URL}/legal/refund-policy`,
     },
     {

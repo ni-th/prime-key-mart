@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/lib/cart-store";
 import { ReportPaymentIssue } from "@/components/shop/report-payment-issue";
 import { OrderKeys } from "@/components/shop/order-keys";
+import { InvoiceButton } from "@/components/shop/invoice-button";
 import type { OrderKeyItem } from "@/lib/warranty-claim-shared";
 
 /** After this long without a payment confirmation, offer the report form. */
@@ -23,6 +24,7 @@ type StatusResponse = {
   closedMessage: string | null;
   canFollowUp: boolean;
   keys: OrderKeyItem[] | null;
+  invoice: boolean;
 };
 
 const DONE = new Set(["FULFILLED", "EXPIRED", "FAILED", "REFUNDED"]);
@@ -129,6 +131,7 @@ export function OrderStatusView({
             Your keys are being prepared and will be emailed to {data.email}{" "}
             shortly. You can safely close this page.
           </p>
+          {data.invoice && <InvoiceButton orderNumber={orderNumber} token={token} className="mt-3" />}
         </div>
       </Card>
     );
@@ -174,9 +177,12 @@ export function OrderStatusView({
           The payment for order {data.orderNumber} was refunded. Refunds usually reach your
           account within 5-10 working days, depending on your bank.
         </p>
-        <Link href="/products" className={cn(buttonVariants({ size: "sm", variant: "outline" }), "mt-2")}>
-          Back to store
-        </Link>
+        <div className="mt-2 flex flex-wrap gap-3">
+          {data.invoice && <InvoiceButton orderNumber={orderNumber} token={token} />}
+          <Link href="/products" className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+            Back to store
+          </Link>
+        </div>
       </Card>
     );
   }
@@ -244,7 +250,8 @@ export function OrderStatusView({
 
       <OrderKeys token={token} items={data.keys ?? []} />
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
+        {data.invoice && <InvoiceButton orderNumber={orderNumber} token={token} />}
         <Link
           href="/account/orders"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}

@@ -34,3 +34,9 @@ export function orderViewUrl(orderNumber: string): string {
   const site = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
   return `${site}/order?order=${encodeURIComponent(orderNumber)}&t=${encodeURIComponent(signOrderToken(orderNumber))}`;
 }
+
+/** Private link to download the order's PDF invoice (same token as the order page). */
+export function orderInvoiceUrl(orderNumber: string): string {
+  const site = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return `${site}/api/orders/${encodeURIComponent(orderNumber)}/invoice?t=${encodeURIComponent(signOrderToken(orderNumber))}`;
+}

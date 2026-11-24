@@ -36,20 +36,20 @@ export default async function RefundPolicyPage() {
         )}
       </section>
 
-      {hours > 0 && (
-        <section>
-          <h2>Keys activated by phone</h2>
-          <p>
-            Some keys (for example Office 2019) are activated by phone. After
-            you enter the key, the software shows an Installation ID. Send it
-            from your order page and we reply with the Confirmation ID,{" "}
-            {ACTIVATION_REPLY_TIME}. For these keys the {period} check period
-            starts when we send the Confirmation ID, not at delivery. Each key
-            includes {ACTIVATION_LIMIT} activation requests (for example after
-            reinstalling); contact us if you need more.
-          </p>
-        </section>
-      )}
+      <section>
+        <h2>Keys activated by phone</h2>
+        <p>
+          Some keys (for example Office 2019) are activated by phone. After
+          you enter the key, the software shows an Installation ID. Send it
+          from your order page and we reply with the Confirmation ID,{" "}
+          {ACTIVATION_REPLY_TIME}.{" "}
+          {hours > 0
+            ? `For these keys the ${period} check period starts when we send the Confirmation ID, not at delivery.`
+            : "Finish the activation as soon as you receive the Confirmation ID, and contact us at once if it does not work."}{" "}
+          Each key includes {ACTIVATION_LIMIT} activation requests (for example
+          after reinstalling); contact us if you need more.
+        </p>
+      </section>
 
       <section>
         <h2>2. Warranty</h2>
