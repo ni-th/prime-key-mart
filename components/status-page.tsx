@@ -13,7 +13,8 @@ export function StatusPage({
   className,
 }: {
   code: string;
-  icon: React.ReactNode;
+  /** Optional badge over the code; without it the code shows on its own. */
+  icon?: React.ReactNode;
   title: string;
   children: React.ReactNode;
   className?: string;
@@ -27,11 +28,13 @@ export function StatusPage({
         >
           {code}
         </span>
-        <span className="absolute inset-0 flex items-center justify-center">
-          <span className="flex size-14 items-center justify-center rounded-2xl border bg-background text-primary shadow-sm">
-            {icon}
+        {icon && (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex size-14 items-center justify-center rounded-2xl border bg-background text-primary shadow-sm">
+              {icon}
+            </span>
           </span>
-        </span>
+        )}
       </div>
       <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
       <div className="mt-3 w-full space-y-6 text-sm text-muted-foreground">{children}</div>

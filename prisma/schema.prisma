@@ -116,6 +116,14 @@ model StoreSettings {
   /// Offer "International (USD)" at checkout. Off = LKR only.
   usdPaymentsEnabled Boolean @default(true)
 
+  // --- Maintenance mode ---
+  /// Store closed to customers: shop pages show the maintenance page and new
+  /// checkouts are refused. Admin, sign-in, payment notifications and
+  /// customers' order pages keep working.
+  maintenanceMode    Boolean @default(false)
+  /// Optional note on the maintenance page, e.g. "Back by 6 pm".
+  maintenanceMessage String?
+
   // --- Admin alerts (emails to the store owner) ---
   /// Comma-separated recipients. Empty = ADMIN_EMAIL from the environment.
   alertEmails         String?

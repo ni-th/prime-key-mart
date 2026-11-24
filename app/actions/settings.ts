@@ -6,6 +6,7 @@ import { getAdminSession } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { MARGIN_MAX, RATE_MAX, RATE_MIN } from "@/lib/pricing";
 import { FEE_MAX_PERCENT } from "@/lib/profit";
+import { clearMaintenanceCache } from "@/lib/maintenance";
 
 export type SettingsResult =
   | { ok: true; message: string }
@@ -104,4 +105,39 @@ export async function savePaymentSettings(
   revalidatePath("/admin/settings");
   revalidatePath("/checkout");
   return { ok: true, message: "Payment settings saved." };
+}
+
+/** Turn maintenance mode on or off, with an optional note for customers. */
+export async function saveMaintenance(
+  _prev: SettingsResult | null,
+  formData: FormData,
+): Promise<SettingsResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { ok: false, error: "Not authorized." };
+
+  const maintenanceMode = formData.get("maintenanceMode") === "on";
+  const message = String(formData.get("maintenanceMessage") ?? "").trim();
+  if (message.length > 300) {
+    return {
+      ok: false,
+      error: "Please fix the highlighted fields.",
+      fieldErrors: { maintenanceMessage: "Keep the message under 300 characters." },
+    };
+  }
+
+  const values = { maintenanceMode, maintenanceMessage: message || null, updatedBy: admin.user.email };
+  await prisma.storeSettings.upsert({
+    where: { id: "default" },
+    create: { id: "default", ...values },
+    update: values,
+  });
+  clearMaintenanceCache();
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: maintenanceMode
+      ? "Maintenance mode is ON. Customers now see the maintenance page (within 10 seconds on every server)."
+      : "Maintenance mode is off. The store is open.",
+  };
 }

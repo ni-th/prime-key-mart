@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { getAdminSession } from "@/lib/admin";
 import { Logo } from "@/components/brand/logo";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { MaintenanceBanner } from "@/components/maintenance-banner";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-full flex-col">
+      <MaintenanceBanner />
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
           <Link href="/admin" className="flex items-center gap-2">

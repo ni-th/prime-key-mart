@@ -7,6 +7,7 @@ import { FEE_MAX_PERCENT } from "@/lib/profit";
 import { ALERT_TYPES, getAlertSettings, type AlertType } from "@/lib/alerts";
 import { AlertSettingsForm } from "@/components/admin/alert-settings-form";
 import { PaymentSettingsForm } from "@/components/admin/payment-settings-form";
+import { MaintenanceForm } from "@/components/admin/maintenance-form";
 import { Badge } from "@/components/ui/badge";
 
 const logTime = new Intl.DateTimeFormat("en-GB", {
@@ -44,6 +45,23 @@ export default async function AdminSettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Store-wide pricing, profit and alert settings.</p>
       </div>
+
+      <Card className={row?.maintenanceMode ? "border-destructive p-6" : "p-6"}>
+        <div className="mb-5">
+          <h2 className="font-medium">
+            Store status:{" "}
+            {row?.maintenanceMode ? (
+              <span className="text-destructive">closed for maintenance</span>
+            ) : (
+              <span className="text-success">open</span>
+            )}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Close the store to customers while you update products, prices or the site.
+          </p>
+        </div>
+        <MaintenanceForm on={row?.maintenanceMode ?? false} message={row?.maintenanceMessage ?? null} />
+      </Card>
 
       <Card className="p-6">
         <div className="mb-5">

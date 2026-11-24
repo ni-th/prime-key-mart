@@ -23,6 +23,7 @@ import {
 } from "@/lib/payhere";
 import { checkoutBlockReason } from "@/lib/moderation";
 import { getPaymentSettings } from "@/lib/payment-settings";
+import { readMaintenance } from "@/lib/maintenance";
 import { paymentLimitError } from "@/lib/payment-limit";
 
 export const runtime = "nodejs";
@@ -43,6 +44,15 @@ export async function POST(req: Request) {
   }
 
   const session = await auth();
+
+  // Maintenance mode: the proxy already blocks this, but its copy of the
+  // setting can be a few seconds old. Admins can still place test orders.
+  if (session?.user?.role !== "ADMIN" && (await readMaintenance()).on) {
+    return NextResponse.json(
+      { error: "The store is closed for maintenance, so we can't take orders right now. Please try again soon." },
+      { status: 503, headers: { "Retry-After": "600" } },
+    );
+  }
 
   const parsed = checkoutSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
