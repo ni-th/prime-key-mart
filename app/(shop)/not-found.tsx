@@ -1,28 +1,11 @@
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { NotFoundContent } from "@/components/shop/not-found-content";
 
+/** notFound() inside the shop (a removed product, an unknown category...). */
 export default function ShopNotFound() {
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        We couldn&rsquo;t find that
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        This product or page isn&rsquo;t available. It may have sold out or been
-        removed.
-      </p>
-      <div className="mt-2 flex gap-3">
-        <Link href="/products" className={cn(buttonVariants({ size: "sm" }))}>
-          Browse all products
-        </Link>
-        <Link
-          href="/"
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-        >
-          Home
-        </Link>
-      </div>
-    </div>
+    <NotFoundContent
+      title="We couldn't find that"
+      message="This product or page isn't available. It may have been removed or renamed."
+    />
   );
 }
