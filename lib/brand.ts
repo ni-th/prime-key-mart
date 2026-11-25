@@ -6,7 +6,8 @@
  *   public/images/brand/keysby-logo-dark.png   full logo, white parts (dark UI)
  *   public/images/brand/keysby-logo-light.png  full logo, ink parts (light UI)
  *   public/images/brand/keysby-mark.png        K mark only
- *   app/icon.png, app/apple-icon.png           mark on a dark tile (favicon/iOS)
+ *   app/icon.png                               mark only, transparent (favicon)
+ *   app/apple-icon.png                         mark on a dark tile (iOS fills transparency with black)
  */
 export const BRAND = {
   name: "Keysby",
