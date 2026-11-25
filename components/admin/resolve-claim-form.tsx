@@ -7,7 +7,7 @@ import { resolveWarrantyClaim, type ClaimResult } from "@/app/actions/warranty-c
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -95,22 +95,31 @@ export function ResolveClaimForm({
       </div>
       <p className="text-xs text-muted-foreground">{current.hint}</p>
       {action === "refund" && (
-        <div className="space-y-1.5">
-          <Label htmlFor={`refund-${claimId}`}>Refund amount ({currency})</Label>
+        <Field>
+          <FieldLabel htmlFor={`refund-${claimId}`} required>
+            Refund amount ({currency})
+          </FieldLabel>
           <Input
             id={`refund-${claimId}`}
             name="refundAmount"
+            type="number"
             inputMode="decimal"
+            min={0}
+            max={keyPaid}
+            step="0.01"
+            required
             defaultValue={keyPaid}
             className="max-w-40"
           />
-          <p className="text-xs text-muted-foreground">
+          <FieldDescription className="text-xs">
             The customer paid {currency} {keyPaid} for this key. Lower it for a partial refund.
-          </p>
-        </div>
+          </FieldDescription>
+        </Field>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor={`note-${claimId}`}>Message to the customer</Label>
+      <Field>
+        <FieldLabel htmlFor={`note-${claimId}`} required={action === "reject"}>
+          Message to the customer{action === "reject" ? "" : " (optional)"}
+        </FieldLabel>
         <Textarea
           id={`note-${claimId}`}
           name="note"
@@ -120,7 +129,7 @@ export function ResolveClaimForm({
           minLength={action === "reject" ? 10 : undefined}
           placeholder={current.placeholder}
         />
-      </div>
+      </Field>
       <Submit action={action} />
     </form>
   );

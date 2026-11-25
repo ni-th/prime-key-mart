@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -57,8 +57,8 @@ export function RefundOrderDialog({
         >
           <input type="hidden" name="orderNumber" value={orderNumber} />
           <input type="hidden" name="action" value="refund" />
-          <div className="space-y-1.5">
-            <Label htmlFor="refund-note">Refund note (optional)</Label>
+          <Field>
+            <FieldLabel htmlFor="refund-note">Refund note (optional)</FieldLabel>
             <Textarea
               id="refund-note"
               name="note"
@@ -66,10 +66,10 @@ export function RefundOrderDialog({
               maxLength={1000}
               placeholder="Reason, support ticket, amount refunded…"
             />
-            <p className="text-xs text-muted-foreground">
-              Saved on the order for your records.
-            </p>
-          </div>
+            <FieldDescription className="text-xs">
+              Saved on the order for your records. Up to 1000 characters.
+            </FieldDescription>
+          </Field>
           <DialogFooter>
             <DialogClose render={<Button variant="ghost" type="button" />}>
               Cancel

@@ -16,10 +16,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { OtpInput } from "@/components/ui/otp-input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { EMAIL_MAX, PASSWORD_MAX } from "@/lib/validation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerUser, resendSignupCode, verifySignupCode } from "@/app/actions/auth";
 import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
+import { safeCallbackUrl } from "@/lib/safe-redirect";
 
 /** Must match SIGNUP_CODE_RESEND_SECONDS on the server. */
 const RESEND_SECONDS = 60;
@@ -29,7 +31,8 @@ type Details = { firstName: string; lastName: string; email: string; password: s
 export function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") || "/";
+  // Only same-site paths: a crafted link must not redirect to another site.
+  const callbackUrl = safeCallbackUrl(params.get("callbackUrl"));
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,8 +176,10 @@ export function RegisterForm() {
                 <AlertDescription>{notice}</AlertDescription>
               </Alert>
             )}
-            <div className="space-y-1.5">
-              <Label htmlFor="code">Code</Label>
+            <Field data-invalid={Boolean(fieldErrors.code) || undefined}>
+              <FieldLabel htmlFor="code" required>
+                Code
+              </FieldLabel>
               <OtpInput
                 key={codeAttempt}
                 className="justify-center"
@@ -187,11 +192,11 @@ export function RegisterForm() {
                 // Submit as soon as the 6th digit is entered.
                 onComplete={() => codeFormRef.current?.requestSubmit()}
               />
-              {fieldErrors.code && <p className="text-xs text-destructive">{fieldErrors.code}</p>}
-              <p className="text-xs text-muted-foreground">
+              <FieldError>{fieldErrors.code}</FieldError>
+              <FieldDescription>
                 Can&apos;t find it? Check your spam folder. The code expires in 15 minutes.
-              </p>
-            </div>
+              </FieldDescription>
+            </Field>
             <Button type="submit" className="w-full" disabled={pending || code.length !== 6}>
               {pending && <Loader2 className="size-4 animate-spin" />}
               Create account
@@ -231,50 +236,73 @@ export function RegisterForm() {
       <CardContent>
         <form onSubmit={onDetails} className="space-y-4">
           {errorBox}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="firstName">First name</Label>
-              <Input id="firstName" name="firstName" autoComplete="given-name" defaultValue={draft?.firstName} maxLength={50} required />
-              {fieldErrors.firstName && (
-                <p className="text-xs text-destructive">{fieldErrors.firstName}</p>
-              )}
+          <FieldGroup>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field data-invalid={Boolean(fieldErrors.firstName) || undefined}>
+                <FieldLabel htmlFor="firstName" required>
+                  First name
+                </FieldLabel>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  autoComplete="given-name"
+                  defaultValue={draft?.firstName}
+                  maxLength={50}
+                  required
+                  aria-invalid={Boolean(fieldErrors.firstName) || undefined}
+                />
+                <FieldError>{fieldErrors.firstName}</FieldError>
+              </Field>
+              <Field data-invalid={Boolean(fieldErrors.lastName) || undefined}>
+                <FieldLabel htmlFor="lastName" required>
+                  Last name
+                </FieldLabel>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  autoComplete="family-name"
+                  defaultValue={draft?.lastName}
+                  maxLength={50}
+                  required
+                  aria-invalid={Boolean(fieldErrors.lastName) || undefined}
+                />
+                <FieldError>{fieldErrors.lastName}</FieldError>
+              </Field>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lastName">Last name</Label>
-              <Input id="lastName" name="lastName" autoComplete="family-name" defaultValue={draft?.lastName} maxLength={50} required />
-              {fieldErrors.lastName && (
-                <p className="text-xs text-destructive">{fieldErrors.lastName}</p>
-              )}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              defaultValue={draft?.email}
-              required
-            />
-            {fieldErrors.email && (
-              <p className="text-xs text-destructive">{fieldErrors.email}</p>
-            )}
-            <p className="text-xs text-muted-foreground">We&apos;ll email you a code to confirm it.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
-            <PasswordInput
-              id="password"
-              name="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-            />
-            {fieldErrors.password && (
-              <p className="text-xs text-destructive">{fieldErrors.password}</p>
-            )}
-          </div>
+            <Field data-invalid={Boolean(fieldErrors.email) || undefined}>
+              <FieldLabel htmlFor="email" required>
+                Email
+              </FieldLabel>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                defaultValue={draft?.email}
+                maxLength={EMAIL_MAX}
+                required
+                aria-invalid={Boolean(fieldErrors.email) || undefined}
+              />
+              <FieldError>{fieldErrors.email}</FieldError>
+              <FieldDescription>We&apos;ll email you a code to confirm it.</FieldDescription>
+            </Field>
+            <Field data-invalid={Boolean(fieldErrors.password) || undefined}>
+              <FieldLabel htmlFor="password" required>
+                Password
+              </FieldLabel>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={PASSWORD_MAX}
+                aria-invalid={Boolean(fieldErrors.password) || undefined}
+              />
+              <FieldError>{fieldErrors.password}</FieldError>
+              <FieldDescription>At least 8 characters.</FieldDescription>
+            </Field>
+          </FieldGroup>
           <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
           <Button type="submit" className="w-full" disabled={pending || waitingForCaptcha}>
             {pending && <Loader2 className="size-4 animate-spin" />}

@@ -3,13 +3,14 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { lookupGuestOrder } from "@/lib/orders";
+import { emailField } from "@/lib/validation";
 import { sendOrderKeysEmail, sendOrderStatusEmail } from "@/lib/mailer";
 import { clientIp, countHits, rateLimit, recordHits } from "@/lib/rate-limit";
 import { sendAlert } from "@/lib/alerts";
 
 const schema = z.object({
   orderNumber: z.string().trim().toUpperCase().min(3).max(40),
-  email: z.email(),
+  email: emailField,
 });
 
 export type LookupState =

@@ -10,7 +10,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { generateTotpSecret, openTotpSecret, sealTotpSecret, verifyTotp } from "@/lib/totp";
 import { LINK_TTL_HOURS, countGuestOrders, signLinkToken } from "@/lib/account-link";
 import { sendConfirmEmailEmail, sendPasswordChangedEmail } from "@/lib/mailer";
-import { personNameSchema, registerSchema } from "@/lib/validation";
+import { PASSWORD_MAX, personNameSchema, registerSchema } from "@/lib/validation";
 import { fullName } from "@/lib/signup-code";
 
 const SITE_URL = process.env.SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
@@ -62,9 +62,9 @@ export async function updateProfile(_prev: AccountFormState, formData: FormData)
 
 const passwordSchema = z
   .object({
-    current: z.string().min(1, "Enter your current password"),
+    current: z.string().min(1, "Enter your current password").max(PASSWORD_MAX),
     password: registerSchema.shape.password,
-    confirm: z.string(),
+    confirm: z.string().max(PASSWORD_MAX),
   })
   .refine((d) => d.password === d.confirm, { path: ["confirm"], message: "Passwords don't match" })
   .refine((d) => d.password !== d.current, {
@@ -170,7 +170,7 @@ export async function disableTwoFactor(_prev: AccountFormState, formData: FormDa
     return { status: "error", error: "Too many attempts. Wait 15 minutes and try again." };
   }
 
-  const password = String(formData.get("password") ?? "");
+  const password = String(formData.get("password") ?? "").slice(0, PASSWORD_MAX);
   if (!user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
     return { status: "error", error: "Your password is wrong.", fieldErrors: { password: "Wrong password" } };
   }

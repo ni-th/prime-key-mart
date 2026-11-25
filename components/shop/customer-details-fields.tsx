@@ -1,7 +1,7 @@
 "use client";
 
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { CustomerDetails } from "@/lib/validation";
 
 /** Suggestions only; any country can be typed. */
@@ -14,7 +14,10 @@ const COUNTRIES = [
 
 export type CustomerDetailsErrors = Partial<Record<keyof CustomerDetails, string>>;
 
-/** First/last name, phone and country: the billing details PayHere asks for. */
+/**
+ * First/last name, phone and country: the billing details PayHere asks for.
+ * All required. Limits match customerDetailsSchema (checked again on the server).
+ */
 export function CustomerDetailsFields({
   value,
   onChange,
@@ -28,41 +31,60 @@ export function CustomerDetailsFields({
 }) {
   const field = (key: keyof CustomerDetails) => ({
     id: `customer-${key}`,
+    name: key,
     value: value[key],
     disabled,
+    required: true,
     "aria-invalid": errors[key] ? true : undefined,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [key]: e.target.value }),
   });
-  const error = (key: keyof CustomerDetails) =>
-    errors[key] ? <p className="text-xs text-destructive">{errors[key]}</p> : null;
+  const invalid = (key: keyof CustomerDetails) => (errors[key] ? true : undefined);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="space-y-1.5">
-        <Label htmlFor="customer-firstName">First name</Label>
+      <Field data-invalid={invalid("firstName")}>
+        <FieldLabel htmlFor="customer-firstName" required>
+          First name
+        </FieldLabel>
         <Input {...field("firstName")} autoComplete="given-name" maxLength={50} />
-        {error("firstName")}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="customer-lastName">Last name</Label>
+        <FieldError>{errors.firstName}</FieldError>
+      </Field>
+      <Field data-invalid={invalid("lastName")}>
+        <FieldLabel htmlFor="customer-lastName" required>
+          Last name
+        </FieldLabel>
         <Input {...field("lastName")} autoComplete="family-name" maxLength={50} />
-        {error("lastName")}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="customer-phone">Mobile number</Label>
-        <Input {...field("phone")} type="tel" autoComplete="tel" inputMode="tel" maxLength={25} placeholder="077 123 4567" />
-        {error("phone")}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="customer-country">Country</Label>
-        <Input {...field("country")} autoComplete="country-name" list="checkout-countries" maxLength={56} />
+        <FieldError>{errors.lastName}</FieldError>
+      </Field>
+      <Field data-invalid={invalid("phone")}>
+        <FieldLabel htmlFor="customer-phone" required>
+          Mobile number
+        </FieldLabel>
+        <Input
+          {...field("phone")}
+          type="tel"
+          autoComplete="tel"
+          inputMode="tel"
+          maxLength={25}
+          // Digits, spaces, brackets, dashes and an optional leading +.
+          pattern="\+?[0-9][0-9 ()\-]*"
+          title="Digits only, e.g. 077 123 4567 or +94 77 123 4567"
+          placeholder="077 123 4567"
+        />
+        <FieldError>{errors.phone}</FieldError>
+      </Field>
+      <Field data-invalid={invalid("country")}>
+        <FieldLabel htmlFor="customer-country" required>
+          Country
+        </FieldLabel>
+        <Input {...field("country")} autoComplete="country-name" list="checkout-countries" minLength={2} maxLength={56} />
         <datalist id="checkout-countries">
           {COUNTRIES.map((c) => (
             <option key={c} value={c} />
           ))}
         </datalist>
-        {error("country")}
-      </div>
+        <FieldError>{errors.country}</FieldError>
+      </Field>
     </div>
   );
 }

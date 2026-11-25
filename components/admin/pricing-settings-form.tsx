@@ -7,7 +7,7 @@ import { savePricingSettings, type SettingsResult } from "@/app/actions/settings
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { formatMoney } from "@/lib/money";
 
 function Save() {
@@ -66,8 +66,10 @@ export function PricingSettingsForm({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="rate">Market rate (LKR per 1 USD)</Label>
+        <Field data-invalid={fe.rate ? true : undefined}>
+          <FieldLabel htmlFor="rate" required>
+            Market rate (LKR per 1 USD)
+          </FieldLabel>
           <Input
             id="rate"
             name="rate"
@@ -81,13 +83,15 @@ export function PricingSettingsForm({
             onChange={(e) => setRateInput(e.target.value)}
             aria-invalid={fe.rate ? true : undefined}
           />
-          <p className={fe.rate ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-            {fe.rate ?? `Today's rate, e.g. 299.50. Allowed: ${rateMin}-${rateMax}.`}
-          </p>
-        </div>
+          {fe.rate ? (
+            <FieldError>{fe.rate}</FieldError>
+          ) : (
+            <FieldDescription className="text-xs">{`Today's rate, e.g. 299.50. Allowed: ${rateMin}-${rateMax}.`}</FieldDescription>
+          )}
+        </Field>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="margin">Safety margin (%)</Label>
+        <Field data-invalid={fe.margin ? true : undefined}>
+          <FieldLabel htmlFor="margin">Safety margin (%)</FieldLabel>
           <Input
             id="margin"
             name="margin"
@@ -100,10 +104,14 @@ export function PricingSettingsForm({
             onChange={(e) => setMarginInput(e.target.value)}
             aria-invalid={fe.margin ? true : undefined}
           />
-          <p className={fe.margin ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-            {fe.margin ?? "Added on top of the rate to cover card fees and rate changes. 2-3% is typical."}
-          </p>
-        </div>
+          {fe.margin ? (
+            <FieldError>{fe.margin}</FieldError>
+          ) : (
+            <FieldDescription className="text-xs">
+              Added on top of the rate to cover card fees and rate changes. 2-3% is typical. Empty = 0.
+            </FieldDescription>
+          )}
+        </Field>
       </div>
 
       <div className="rounded-lg border bg-muted/40 p-4 text-sm">
@@ -129,8 +137,8 @@ export function PricingSettingsForm({
         </p>
       </div>
 
-      <div className="space-y-1.5 border-t pt-5">
-        <Label htmlFor="fee">Payment gateway fee (%)</Label>
+      <Field className="border-t pt-5" data-invalid={fe.fee ? true : undefined}>
+        <FieldLabel htmlFor="fee">Payment gateway fee (%)</FieldLabel>
         <Input
           id="fee"
           name="fee"
@@ -144,14 +152,17 @@ export function PricingSettingsForm({
           aria-invalid={fe.fee ? true : undefined}
           className="sm:max-w-[calc(50%-0.5rem)]"
         />
-        <p className={fe.fee ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-          {fe.fee ??
-            (feeValid && f > 0
+        {fe.fee ? (
+          <FieldError>{fe.fee}</FieldError>
+        ) : (
+          <FieldDescription className="text-xs">
+            {feeValid && f > 0
               ? `PayHere keeps ${f}% of each payment, e.g. ${formatMoney(Math.round(10000 * f), "LKR")} of a LKR 10,000 order. `
-              : "The percent PayHere keeps from each payment (see your PayHere plan). ")}
-          Only used to calculate your profit; customers never see it or pay extra.
-        </p>
-      </div>
+              : "The percent PayHere keeps from each payment (see your PayHere plan). "}
+            Only used to calculate your profit; customers never see it or pay extra.
+          </FieldDescription>
+        )}
+      </Field>
 
       <Save />
     </form>

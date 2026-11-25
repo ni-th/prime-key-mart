@@ -26,7 +26,8 @@ export async function saveAlertSettings(
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const emails = parseEmailList(String(formData.get("alertEmails") ?? ""));
+  // Capped before splitting: at most 10 addresses are accepted anyway.
+  const emails = parseEmailList(String(formData.get("alertEmails") ?? "").slice(0, 3000));
   const invalid = emails.filter((e) => !z.email().safeParse(e).success);
   if (invalid.length > 0) {
     return {

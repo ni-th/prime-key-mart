@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { BellRing, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { EMAIL_MAX } from "@/lib/validation";
 import { subscribeBackInStock, type NotifyState } from "@/app/actions/stock-notify";
 
 function SubmitButton() {
@@ -36,25 +38,29 @@ export function BackInStockForm({ productId }: { productId: string }) {
   }
 
   return (
-    <form action={formAction} className="space-y-2 rounded-lg border p-4">
+    <form action={formAction} className="rounded-lg border p-4">
       <input type="hidden" name="productId" value={productId} />
-      <label htmlFor="restock-email" className="text-sm font-medium">
-        Get an email when it&apos;s back in stock
-      </label>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          id="restock-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          required
-          className="h-10 sm:flex-1"
-        />
-        <SubmitButton />
-      </div>
-      {state.status === "error" && <p className="text-sm text-destructive">{state.message}</p>}
-      <p className="text-xs text-muted-foreground">One email, only for this product. No newsletter.</p>
+      <Field data-invalid={state.status === "error" || undefined}>
+        <FieldLabel htmlFor="restock-email" required>
+          Get an email when it&apos;s back in stock
+        </FieldLabel>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            id="restock-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            maxLength={EMAIL_MAX}
+            required
+            aria-invalid={state.status === "error" || undefined}
+            className="h-10 sm:flex-1"
+          />
+          <SubmitButton />
+        </div>
+        <FieldError>{state.status === "error" ? state.message : null}</FieldError>
+        <FieldDescription className="text-xs">One email, only for this product. No newsletter.</FieldDescription>
+      </Field>
     </form>
   );
 }

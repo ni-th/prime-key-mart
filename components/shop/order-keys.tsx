@@ -11,7 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CopyKey } from "@/components/shop/key-list";
-import { Label } from "@/components/ui/label";
+import { RequiredMark } from "@/components/ui/label";
+import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CLAIM_REASONS,
@@ -59,8 +60,10 @@ function ClaimForm({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <fieldset className="space-y-1.5">
-        <legend className="mb-1 text-sm font-medium">What&apos;s wrong?</legend>
+      <FieldSet className="gap-1.5">
+        <FieldLegend variant="label">
+          What&apos;s wrong? <RequiredMark className="ml-0" />
+        </FieldLegend>
         {(Object.keys(CLAIM_REASONS) as ClaimReason[]).map((r) => (
           <label key={r} className="flex items-center gap-2 text-sm">
             <input
@@ -68,14 +71,15 @@ function ClaimForm({
               name={`reason-${keyId}`}
               checked={reason === r}
               onChange={() => setReason(r)}
+              required
               className="size-4"
             />
             {CLAIM_REASONS[r]}
           </label>
         ))}
-      </fieldset>
-      <div className="space-y-1.5">
-        <Label htmlFor={`claim-msg-${keyId}`}>Details (optional)</Label>
+      </FieldSet>
+      <Field>
+        <FieldLabel htmlFor={`claim-msg-${keyId}`}>Details (optional)</FieldLabel>
         <Textarea
           id={`claim-msg-${keyId}`}
           rows={3}
@@ -84,7 +88,7 @@ function ClaimForm({
           onChange={(e) => setMessage(e.target.value)}
           placeholder="e.g. The exact error message, and when it stopped working."
         />
-      </div>
+      </Field>
       <p className="text-xs text-muted-foreground">
         Lost account access or a forgotten password, sharing the key, or buying the wrong edition
         isn&apos;t covered.{" "}
@@ -201,21 +205,29 @@ function Activation({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <Label htmlFor={`iid-${keyId}`}>Installation ID</Label>
-          <Textarea
-            id={`iid-${keyId}`}
-            rows={2}
-            inputMode="numeric"
-            autoComplete="off"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="1234567 1234567 1234567 1234567 1234567 1234567 1234567 1234567 1234567"
-            className="font-mono text-sm"
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Type all 9 groups exactly as shown. Spaces or dashes are fine.
-          </p>
+          <Field data-invalid={error ? true : undefined}>
+            <FieldLabel htmlFor={`iid-${keyId}`} required>
+              Installation ID
+            </FieldLabel>
+            <Textarea
+              id={`iid-${keyId}`}
+              rows={2}
+              inputMode="numeric"
+              autoComplete="off"
+              spellCheck={false}
+              value={value}
+              // Digits, spaces and dashes only; the server checks the 63 digits.
+              onChange={(e) => setValue(e.target.value.replace(/[^0-9\s-]/g, ""))}
+              maxLength={120}
+              placeholder="1234567 1234567 1234567 1234567 1234567 1234567 1234567 1234567 1234567"
+              className="font-mono text-sm"
+              aria-invalid={error ? true : undefined}
+              required
+            />
+            <FieldDescription className="text-xs">
+              Type all 9 groups exactly as shown. Spaces or dashes are fine.
+            </FieldDescription>
+          </Field>
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={pending}>
               {pending && <Loader2 className="size-4 animate-spin" />}

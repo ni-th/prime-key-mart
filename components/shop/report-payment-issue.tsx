@@ -6,7 +6,7 @@ import { reportPaymentIssue, type ReportResult } from "@/app/actions/payment-iss
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 
 /**
@@ -120,31 +120,34 @@ export function ReportPaymentIssue({
         </Alert>
       )}
 
-      <div className="space-y-1.5">
-        <Label htmlFor={`ref-${orderNumber}`}>Payment reference (optional)</Label>
-        <Input
-          id={`ref-${orderNumber}`}
-          value={paymentRef}
-          onChange={(e) => setPaymentRef(e.target.value)}
-          maxLength={80}
-          placeholder="From your PayHere receipt email"
-          aria-invalid={fe.paymentRef ? true : undefined}
-        />
-        {fe.paymentRef && <p className="text-xs text-destructive">{fe.paymentRef}</p>}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`note-${orderNumber}`}>Anything else? (optional)</Label>
-        <Textarea
-          id={`note-${orderNumber}`}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          maxLength={1000}
-          rows={3}
-          placeholder="e.g. Paid by card at 2:15pm, the page stopped loading."
-          aria-invalid={fe.note ? true : undefined}
-        />
-        {fe.note && <p className="text-xs text-destructive">{fe.note}</p>}
-      </div>
+      <FieldGroup className="gap-4">
+        <Field data-invalid={fe.paymentRef ? true : undefined}>
+          <FieldLabel htmlFor={`ref-${orderNumber}`}>Payment reference (optional)</FieldLabel>
+          <Input
+            id={`ref-${orderNumber}`}
+            value={paymentRef}
+            onChange={(e) => setPaymentRef(e.target.value)}
+            maxLength={80}
+            spellCheck={false}
+            placeholder="From your PayHere receipt email"
+            aria-invalid={fe.paymentRef ? true : undefined}
+          />
+          <FieldError>{fe.paymentRef}</FieldError>
+        </Field>
+        <Field data-invalid={fe.note ? true : undefined}>
+          <FieldLabel htmlFor={`note-${orderNumber}`}>Anything else? (optional)</FieldLabel>
+          <Textarea
+            id={`note-${orderNumber}`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={1000}
+            rows={3}
+            placeholder="e.g. Paid by card at 2:15pm, the page stopped loading."
+            aria-invalid={fe.note ? true : undefined}
+          />
+          <FieldError>{fe.note}</FieldError>
+        </Field>
+      </FieldGroup>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>
           {pending && <Loader2 className="size-4 animate-spin" />}

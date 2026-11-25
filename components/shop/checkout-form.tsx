@@ -7,7 +7,7 @@ import { Loader2, Lock } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,7 +20,7 @@ import { cartIssues, issueLabel, type CartIssue } from "@/lib/cart-issues";
 import type { CartQuote, CartQuoteLine } from "@/app/actions/pricing";
 import { StockIssueDialog } from "@/components/shop/stock-issue-dialog";
 import { warrantyLength } from "@/lib/warranty";
-import { customerDetailsSchema, type CustomerDetails } from "@/lib/validation";
+import { EMAIL_MAX, customerDetailsSchema, emailField, type CustomerDetails } from "@/lib/validation";
 import { CustomerDetailsFields, type CustomerDetailsErrors } from "@/components/shop/customer-details-fields";
 import { ReleaseAbandonedCheckout } from "@/components/shop/pending-checkout";
 import { rememberPendingCheckout } from "@/lib/pending-checkout";
@@ -90,6 +90,7 @@ export function CheckoutForm({
   }
 
   const [email, setEmail] = useState(defaultEmail ?? "");
+  const [emailError, setEmailError] = useState<string | null>(null);
   // Lazy init runs on the client after hydration (this form renders a skeleton until then).
   const [customer, setCustomer] = useState<CustomerDetails>(() =>
     withDefaults(typeof window === "undefined" ? null : loadSavedDetails(), defaultCustomer),
@@ -157,6 +158,14 @@ export function CheckoutForm({
       return;
     }
     setCustomerErrors({});
+    if (!emailLocked) {
+      const checked = emailField.safeParse(email);
+      if (!checked.success) {
+        setEmailError(checked.error.issues[0]?.message ?? "Enter a valid email address");
+        setError("Please check your email address above.");
+        return;
+      }
+    }
     if (limitError) {
       setError(limitError);
       return;
@@ -242,24 +251,33 @@ export function CheckoutForm({
           <p className="mt-1 text-sm text-muted-foreground">
             Your license keys are sent here immediately after payment.
           </p>
-          <div className="mt-4 space-y-1.5">
-            <Label htmlFor="email">Email address</Label>
+          <Field className="mt-4" data-invalid={emailError ? true : undefined}>
+            <FieldLabel htmlFor="email" required={!emailLocked}>
+              Email address
+            </FieldLabel>
             <Input
               id="email"
               type="email"
+              autoComplete="email"
               value={email}
               disabled={emailLocked}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError(null);
+              }}
               placeholder="you@example.com"
+              maxLength={EMAIL_MAX}
               required
+              aria-invalid={emailError ? true : undefined}
             />
+            <FieldError>{emailError}</FieldError>
             {emailLocked && (
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Lock className="size-3" />
                 Using your account email.
               </p>
             )}
-          </div>
+          </Field>
         </Card>
 
         <Card className="p-5">

@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -102,8 +102,8 @@ export function ModerationDialog({
             <input key={name} type="hidden" name={name} value={value} />
           ))}
           {noteLabel && (
-            <div className="space-y-1.5">
-              <Label htmlFor="mod-note">{noteLabel}</Label>
+            <Field>
+              <FieldLabel htmlFor="mod-note">{noteLabel}</FieldLabel>
               <Textarea
                 id="mod-note"
                 name="note"
@@ -112,7 +112,7 @@ export function ModerationDialog({
                 defaultValue={noteDefaultValue}
                 placeholder={notePlaceholder}
               />
-            </div>
+            </Field>
           )}
           <DialogFooter>
             <DialogClose render={<Button variant="ghost" type="button" />}>

@@ -14,10 +14,11 @@ import {
 } from "@/app/actions/account";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { OtpInput } from "@/components/ui/otp-input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { PASSWORD_MAX } from "@/lib/validation";
 
 const IDLE: AccountFormState = { status: "idle" };
 
@@ -49,9 +50,9 @@ function Status({ state }: { state: AccountFormState }) {
   return null;
 }
 
-function FieldError({ state, name }: { state: AccountFormState; name: string }) {
-  const msg = state.status === "error" ? state.fieldErrors?.[name] : undefined;
-  return msg ? <p className="text-xs text-destructive">{msg}</p> : null;
+/** The server's message for one field, if any. */
+function errorFor(state: AccountFormState, name: string): string | undefined {
+  return state.status === "error" ? state.fieldErrors?.[name] : undefined;
 }
 
 export function ProfileForm({
@@ -64,43 +65,50 @@ export function ProfileForm({
   email: string;
 }) {
   const [state, action] = useActionState(updateProfile, IDLE);
+  const err = (n: string) => errorFor(state, n);
   return (
     <form action={action} className="space-y-4">
       <Status state={state} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="firstName">First name</Label>
-          <Input
-            id="firstName"
-            name="firstName"
-            defaultValue={firstName}
-            maxLength={50}
-            required
-            autoComplete="given-name"
-          />
-          <FieldError state={state} name="firstName" />
+      <FieldGroup>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field data-invalid={Boolean(err("firstName")) || undefined}>
+            <FieldLabel htmlFor="firstName" required>
+              First name
+            </FieldLabel>
+            <Input
+              id="firstName"
+              name="firstName"
+              defaultValue={firstName}
+              maxLength={50}
+              required
+              autoComplete="given-name"
+              aria-invalid={Boolean(err("firstName")) || undefined}
+            />
+            <FieldError>{err("firstName")}</FieldError>
+          </Field>
+          <Field data-invalid={Boolean(err("lastName")) || undefined}>
+            <FieldLabel htmlFor="lastName" required>
+              Last name
+            </FieldLabel>
+            <Input
+              id="lastName"
+              name="lastName"
+              defaultValue={lastName}
+              maxLength={50}
+              required
+              autoComplete="family-name"
+              aria-invalid={Boolean(err("lastName")) || undefined}
+            />
+            <FieldError>{err("lastName")}</FieldError>
+          </Field>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="lastName">Last name</Label>
-          <Input
-            id="lastName"
-            name="lastName"
-            defaultValue={lastName}
-            maxLength={50}
-            required
-            autoComplete="family-name"
-          />
-          <FieldError state={state} name="lastName" />
-        </div>
-      </div>
-      <p className="-mt-2 text-xs text-muted-foreground">Used for your payment details at checkout.</p>
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" value={email} disabled readOnly />
-        <p className="text-xs text-muted-foreground">
-          Your keys and receipts go to this address. To change it, contact us.
-        </p>
-      </div>
+        <FieldDescription className="-mt-3">Used for your payment details at checkout.</FieldDescription>
+        <Field data-disabled>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <Input id="email" value={email} disabled readOnly />
+          <FieldDescription>Your keys and receipts go to this address. To change it, contact us.</FieldDescription>
+        </Field>
+      </FieldGroup>
       <Submit>Save name</Submit>
     </form>
   );
@@ -108,28 +116,63 @@ export function ProfileForm({
 
 export function PasswordForm() {
   const [state, action] = useActionState(changePassword, IDLE);
+  const err = (n: string) => errorFor(state, n);
   // Clear the fields after a successful change by remounting them.
   const formKey = state.status === "done" ? state.message : "form";
   return (
     <form action={action} className="space-y-4" key={formKey}>
       <Status state={state} />
-      <div className="space-y-1.5">
-        <Label htmlFor="current">Current password</Label>
-        <PasswordInput id="current" name="current" required autoComplete="current-password" />
-        <FieldError state={state} name="current" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="password">New password</Label>
-          <PasswordInput id="password" name="password" required minLength={8} autoComplete="new-password" />
-          <FieldError state={state} name="password" />
+      <FieldGroup>
+        <Field data-invalid={Boolean(err("current")) || undefined}>
+          <FieldLabel htmlFor="current" required>
+            Current password
+          </FieldLabel>
+          <PasswordInput
+            id="current"
+            name="current"
+            required
+            maxLength={PASSWORD_MAX}
+            autoComplete="current-password"
+            aria-invalid={Boolean(err("current")) || undefined}
+          />
+          <FieldError>{err("current")}</FieldError>
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field data-invalid={Boolean(err("password")) || undefined}>
+            <FieldLabel htmlFor="password" required>
+              New password
+            </FieldLabel>
+            <PasswordInput
+              id="password"
+              name="password"
+              required
+              minLength={8}
+              maxLength={PASSWORD_MAX}
+              autoComplete="new-password"
+              aria-invalid={Boolean(err("password")) || undefined}
+            />
+            {err("password") ? (
+              <FieldError>{err("password")}</FieldError>
+            ) : (
+              <FieldDescription>At least 8 characters.</FieldDescription>
+            )}
+          </Field>
+          <Field data-invalid={Boolean(err("confirm")) || undefined}>
+            <FieldLabel htmlFor="confirm" required>
+              Repeat new password
+            </FieldLabel>
+            <PasswordInput
+              id="confirm"
+              name="confirm"
+              required
+              maxLength={PASSWORD_MAX}
+              autoComplete="new-password"
+              aria-invalid={Boolean(err("confirm")) || undefined}
+            />
+            <FieldError>{err("confirm")}</FieldError>
+          </Field>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="confirm">Repeat new password</Label>
-          <PasswordInput id="confirm" name="confirm" required autoComplete="new-password" />
-          <FieldError state={state} name="confirm" />
-        </div>
-      </div>
+      </FieldGroup>
       <Submit>Change password</Submit>
     </form>
   );
@@ -194,10 +237,12 @@ function SetupTwoFactor({ qrSvg, secret, email }: { qrSvg: string; secret: strin
       </details>
       <form action={action} className="space-y-3">
         <Status state={state} />
-        <div className="space-y-1.5">
-          <Label htmlFor="setup-code">6-digit code</Label>
+        <Field data-invalid={state.status === "error" || undefined}>
+          <FieldLabel htmlFor="setup-code" required>
+            6-digit code
+          </FieldLabel>
           <OtpInput id="setup-code" name="code" invalid={state.status === "error"} onChange={setCode} />
-        </div>
+        </Field>
         <div className="flex flex-wrap gap-2">
           <Submit disabled={code.length !== 6}>Turn on</Submit>
           <Button type="submit" size="sm" variant="ghost" formAction={cancelTwoFactorSetup} formNoValidate>
@@ -212,6 +257,7 @@ function SetupTwoFactor({ qrSvg, secret, email }: { qrSvg: string; secret: strin
 function DisableTwoFactor() {
   const [state, action] = useActionState(disableTwoFactor, IDLE);
   const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
   return (
     <div className="space-y-3 text-sm">
       <p className="flex items-center gap-2">
@@ -226,17 +272,32 @@ function DisableTwoFactor() {
         <form action={action} className="space-y-3 rounded-lg border p-3">
           <Status state={state} />
           <p className="text-xs text-muted-foreground">To turn it off, confirm your password and a current code.</p>
-          <div className="space-y-1.5">
-            <Label htmlFor="off-password">Password</Label>
-            <PasswordInput id="off-password" name="password" required autoComplete="current-password" />
-            <FieldError state={state} name="password" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="off-code">6-digit code</Label>
-            <OtpInput id="off-code" name="code" invalid={state.status === "error"} />
-          </div>
+          <FieldGroup className="gap-4">
+            <Field data-invalid={Boolean(errorFor(state, "password")) || undefined}>
+              <FieldLabel htmlFor="off-password" required>
+                Password
+              </FieldLabel>
+              <PasswordInput
+                id="off-password"
+                name="password"
+                required
+                maxLength={PASSWORD_MAX}
+                autoComplete="current-password"
+                aria-invalid={Boolean(errorFor(state, "password")) || undefined}
+              />
+              <FieldError>{errorFor(state, "password")}</FieldError>
+            </Field>
+            <Field data-invalid={state.status === "error" || undefined}>
+              <FieldLabel htmlFor="off-code" required>
+                6-digit code
+              </FieldLabel>
+              <OtpInput id="off-code" name="code" invalid={state.status === "error"} onChange={setCode} />
+            </Field>
+          </FieldGroup>
           <div className="flex gap-2">
-            <Submit variant="destructive">Turn off two-step sign-in</Submit>
+            <Submit variant="destructive" disabled={code.length !== 6}>
+              Turn off two-step sign-in
+            </Submit>
             <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>

@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { confirmTwoFactor, type TwoFactorState } from "@/app/actions/two-factor";
 import { Button } from "@/components/ui/button";
 import { OtpInput } from "@/components/ui/otp-input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 function Submit({ ready }: { ready: boolean }) {
@@ -33,8 +33,10 @@ export function TwoFactorSetupForm() {
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor="code">6-digit code</Label>
+      <Field data-invalid={state.error !== null || undefined}>
+        <FieldLabel htmlFor="code" required>
+          6-digit code
+        </FieldLabel>
         <OtpInput
           className="justify-center"
           id="code"
@@ -43,7 +45,7 @@ export function TwoFactorSetupForm() {
           invalid={state.error !== null}
           onChange={setCode}
         />
-      </div>
+      </Field>
       <Submit ready={code.length === 6} />
       <p className="text-xs text-muted-foreground">
         You&apos;ll be signed out and asked to sign in again with a code.

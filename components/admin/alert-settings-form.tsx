@@ -11,7 +11,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { EMAIL_MAX } from "@/lib/validation";
 
 type Toggles = {
   alertLowStock: boolean;
@@ -89,28 +90,38 @@ export function AlertSettingsForm({
       )}
 
       <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
-        <div className="space-y-1.5">
-          <Label htmlFor="alertEmails">Send alerts to</Label>
+        <Field data-invalid={fe.alertEmails ? true : undefined}>
+          <FieldLabel htmlFor="alertEmails">Send alerts to</FieldLabel>
           <Input
             id="alertEmails"
             name="alertEmails"
             defaultValue={alertEmails}
             placeholder={fallbackEmail ?? "you@example.com"}
+            // Up to 10 addresses (checked on the server).
+            maxLength={10 * (EMAIL_MAX + 2)}
+            spellCheck={false}
+            autoComplete="off"
             aria-invalid={fe.alertEmails ? true : undefined}
           />
-          <p className={fe.alertEmails ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-            {fe.alertEmails ??
-              (fallbackEmail
-                ? `Separate several with commas. Empty = ${fallbackEmail} (ADMIN_EMAIL).`
-                : "Separate several with commas.")}
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="lowStockThreshold">Low stock level</Label>
+          {fe.alertEmails ? (
+            <FieldError>{fe.alertEmails}</FieldError>
+          ) : (
+            <FieldDescription className="text-xs">
+              {fallbackEmail
+                ? `Up to 10, separated by commas. Empty = ${fallbackEmail} (ADMIN_EMAIL).`
+                : "Up to 10, separated by commas."}
+            </FieldDescription>
+          )}
+        </Field>
+        <Field data-invalid={fe.lowStockThreshold ? true : undefined}>
+          <FieldLabel htmlFor="lowStockThreshold" required>
+            Low stock level
+          </FieldLabel>
           <Input
             id="lowStockThreshold"
             name="lowStockThreshold"
             type="number"
+            inputMode="numeric"
             min={1}
             max={1000}
             step={1}
@@ -118,14 +129,14 @@ export function AlertSettingsForm({
             defaultValue={lowStockThreshold}
             aria-invalid={fe.lowStockThreshold ? true : undefined}
           />
-          <p
-            className={
-              fe.lowStockThreshold ? "text-xs text-destructive" : "text-xs text-muted-foreground"
-            }
-          >
-            {fe.lowStockThreshold ?? "Alert when fewer keys than this are left. Products can override it."}
-          </p>
-        </div>
+          {fe.lowStockThreshold ? (
+            <FieldError>{fe.lowStockThreshold}</FieldError>
+          ) : (
+            <FieldDescription className="text-xs">
+              Alert when fewer keys than this are left (1 to 1000). Products can override it.
+            </FieldDescription>
+          )}
+        </Field>
       </div>
 
       <fieldset className="space-y-3">

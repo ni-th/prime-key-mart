@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { slugify } from "@/lib/validation";
@@ -27,10 +27,11 @@ export type CategoryFormValues = {
   showInHeader: boolean;
 };
 
+/** The server's error for a field, or its help text. */
 function Hint({ error, children }: { error?: string; children?: React.ReactNode }) {
-  if (error) return <p className="text-xs text-destructive">{error}</p>;
+  if (error) return <FieldError className="text-xs">{error}</FieldError>;
   if (!children) return null;
-  return <p className="text-xs text-muted-foreground">{children}</p>;
+  return <FieldDescription className="text-xs">{children}</FieldDescription>;
 }
 
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
@@ -77,24 +78,32 @@ export function CategoryForm({
 
       <Card className="space-y-4 p-5">
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Name</Label>
+          <Field data-invalid={fe.name ? true : undefined}>
+            <FieldLabel htmlFor="name" required>
+              Name
+            </FieldLabel>
             <Input
               id="name"
               name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Operating Systems"
+              minLength={2}
+              maxLength={60}
               required
               aria-invalid={fe.name ? true : undefined}
             />
-            <Hint error={fe.name} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="slug">Slug</Label>
+            <Hint error={fe.name}>2 to 60 characters.</Hint>
+          </Field>
+          <Field data-invalid={fe.slug ? true : undefined}>
+            <FieldLabel htmlFor="slug">Slug</FieldLabel>
             <Input
               id="slug"
               name="slug"
+              // Cleaned up on the server (lowercase, hyphens); empty = from the name.
+              maxLength={60}
+              spellCheck={false}
+              autoCapitalize="none"
               value={slugTouched ? slug : effectiveSlug}
               onChange={(e) => {
                 setSlugTouched(true);
@@ -118,11 +127,11 @@ export function CategoryForm({
                 redirect here automatically.
               </p>
             )}
-          </div>
+          </Field>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="description">Description (optional)</Label>
+        <Field data-invalid={fe.description ? true : undefined}>
+          <FieldLabel htmlFor="description">Description (optional)</FieldLabel>
           <Textarea
             id="description"
             name="description"
@@ -133,9 +142,9 @@ export function CategoryForm({
             aria-invalid={fe.description ? true : undefined}
           />
           <Hint error={fe.description}>
-            Shown under the category name and in Google search results. 1-2 sentences.
+            Shown under the category name and in Google search results. 1-2 sentences, up to 300 characters.
           </Hint>
-        </div>
+        </Field>
       </Card>
 
       <Card className="space-y-5 p-5">
@@ -146,8 +155,8 @@ export function CategoryForm({
             the name and description.
           </p>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="bannerUrl">Desktop banner</Label>
+        <Field data-invalid={fe.bannerUrl ? true : undefined}>
+          <FieldLabel htmlFor="bannerUrl">Desktop banner</FieldLabel>
           <ImageUpload
             name="bannerUrl"
             preset="banner"
@@ -156,9 +165,9 @@ export function CategoryForm({
             invalid={Boolean(fe.bannerUrl)}
           />
           <Hint error={fe.bannerUrl}>Best: 1920 x 480 px (4:1).</Hint>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="bannerMobileUrl">Phone banner (optional)</Label>
+        </Field>
+        <Field data-invalid={fe.bannerMobileUrl ? true : undefined}>
+          <FieldLabel htmlFor="bannerMobileUrl">Phone banner (optional)</FieldLabel>
           <ImageUpload
             name="bannerMobileUrl"
             preset="bannerMobile"
@@ -170,7 +179,7 @@ export function CategoryForm({
             Best: 1200 x 600 px (2:1). Without it, phones show the desktop banner, which is
             very thin on a small screen, so add one if the banner has text.
           </Hint>
-        </div>
+        </Field>
       </Card>
 
       <Card className="space-y-4 p-5">

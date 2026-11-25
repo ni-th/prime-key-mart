@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { formatMoney } from "@/lib/money";
 import { warrantyLength, warrantyUsdCents, WARRANTY_MAX_PERCENT } from "@/lib/warranty";
 import { cn } from "@/lib/utils";
@@ -30,9 +30,10 @@ const EXAMPLE_PRICES = [999, 3999, 14999];
 /** Quick picks for the length field. */
 const DAY_PRESETS = [7, 14, 30, 90, 180, 365, 730];
 
+/** The server's error for a field, or its help text. */
 function Hint({ error, children }: { error?: string; children?: React.ReactNode }) {
-  if (error) return <p className="text-xs text-destructive">{error}</p>;
-  return children ? <p className="text-xs text-muted-foreground">{children}</p> : null;
+  if (error) return <FieldError className="text-xs">{error}</FieldError>;
+  return children ? <FieldDescription className="text-xs">{children}</FieldDescription> : null;
 }
 
 function Submit({ isEdit }: { isEdit: boolean }) {
@@ -67,32 +68,49 @@ export function WarrantyPlanForm({ plan }: { plan?: WarrantyPlanValues }) {
       )}
 
       <Card className="grid gap-4 p-5 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Plan name</Label>
-          <Input id="name" name="name" defaultValue={plan?.name} placeholder="e.g. Premium" required maxLength={40} />
-          <Hint error={fe.name}>Shown to customers, e.g. &quot;Premium, 1 year&quot;.</Hint>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="description">Short description (optional)</Label>
+        <Field data-invalid={fe.name ? true : undefined}>
+          <FieldLabel htmlFor="name" required>
+            Plan name
+          </FieldLabel>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={plan?.name}
+            placeholder="e.g. Premium"
+            required
+            minLength={2}
+            maxLength={40}
+            aria-invalid={fe.name ? true : undefined}
+          />
+          <Hint error={fe.name}>Shown to customers, e.g. &quot;Premium, 1 year&quot;. 2 to 40 characters.</Hint>
+        </Field>
+        <Field data-invalid={fe.description ? true : undefined}>
+          <FieldLabel htmlFor="description">Short description (optional)</FieldLabel>
           <Input
             id="description"
             name="description"
             defaultValue={plan?.description ?? ""}
             placeholder="Free replacement if your key stops working"
             maxLength={120}
+            aria-invalid={fe.description ? true : undefined}
           />
-          <Hint error={fe.description} />
-        </div>
+          <Hint error={fe.description}>Up to 120 characters.</Hint>
+        </Field>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="days">Length (days)</Label>
+        <Field data-invalid={fe.days ? true : undefined}>
+          <FieldLabel htmlFor="days" required={!lifetime}>
+            Length (days)
+          </FieldLabel>
           <Input
             id="days"
             name="days"
             type="number"
+            inputMode="numeric"
             min={1}
             max={3650}
             step={1}
+            required={!lifetime}
+            aria-invalid={fe.days ? true : undefined}
             value={lifetime ? "" : days}
             onChange={(e) => setDays(e.target.value)}
             disabled={lifetime}
@@ -126,16 +144,21 @@ export function WarrantyPlanForm({ plan }: { plan?: WarrantyPlanValues }) {
             Lifetime (as long as the product is supported)
           </label>
           <Hint error={fe.days}>
-            {!lifetime && daysNum && daysNum > 0 ? `Shown to customers as "${warrantyLength(daysNum)}".` : undefined}
+            {!lifetime && daysNum && daysNum > 0 ? `Shown to customers as "${warrantyLength(daysNum)}".` : "1 to 3650 days, or tick Lifetime."}
           </Hint>
-        </div>
+        </Field>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="percent">Price (% of the product price)</Label>
+        <Field data-invalid={fe.percent ? true : undefined}>
+          <FieldLabel htmlFor="percent" required>
+            Price (% of the product price)
+          </FieldLabel>
           <Input
             id="percent"
             name="percent"
             type="number"
+            inputMode="decimal"
+            required
+            aria-invalid={fe.percent ? true : undefined}
             min={0}
             max={WARRANTY_MAX_PERCENT}
             step={0.1}
@@ -144,9 +167,11 @@ export function WarrantyPlanForm({ plan }: { plan?: WarrantyPlanValues }) {
             disabled={isDefault}
           />
           <Hint error={fe.percent}>
-            {isDefault ? "The included plan is always free." : "Of the normal price, before any sale."}
+            {isDefault
+              ? "The included plan is always free."
+              : `Of the normal price, before any sale. 0 to ${WARRANTY_MAX_PERCENT}.`}
           </Hint>
-        </div>
+        </Field>
       </Card>
 
       <Card className="space-y-3 p-5">

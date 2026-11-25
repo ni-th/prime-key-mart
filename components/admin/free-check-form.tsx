@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { saveFreeCheckHours, type FreeCheckState } from "@/app/actions/warranty";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -24,23 +24,29 @@ export function FreeCheckForm({ hours }: { hours: number }) {
   return (
     <form action={action} className="space-y-2">
       <div className="flex flex-wrap items-end gap-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="free-check-hours">Hours after delivery</Label>
+        <Field className="w-auto" data-invalid={state.status === "error" || undefined}>
+          <FieldLabel htmlFor="free-check-hours" required>
+            Hours after delivery
+          </FieldLabel>
           <Input
             id="free-check-hours"
             name="hours"
             type="number"
+            inputMode="numeric"
             min={0}
             max={168}
             step={1}
+            required
             defaultValue={hours}
+            aria-invalid={state.status === "error" || undefined}
             className="w-28"
           />
-        </div>
+        </Field>
         <Submit />
       </div>
+      <FieldDescription className="text-xs">0 to 168 (one week). 0 turns it off.</FieldDescription>
       {state.status === "done" && <p className="text-xs text-success">{state.message}</p>}
-      {state.status === "error" && <p className="text-xs text-destructive">{state.error}</p>}
+      <FieldError className="text-xs">{state.status === "error" ? state.error : null}</FieldError>
     </form>
   );
 }

@@ -7,9 +7,33 @@ import { getAdminSession } from "@/lib/admin";
 import { encryptSecret, keyFingerprint } from "@/lib/crypto";
 import { sendOrderKeysEmail, sendPaymentReportClosedEmail } from "@/lib/mailer";
 import { fulfillOrder, releaseOrderReservation } from "@/lib/inventory";
-import { productSchema, slugify } from "@/lib/validation";
+import {
+  KEY_BATCH_MAX_LINES,
+  emailField,
+  idField,
+  licenseKeyBatchSchema,
+  productSchema,
+  slugify,
+} from "@/lib/validation";
 import { queueStockCheck } from "@/lib/alerts";
 import { asDeliveryType, encodeAccount, parseAccountLine } from "@/lib/delivery";
+
+/** A form field that must be a database id (or an order number); null if it isn't. */
+function formId(formData: FormData, key: string): string | null {
+  const parsed = idField.safeParse(formData.get(key));
+  return parsed.success ? parsed.data : null;
+}
+
+/** A text field from a form, trimmed. Anything that isn't text (e.g. a file) counts as empty. */
+function formText(formData: FormData, key: string): string {
+  const v = formData.get(key);
+  return typeof v === "string" ? v.trim() : "";
+}
+
+/** A short free-text note from a form (refund reason, suspension note...). */
+function formNote(formData: FormData, key = "note"): string {
+  return formText(formData, key).slice(0, 1000);
+}
 
 export type FormResult =
   | { ok: true; message?: string }
@@ -44,27 +68,27 @@ export async function saveProduct(
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const id = (formData.get("id") as string) || null;
-  const name = ((formData.get("name") as string) ?? "").trim();
-  const rawSlug = ((formData.get("slug") as string) ?? "").trim();
-  const priceInput = parseFloat((formData.get("price") as string) ?? "");
+  const id = formId(formData, "id");
+  const name = formText(formData, "name");
+  const rawSlug = formText(formData, "slug");
+  const priceInput = parseFloat(formText(formData, "price"));
   // Empty = no fixed LKR price (calculated from USD). Whole rupees only.
-  const lkrRaw = ((formData.get("priceLkr") as string) ?? "").trim();
+  const lkrRaw = formText(formData, "priceLkr");
   const lkrInput = lkrRaw === "" ? null : parseFloat(lkrRaw);
   // Empty = use the store-wide low stock level.
-  const thresholdRaw = ((formData.get("lowStockThreshold") as string) ?? "").trim();
+  const thresholdRaw = formText(formData, "lowStockThreshold");
   // Empty = cost not tracked for this product.
-  const costRaw = ((formData.get("cost") as string) ?? "").trim();
+  const costRaw = formText(formData, "cost");
   const costInput = costRaw === "" ? null : parseFloat(costRaw);
 
   const candidate = {
     name,
     slug: rawSlug ? slugify(rawSlug) : slugify(name),
-    shortDescription: ((formData.get("shortDescription") as string) ?? "").trim(),
-    description: ((formData.get("description") as string) ?? "").trim(),
-    brand: ((formData.get("brand") as string) ?? "").trim(),
-    platform: ((formData.get("platform") as string) ?? "").trim(),
-    region: ((formData.get("region") as string) ?? "Global").trim() || "Global",
+    shortDescription: formText(formData, "shortDescription"),
+    description: formText(formData, "description"),
+    brand: formText(formData, "brand"),
+    platform: formText(formData, "platform"),
+    region: formText(formData, "region") || "Global",
     priceCents: Number.isFinite(priceInput) ? Math.round(priceInput * 100) : NaN,
     priceLkrCents:
       lkrInput === null ? null : Number.isFinite(lkrInput) ? Math.round(lkrInput) * 100 : NaN,
@@ -72,10 +96,10 @@ export async function saveProduct(
       costInput === null ? null : Number.isFinite(costInput) ? Math.round(costInput * 100) : NaN,
     costCurrency: formData.get("costCurrency") === "LKR" ? "LKR" : "USD",
     lowStockThreshold: thresholdRaw === "" ? null : Number(thresholdRaw),
-    categoryId: (formData.get("categoryId") as string) ?? "",
+    categoryId: formText(formData, "categoryId"),
     deliveryType: asDeliveryType(formData.get("deliveryType")),
-    activationSteps: ((formData.get("activationSteps") as string) ?? "").trim(),
-    imageUrl: ((formData.get("imageUrl") as string) ?? "").trim(),
+    activationSteps: formText(formData, "activationSteps"),
+    imageUrl: formText(formData, "imageUrl"),
     published: formData.get("published") === "on",
     featured: formData.get("featured") === "on",
   };
@@ -161,7 +185,7 @@ export async function deleteProduct(
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const id = formData.get("id") as string;
+  const id = formId(formData, "id");
   if (!id) return { ok: false, error: "Missing product id." };
 
   const orderedCount = await prisma.orderItem.count({ where: { productId: id } });
@@ -187,9 +211,15 @@ export async function addLicenseKeys(
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const productId = formData.get("productId") as string;
-  const raw = (formData.get("raw") as string) ?? "";
-  if (!productId) return { ok: false, error: "Missing product." };
+  const batch = licenseKeyBatchSchema.safeParse({
+    productId: formData.get("productId"),
+    raw: formData.get("raw") ?? "",
+  });
+  if (!batch.success) {
+    const issue = batch.error.issues[0];
+    return { ok: false, error: issue?.path[0] === "productId" ? "Missing product." : (issue?.message ?? "Paste at least one key.") };
+  }
+  const { productId, raw } = batch.data;
 
   const lines = Array.from(
     new Set(
@@ -201,6 +231,16 @@ export async function addLicenseKeys(
   );
   if (lines.length === 0) {
     return { ok: false, error: "Paste at least one key." };
+  }
+  if (lines.length > KEY_BATCH_MAX_LINES) {
+    return {
+      ok: false,
+      error: `That's ${lines.length} lines: add at most ${KEY_BATCH_MAX_LINES} per batch. Nothing was added.`,
+    };
+  }
+  const tooLong = lines.findIndex((l) => l.length > 500);
+  if (tooLong !== -1) {
+    return { ok: false, error: `Line ${tooLong + 1} is too long to be a key (500 characters max). Nothing was added.` };
   }
 
   const product = await prisma.product.findUnique({ where: { id: productId }, select: { deliveryType: true } });
@@ -275,7 +315,8 @@ export async function deleteLicenseKey(formData: FormData): Promise<void> {
   const admin = await getAdminSession();
   if (!admin) return;
 
-  const id = formData.get("id") as string;
+  const id = formId(formData, "id");
+  if (!id) return;
   const key = await prisma.licenseKey.findUnique({ where: { id } });
   if (!key || key.status === "SOLD") return;
 
@@ -291,7 +332,8 @@ export async function resendOrderEmail(formData: FormData): Promise<FormResult> 
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const orderNumber = formData.get("orderNumber") as string;
+  const orderNumber = formId(formData, "orderNumber");
+  if (!orderNumber) return { ok: false, error: "Order not found." };
   const order = await prisma.order.findUnique({ where: { orderNumber } });
   if (!order) return { ok: false, error: "Order not found." };
   if (order.status !== "FULFILLED") {
@@ -312,8 +354,9 @@ export async function updateOrderStatus(
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const orderNumber = formData.get("orderNumber") as string;
-  const action = formData.get("action") as string;
+  const orderNumber = formId(formData, "orderNumber");
+  const action = String(formData.get("action") ?? "");
+  if (!orderNumber) return { ok: false, error: "Order not found." };
   const order = await prisma.order.findUnique({ where: { orderNumber } });
   if (!order) return { ok: false, error: "Order not found." };
 
@@ -321,7 +364,7 @@ export async function updateOrderStatus(
     if (order.status !== "FULFILLED" && order.status !== "PAID") {
       return { ok: false, error: "Only paid or delivered orders can be marked refunded." };
     }
-    const note = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
+    const note = formNote(formData);
     await prisma.$transaction(async (tx) => {
       await tx.order.update({
         where: { id: order.id },
@@ -375,7 +418,7 @@ export async function updateOrderStatus(
       return { ok: false, error: "There is no open report on this order." };
     }
     // The message goes to the customer (email + their order page).
-    const message = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
+    const message = formNote(formData);
     if (message.length < 10) {
       return { ok: false, error: "Write a short message to the customer explaining what you found." };
     }
@@ -416,9 +459,10 @@ export async function setUserSuspended(
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const userId = formData.get("userId") as string;
+  const userId = formId(formData, "userId");
+  if (!userId) return { ok: false, error: "User not found." };
   const suspend = formData.get("suspend") === "true";
-  const note = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
+  const note = formNote(formData);
 
   if (userId === admin.user.id) {
     return { ok: false, error: "You can't suspend your own account." };
@@ -446,7 +490,8 @@ export async function setUserRole(formData: FormData): Promise<FormResult> {
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const userId = formData.get("userId") as string;
+  const userId = formId(formData, "userId");
+  if (!userId) return { ok: false, error: "User not found." };
   const role = formData.get("role") === "ADMIN" ? "ADMIN" : "USER";
 
   if (userId === admin.user.id) {
@@ -471,10 +516,11 @@ export async function setEmailBlocked(formData: FormData): Promise<FormResult> {
   const admin = await getAdminSession();
   if (!admin) return { ok: false, error: "Not authorized." };
 
-  const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
+  const parsedEmail = emailField.safeParse(formData.get("email"));
+  if (!parsedEmail.success) return { ok: false, error: "Enter a valid email address." };
+  const email = parsedEmail.data;
   const block = formData.get("block") === "true";
-  const note = ((formData.get("note") as string) ?? "").trim().slice(0, 1000);
-  if (!email) return { ok: false, error: "Missing email." };
+  const note = formNote(formData);
 
   if (email === admin.user.email?.toLowerCase()) {
     return { ok: false, error: "You can't block your own email." };

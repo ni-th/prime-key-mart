@@ -6,6 +6,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { KEY_BATCH_MAX_CHARS, KEY_BATCH_MAX_LINES } from "@/lib/validation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { addLicenseKeys, type FormResult } from "@/app/actions/admin";
 
@@ -29,10 +31,10 @@ export function AddKeysForm({ productId, accounts = false }: { productId: string
     <Card className="space-y-3 p-5">
       <form action={formAction} className="space-y-3">
         <input type="hidden" name="productId" value={productId} />
-        <div className="space-y-1.5">
-          <label htmlFor="raw" className="text-sm font-medium">
+        <Field data-invalid={!state.ok && state.error ? true : undefined}>
+          <FieldLabel htmlFor="raw" required>
             {accounts ? "Paste accounts - one per line: username, password" : "Paste license keys - one per line"}
-          </label>
+          </FieldLabel>
           <Textarea
             id="raw"
             name="raw"
@@ -43,14 +45,18 @@ export function AddKeysForm({ productId, accounts = false }: { productId: string
                 : "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX\nYYYYY-YYYYY-YYYYY-YYYYY-YYYYY"
             }
             className="font-mono text-sm"
+            spellCheck={false}
+            autoComplete="off"
+            maxLength={KEY_BATCH_MAX_CHARS}
             required
           />
-          <p className="text-xs text-muted-foreground">
+          <FieldDescription className="text-xs">
             {accounts
               ? "Only the first comma separates the username from the password, so passwords may contain commas. Accounts are encrypted; a username that's already in stock is skipped."
-              : "Keys are encrypted before they touch the database. Exact duplicates are skipped automatically."}
-          </p>
-        </div>
+              : "Keys are encrypted before they touch the database. Exact duplicates are skipped automatically."}{" "}
+            Up to {KEY_BATCH_MAX_LINES.toLocaleString()} per batch.
+          </FieldDescription>
+        </Field>
 
         {state.ok && state.message && (
           <Alert>

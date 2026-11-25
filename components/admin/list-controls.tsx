@@ -87,6 +87,7 @@ export function ListSearch({
         value={value}
         placeholder={placeholder}
         aria-label={placeholder}
+        maxLength={100}
         className="h-8 pr-8 pl-8"
         onChange={(e) => {
           const v = e.target.value;

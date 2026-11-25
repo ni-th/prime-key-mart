@@ -14,7 +14,7 @@ import { Loader2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -77,7 +77,7 @@ function DeliveryFields({
   const [value, setValue] = useState<DeliveryType>(type);
   return (
     <>
-      <Field label="Delivery" htmlFor="deliveryType" hint={DELIVERY_HINT[value]}>
+      <ProductField label="Delivery" htmlFor="deliveryType" hint={DELIVERY_HINT[value]} required>
         <Select
           name="deliveryType"
           value={value}
@@ -95,17 +95,19 @@ function DeliveryFields({
             ))}
           </SelectContent>
         </Select>
-      </Field>
-      <Field
+      </ProductField>
+      <ProductField
         label="How to activate (optional)"
         htmlFor="activationSteps"
         error={error}
-        hint="One step per line. Shown with the keys on the order page and in the keys email."
+        hint="One step per line, up to 3000 characters. Shown with the keys on the order page and in the keys email."
       >
         <Textarea
           id="activationSteps"
           name="activationSteps"
           rows={6}
+          maxLength={3000}
+          aria-invalid={error ? true : undefined}
           defaultValue={steps ?? ""}
           placeholder={
             value === "PHONE"
@@ -126,33 +128,36 @@ function DeliveryFields({
                   )
           }
         />
-      </Field>
+      </ProductField>
     </>
   );
 }
 
-function Field({
+/** Label (with * when required), the input, then its help text or the server's error. */
+function ProductField({
   label,
   htmlFor,
   error,
   children,
   hint,
+  required,
 }: {
   label: string;
   htmlFor: string;
   error?: string;
   hint?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
+    <Field data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={htmlFor} required={required}>
+        {label}
+      </FieldLabel>
       {children}
-      {hint && !error && (
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+      {hint && !error && <FieldDescription className="text-xs">{hint}</FieldDescription>}
+      <FieldError className="text-xs">{error}</FieldError>
+    </Field>
   );
 }
 
@@ -386,35 +391,40 @@ function PriceFields({
 
   return (
     <>
-      <Field label="Price (USD)" htmlFor="price" error={usdError}>
+      <ProductField label="Price (USD)" htmlFor="price" error={usdError} required>
         <Input
           id="price"
           name="price"
           type="number"
+          inputMode="decimal"
           step="0.01"
           min="0"
+          max="10000"
+          aria-invalid={usdError ? true : undefined}
           value={usd}
           onChange={(e) => setUsd(e.target.value)}
           required
         />
-      </Field>
-      <div className="space-y-1.5">
-        <Label htmlFor="priceLkr">Fixed price in LKR (optional)</Label>
+      </ProductField>
+      <Field data-invalid={lkrError ? true : undefined}>
+        <FieldLabel htmlFor="priceLkr">Fixed price in LKR (optional)</FieldLabel>
         <Input
           id="priceLkr"
           name="priceLkr"
           type="number"
+          inputMode="numeric"
           step="1"
-          min="0"
+          min="1"
+          max="5000000"
           placeholder={calculated !== null ? String(calculated) : "Calculated from USD"}
           value={lkr}
           onChange={(e) => setLkr(e.target.value)}
           aria-invalid={lkrError ? true : undefined}
         />
         {lkrError ? (
-          <p className="text-xs text-destructive">{lkrError}</p>
+          <FieldError className="text-xs">{lkrError}</FieldError>
         ) : (
-          <p className="text-xs text-muted-foreground">
+          <FieldDescription className="text-xs">
             {calculated !== null ? (
               <>
                 At today&apos;s rate: {formatMoney(calculated * 100, "LKR")}.{" "}
@@ -425,7 +435,7 @@ function PriceFields({
             ) : (
               "Leave empty to calculate it from the USD price."
             )}
-          </p>
+          </FieldDescription>
         )}
         {drift !== null && Math.abs(drift) >= LKR_DRIFT_WARN_PERCENT && (
           <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -434,17 +444,19 @@ function PriceFields({
             better deal.
           </p>
         )}
-      </div>
+      </Field>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="cost">Your cost per key (private)</Label>
+      <Field data-invalid={costError ? true : undefined}>
+        <FieldLabel htmlFor="cost">Your cost per key (optional, private)</FieldLabel>
         <div className="flex gap-2">
           <Input
             id="cost"
             name="cost"
             type="number"
+            inputMode="decimal"
             step="0.01"
             min="0"
+            max="5000000"
             placeholder="What you paid"
             value={cost}
             onChange={(e) => setCost(e.target.value)}
@@ -470,10 +482,14 @@ function PriceFields({
             ))}
           </div>
         </div>
-        <p className={costError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-          {costError ?? "Only admins see this. Used to show your real profit after gateway fees."}
-        </p>
-      </div>
+        {costError ? (
+          <FieldError className="text-xs">{costError}</FieldError>
+        ) : (
+          <FieldDescription className="text-xs">
+            Only admins see this. Used to show your real profit after gateway fees.
+          </FieldDescription>
+        )}
+      </Field>
 
       <div className="rounded-lg border bg-muted/40 p-4 text-sm sm:col-span-2">
         {costValid && calculated !== null ? (
@@ -546,59 +562,100 @@ export function ProductForm({
       )}
 
       <Card className="space-y-4 p-5">
-        <Field label="Name" htmlFor="name" error={fe.name}>
-          <Input id="name" name="name" defaultValue={product?.name} required />
-        </Field>
-        <Field
+        <ProductField label="Name" htmlFor="name" error={fe.name} hint="2 to 120 characters." required>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={product?.name}
+            required
+            minLength={2}
+            maxLength={120}
+            aria-invalid={fe.name ? true : undefined}
+          />
+        </ProductField>
+        <ProductField
           label="Slug"
           htmlFor="slug"
           error={fe.slug}
           hint="URL identifier. Leave blank to generate from the name."
         >
-          <Input id="slug" name="slug" defaultValue={product?.slug} />
-        </Field>
-        <Field
+          <Input
+            id="slug"
+            name="slug"
+            defaultValue={product?.slug}
+            maxLength={120}
+            spellCheck={false}
+            autoCapitalize="none"
+            aria-invalid={fe.slug ? true : undefined}
+          />
+        </ProductField>
+        <ProductField
           label="Short description"
           htmlFor="shortDescription"
           error={fe.shortDescription}
+          hint="5 to 200 characters. Shown on product cards."
+          required
         >
           <Input
             id="shortDescription"
             name="shortDescription"
             defaultValue={product?.shortDescription}
+            minLength={5}
+            maxLength={200}
+            aria-invalid={fe.shortDescription ? true : undefined}
             required
           />
-        </Field>
-        <Field label="Full description" htmlFor="description" error={fe.description}>
+        </ProductField>
+        <ProductField
+          label="Full description"
+          htmlFor="description"
+          error={fe.description}
+          hint="10 to 4000 characters."
+          required
+        >
           <Textarea
             id="description"
             name="description"
             rows={6}
+            minLength={10}
+            maxLength={4000}
+            aria-invalid={fe.description ? true : undefined}
             defaultValue={product?.description}
             required
           />
-        </Field>
+        </ProductField>
       </Card>
 
       <Card className="grid gap-4 p-5 sm:grid-cols-2">
-        <Field label="Brand" htmlFor="brand" error={fe.brand}>
-          <Input id="brand" name="brand" defaultValue={product?.brand} required />
-        </Field>
-        <Field label="Platform" htmlFor="platform" error={fe.platform}>
+        <ProductField label="Brand" htmlFor="brand" error={fe.brand} required>
+          <Input
+            id="brand"
+            name="brand"
+            defaultValue={product?.brand}
+            maxLength={60}
+            aria-invalid={fe.brand ? true : undefined}
+            required
+          />
+        </ProductField>
+        <ProductField label="Platform" htmlFor="platform" error={fe.platform} required>
           <Input
             id="platform"
             name="platform"
             defaultValue={product?.platform ?? "Windows"}
+            maxLength={60}
+            aria-invalid={fe.platform ? true : undefined}
             required
           />
-        </Field>
-        <Field label="Region" htmlFor="region" error={fe.region}>
+        </ProductField>
+        <ProductField label="Region" htmlFor="region" error={fe.region} hint="Empty = Global.">
           <Input
             id="region"
             name="region"
             defaultValue={product?.region ?? "Global"}
+            maxLength={60}
+            aria-invalid={fe.region ? true : undefined}
           />
-        </Field>
+        </ProductField>
         <PriceFields
           priceCents={product?.priceCents}
           priceLkrCents={product?.priceLkrCents ?? null}
@@ -609,7 +666,7 @@ export function ProductForm({
           lkrError={fe.priceLkrCents}
           costError={fe.costCents}
         />
-        <Field label="Category" htmlFor="categoryId" error={fe.categoryId}>
+        <ProductField label="Category" htmlFor="categoryId" error={fe.categoryId} required>
           {/* `items` lets the trigger show the name before the popup has opened
               (otherwise Base UI shows the raw value, i.e. the category id). */}
           <Select
@@ -628,8 +685,8 @@ export function ProductForm({
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field
+        </ProductField>
+        <ProductField
           label="Image URL"
           htmlFor="imageUrl"
           error={fe.imageUrl}
@@ -641,7 +698,7 @@ export function ProductForm({
             enabled={uploadsEnabled}
             invalid={Boolean(fe.imageUrl)}
           />
-        </Field>
+        </ProductField>
       </Card>
 
       <Card className="space-y-4 p-5">
@@ -669,7 +726,7 @@ export function ProductForm({
       </Card>
 
       <Card className="space-y-3 p-5">
-        <Field
+        <ProductField
           label="Low stock alert (optional)"
           htmlFor="lowStockThreshold"
           error={fe.lowStockThreshold}
@@ -682,11 +739,13 @@ export function ProductForm({
             min={1}
             max={1000}
             step={1}
+            inputMode="numeric"
             placeholder={String(defaultLowStock)}
             defaultValue={product?.lowStockThreshold ?? ""}
+            aria-invalid={fe.lowStockThreshold ? true : undefined}
             className="sm:max-w-40"
           />
-        </Field>
+        </ProductField>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

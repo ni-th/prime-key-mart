@@ -2,12 +2,13 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { emailField, idField } from "@/lib/validation";
 import { isEmailBlocked } from "@/lib/moderation";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
-  productId: z.string().min(1).max(64),
-  email: z.email().max(254),
+  productId: idField,
+  email: emailField,
 });
 
 export type NotifyState =

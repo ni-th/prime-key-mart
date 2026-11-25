@@ -7,7 +7,7 @@ import { answerActivation, type ActivationResult } from "@/app/actions/activatio
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -68,26 +68,33 @@ export function AnswerActivationForm({ requestId }: { requestId: string }) {
         ))}
       </div>
       {action === "send" && (
-        <div className="space-y-1.5">
-          <Label htmlFor={`cid-${requestId}`}>Confirmation ID</Label>
+        <Field>
+          <FieldLabel htmlFor={`cid-${requestId}`} required>
+            Confirmation ID
+          </FieldLabel>
           <Input
             id={`cid-${requestId}`}
             name="confirmationId"
             inputMode="numeric"
             autoComplete="off"
+            spellCheck={false}
             required
+            maxLength={80}
+            // 48 digits, with optional spaces or dashes between groups.
+            pattern="[0-9\s\-]+"
+            title="Digits, spaces and dashes only"
             placeholder="123456-123456-123456-123456-123456-123456-123456-123456"
             className="font-mono"
           />
-          <p className="text-xs text-muted-foreground">
+          <FieldDescription className="text-xs">
             48 digits. Spaces and dashes are fine. It&apos;s emailed to the customer and shown under their key.
-          </p>
-        </div>
+          </FieldDescription>
+        </Field>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor={`anote-${requestId}`}>
+      <Field>
+        <FieldLabel htmlFor={`anote-${requestId}`} required={action === "reject"}>
           Message to the customer{action === "send" ? " (optional)" : ""}
-        </Label>
+        </FieldLabel>
         <Textarea
           id={`anote-${requestId}`}
           name="note"
@@ -100,7 +107,7 @@ export function AnswerActivationForm({ requestId }: { requestId: string }) {
               : "e.g. The Installation ID is incomplete. Please copy all 9 groups and send it again."
           }
         />
-      </div>
+      </Field>
       <Submit action={action} />
     </form>
   );

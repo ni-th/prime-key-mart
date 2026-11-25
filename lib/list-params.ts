@@ -4,10 +4,13 @@
  */
 export type RawParams = Record<string, string | string[] | undefined>;
 
-/** First value of a search param, trimmed; "" when missing. */
+/** Longest value read from a search param (search boxes, filters). */
+const PARAM_MAX = 200;
+
+/** First value of a search param, trimmed and length-capped; "" when missing. */
 export function param(sp: RawParams, key: string): string {
   const v = sp[key];
-  return (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
+  return ((Array.isArray(v) ? v[0] : v)?.trim() ?? "").slice(0, PARAM_MAX);
 }
 
 /** Value only if it's one of `allowed`, else `fallback`. */

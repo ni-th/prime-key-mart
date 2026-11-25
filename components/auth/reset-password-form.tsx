@@ -14,7 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { PASSWORD_MAX } from "@/lib/validation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
@@ -80,39 +81,42 @@ export function ResetPasswordForm({ token, email }: { token: string; email: stri
             readOnly
             hidden
           />
-          <div className="space-y-1.5">
-            <Label htmlFor="password">New password</Label>
-            <PasswordInput
-              id="password"
-              name="password"
-              autoComplete="new-password"
-              minLength={8}
-              required
-              autoFocus
-              aria-invalid={fieldErrors.password ? true : undefined}
-            />
-            <p
-              className={cn(
-                "text-xs",
-                fieldErrors.password ? "text-destructive" : "text-muted-foreground",
+          <FieldGroup>
+            <Field data-invalid={fieldErrors.password ? true : undefined}>
+              <FieldLabel htmlFor="password" required>
+                New password
+              </FieldLabel>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={PASSWORD_MAX}
+                required
+                autoFocus
+                aria-invalid={fieldErrors.password ? true : undefined}
+              />
+              {fieldErrors.password ? (
+                <FieldError>{fieldErrors.password}</FieldError>
+              ) : (
+                <FieldDescription>At least 8 characters.</FieldDescription>
               )}
-            >
-              {fieldErrors.password ?? "At least 8 characters."}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm">Confirm new password</Label>
-            <PasswordInput
-              id="confirm"
-              name="confirm"
-              autoComplete="new-password"
-              required
-              aria-invalid={fieldErrors.confirm ? true : undefined}
-            />
-            {fieldErrors.confirm && (
-              <p className="text-xs text-destructive">{fieldErrors.confirm}</p>
-            )}
-          </div>
+            </Field>
+            <Field data-invalid={fieldErrors.confirm ? true : undefined}>
+              <FieldLabel htmlFor="confirm" required>
+                Confirm new password
+              </FieldLabel>
+              <PasswordInput
+                id="confirm"
+                name="confirm"
+                autoComplete="new-password"
+                maxLength={PASSWORD_MAX}
+                required
+                aria-invalid={fieldErrors.confirm ? true : undefined}
+              />
+              <FieldError>{fieldErrors.confirm}</FieldError>
+            </Field>
+          </FieldGroup>
           <Submit />
         </form>
       </CardContent>

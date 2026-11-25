@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, MailX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -59,8 +59,10 @@ export function CloseReportDialog({
         <form action={formAction} onSubmit={() => setOpen(false)} className="space-y-3">
           <input type="hidden" name="orderNumber" value={orderNumber} />
           <input type="hidden" name="action" value="dismiss-report" />
-          <div className="space-y-1.5">
-            <Label htmlFor="close-message">Message to the customer</Label>
+          <Field>
+            <FieldLabel htmlFor="close-message" required>
+              Message to the customer
+            </FieldLabel>
             <Textarea
               id="close-message"
               name="note"
@@ -70,11 +72,11 @@ export function CloseReportDialog({
               required
               defaultValue={DEFAULT_MESSAGE}
             />
-            <p className="text-xs text-muted-foreground">
-              Edit as needed. The customer can reply to the email, and can send one follow-up
+            <FieldDescription className="text-xs">
+              Edit as needed. 10 to 1000 characters. The customer can reply to the email, and can send one follow-up
               report from their order page.
-            </p>
-          </div>
+            </FieldDescription>
+          </Field>
           <DialogFooter>
             <DialogClose render={<Button variant="ghost" type="button" />}>Cancel</DialogClose>
             <SubmitButton />

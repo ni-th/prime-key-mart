@@ -59,6 +59,7 @@ export async function SiteHeader() {
             <Input
               type="search"
               name="q"
+              maxLength={100}
               placeholder="Search keys…"
               className="h-8 w-full pl-8"
             />

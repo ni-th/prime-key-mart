@@ -104,11 +104,13 @@ export async function getProducts(
   const where: Prisma.ProductWhereInput = { published: true };
   if (opts.category) where.category = { slug: opts.category, visible: true };
   if (opts.brand) where.brand = opts.brand;
-  if (opts.q) {
+  // Search text comes from the URL: cap it so a huge value can't slow the query.
+  const q = opts.q?.trim().slice(0, 100);
+  if (q) {
     where.OR = [
-      { name: { contains: opts.q, mode: "insensitive" } },
-      { shortDescription: { contains: opts.q, mode: "insensitive" } },
-      { brand: { contains: opts.q, mode: "insensitive" } },
+      { name: { contains: q, mode: "insensitive" } },
+      { shortDescription: { contains: q, mode: "insensitive" } },
+      { brand: { contains: q, mode: "insensitive" } },
     ];
   }
 

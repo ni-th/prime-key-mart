@@ -16,14 +16,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { OtpInput } from "@/components/ui/otp-input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { EMAIL_MAX, PASSWORD_MAX } from "@/lib/validation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
+import { safeCallbackUrl } from "@/lib/safe-redirect";
 
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") || "/";
+  // Only same-site paths: a crafted link must not redirect to another site.
+  const callbackUrl = safeCallbackUrl(params.get("callbackUrl"));
 
   const justEnabled = params.get("twofa") === "enabled";
 
@@ -105,8 +108,10 @@ export function LoginForm() {
             </Alert>
           )}
           {needsCode && (
-            <div className="space-y-1.5">
-              <Label htmlFor="code">Authenticator code</Label>
+            <Field data-invalid={error !== null || undefined}>
+              <FieldLabel htmlFor="code" required>
+                Authenticator code
+              </FieldLabel>
               <OtpInput
                 key={codeAttempt}
                 className="justify-center"
@@ -119,39 +124,46 @@ export function LoginForm() {
                 // Submit as soon as the 6th digit is entered.
                 onComplete={() => formRef.current?.requestSubmit()}
               />
-              <p className="text-xs text-muted-foreground">
-                Open your authenticator app and enter the 6-digit code for
-                Keysby.
-              </p>
-            </div>
+              <FieldDescription>
+                Open your authenticator app and enter the 6-digit code for Keysby.
+              </FieldDescription>
+            </Field>
           )}
-          <div className={needsCode ? "hidden" : "space-y-1.5"}>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-            />
-          </div>
-          <div className={needsCode ? "hidden" : "space-y-1.5"}>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-            <PasswordInput
-              id="password"
-              name="password"
-              autoComplete="current-password"
-              required
-            />
-          </div>
+          <FieldGroup className={needsCode ? "hidden" : undefined}>
+            <Field>
+              <FieldLabel htmlFor="email" required>
+                Email
+              </FieldLabel>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                maxLength={EMAIL_MAX}
+                required
+              />
+            </Field>
+            <Field>
+              <div className="flex items-center justify-between">
+                <FieldLabel htmlFor="password" required>
+                  Password
+                </FieldLabel>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="current-password"
+                maxLength={PASSWORD_MAX}
+                required
+              />
+            </Field>
+          </FieldGroup>
           <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
           <Button
             type="submit"

@@ -9,12 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { RequiredMark } from "@/components/ui/label";
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Stars } from "@/components/shop/stars";
 import { cn } from "@/lib/utils";
 import {
   REVIEW_BODY_MAX,
+  REVIEW_BODY_MIN,
   REVIEW_STATUS,
   REVIEW_TITLE_MAX,
   type OrderReviewItem,
@@ -94,32 +96,45 @@ function ReviewForm({
         });
       }}
     >
-      <StarPicker value={rating} onChange={(n) => { setRating(n); setError(null); }} />
-      <div className="space-y-1.5">
-        <Label htmlFor={`title-${item.productId}`}>Title (optional)</Label>
-        <Input
-          id={`title-${item.productId}`}
-          value={title}
-          maxLength={REVIEW_TITLE_MAX}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Activated in seconds"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`body-${item.productId}`}>Your review</Label>
-        <Textarea
-          id={`body-${item.productId}`}
-          value={body}
-          rows={4}
-          maxLength={REVIEW_BODY_MAX}
-          onChange={(e) => { setBody(e.target.value); setError(null); }}
-          placeholder="How was activation? Did it work as described?"
-          required
-        />
-        <p className="text-xs text-muted-foreground">
-          Shown with your first name and last initial. Please don&apos;t include your key or personal details.
-        </p>
-      </div>
+      <FieldGroup className="gap-4">
+        <Field>
+          <FieldTitle>
+            Rating <RequiredMark className="ml-0" />
+          </FieldTitle>
+          <StarPicker value={rating} onChange={(n) => { setRating(n); setError(null); }} />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor={`title-${item.productId}`}>Title (optional)</FieldLabel>
+          <Input
+            id={`title-${item.productId}`}
+            value={title}
+            maxLength={REVIEW_TITLE_MAX}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Activated in seconds"
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor={`body-${item.productId}`} required>
+            Your review
+          </FieldLabel>
+          <Textarea
+            id={`body-${item.productId}`}
+            value={body}
+            rows={4}
+            minLength={REVIEW_BODY_MIN}
+            maxLength={REVIEW_BODY_MAX}
+            onChange={(e) => { setBody(e.target.value); setError(null); }}
+            placeholder="How was activation? Did it work as described?"
+            required
+          />
+          <FieldDescription className="flex justify-between gap-3 text-xs">
+            <span>Shown with your first name and last initial. Please don&apos;t include your key or personal details.</span>
+            <span className="shrink-0 tabular-nums">
+              {body.trim().length}/{REVIEW_BODY_MAX}
+            </span>
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

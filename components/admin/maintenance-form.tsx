@@ -7,7 +7,7 @@ import { saveMaintenance, type SettingsResult } from "@/app/actions/settings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 
 function Save({ turningOn, changed }: { turningOn: boolean; changed: boolean }) {
   const { pending } = useFormStatus();
@@ -50,8 +50,8 @@ export function MaintenanceForm({ on, message }: { on: boolean; message: string 
         </span>
       </label>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="maintenanceMessage">Message for customers (optional)</Label>
+      <Field data-invalid={fe.maintenanceMessage ? true : undefined}>
+        <FieldLabel htmlFor="maintenanceMessage">Message for customers (optional)</FieldLabel>
         <Input
           id="maintenanceMessage"
           name="maintenanceMessage"
@@ -60,8 +60,9 @@ export function MaintenanceForm({ on, message }: { on: boolean; message: string 
           placeholder="e.g. We're updating our stock. Back by 6 pm."
           aria-invalid={fe.maintenanceMessage ? true : undefined}
         />
-        {fe.maintenanceMessage && <p className="text-xs text-destructive">{fe.maintenanceMessage}</p>}
-      </div>
+        <FieldError>{fe.maintenanceMessage}</FieldError>
+        <FieldDescription className="text-xs">Up to 300 characters. Shown on the maintenance page.</FieldDescription>
+      </Field>
 
       <Save turningOn={enabled} changed={enabled !== on} />
     </form>

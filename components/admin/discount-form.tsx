@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRangePicker, type DateRange } from "@/components/ui/date-range-picker";
 import {
@@ -135,10 +135,11 @@ function TimeSelect({
   );
 }
 
+/** The server's error for a field, or its help text. */
 function Hint({ error, children }: { error?: string; children?: React.ReactNode }) {
-  if (error) return <p className="text-xs text-destructive">{error}</p>;
+  if (error) return <FieldError className="text-xs">{error}</FieldError>;
   if (!children) return null;
-  return <p className="text-xs text-muted-foreground">{children}</p>;
+  return <FieldDescription className="text-xs">{children}</FieldDescription>;
 }
 
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
@@ -253,21 +254,26 @@ export function DiscountForm({
       )}
 
       <Card className="grid gap-4 p-5 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Sale name</Label>
+        <Field data-invalid={fe.name ? true : undefined}>
+          <FieldLabel htmlFor="name" required>
+            Sale name
+          </FieldLabel>
           <Input
             id="name"
             name="name"
             defaultValue={discount?.name}
             placeholder="e.g. Black Friday"
             required
+            minLength={2}
             maxLength={60}
             aria-invalid={fe.name ? true : undefined}
           />
-          <Hint error={fe.name}>Shown to customers next to the sale price.</Hint>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="percent">Percent off</Label>
+          <Hint error={fe.name}>Shown to customers next to the sale price. 2 to 60 characters.</Hint>
+        </Field>
+        <Field data-invalid={fe.percent ? true : undefined}>
+          <FieldLabel htmlFor="percent" required>
+            Percent off
+          </FieldLabel>
           <Input
             id="percent"
             name="percent"
@@ -285,9 +291,9 @@ export function DiscountForm({
           <Hint error={fe.percent}>
             {percentValid && example
               ? `e.g. ${example.name}: ${formatMoney(example.priceCents, "USD")} becomes ${formatMoney(discountedUsdCents(example.priceCents, percent), "USD")}.`
-              : "Applies to USD and LKR prices alike (LKR rounded to whole rupees)."}
+              : `${DISCOUNT_MIN_PERCENT} to ${DISCOUNT_MAX_PERCENT}%. Applies to USD and LKR prices alike (LKR rounded to whole rupees).`}
           </Hint>
-        </div>
+        </Field>
       </Card>
 
       <Card className="space-y-4 p-5">
@@ -412,8 +418,8 @@ export function DiscountForm({
         </div>
         {hydrated ? (
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="saleDates">Dates</Label>
+            <Field data-invalid={fe.startsAt || fe.endsAt ? true : undefined}>
+              <FieldLabel htmlFor="saleDates">Dates (optional)</FieldLabel>
               <DateRangePicker
                 id="saleDates"
                 className="w-full sm:w-80"
@@ -429,22 +435,22 @@ export function DiscountForm({
                     ? "Start date only: runs from then with no end date. Pick a second day to set an end."
                     : "Customers see a countdown such as \"Ends in 2 days\"."}
               </Hint>
-            </div>
+            </Field>
             {range?.from && (
               <div className="grid gap-4 sm:max-w-80 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="startTime">Start time</Label>
+                <Field>
+                  <FieldLabel htmlFor="startTime">Start time</FieldLabel>
                   <TimeSelect id="startTime" value={startTime} onChange={setStartTime} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="endTime">End time</Label>
+                </Field>
+                <Field data-disabled={!range.to || undefined}>
+                  <FieldLabel htmlFor="endTime">End time</FieldLabel>
                   <TimeSelect
                     id="endTime"
                     value={endTime}
                     onChange={setEndTime}
                     disabled={!range.to}
                   />
-                </div>
+                </Field>
               </div>
             )}
           </div>

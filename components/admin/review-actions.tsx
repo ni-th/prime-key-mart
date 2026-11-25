@@ -6,6 +6,7 @@ import { Check, EyeOff, Loader2, MessageSquareReply, Trash2 } from "lucide-react
 import { deleteReview, replyToReview, setReviewStatus, type ReviewResult } from "@/app/actions/reviews";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { REVIEW_REPLY_MAX, type ReviewStatus } from "@/lib/review-shared";
 
 /** Approve / hide / delete / reply buttons for one review in Admin -> Reviews. */
@@ -74,13 +75,20 @@ export function ReviewActions({
 
       {replying && (
         <div className="space-y-2">
-          <Textarea
-            rows={3}
-            maxLength={REVIEW_REPLY_MAX}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Thanks for the review! ... (shown publicly under the review)"
-          />
+          <Field>
+            <FieldLabel htmlFor={`reply-${id}`}>Public reply</FieldLabel>
+            <Textarea
+              id={`reply-${id}`}
+              rows={3}
+              maxLength={REVIEW_REPLY_MAX}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Thanks for the review! ... (shown publicly under the review)"
+            />
+            <FieldDescription className="text-xs">
+              Shown under the review. {text.trim().length}/{REVIEW_REPLY_MAX} characters. Empty removes it.
+            </FieldDescription>
+          </Field>
           <div className="flex gap-2">
             <Button size="sm" disabled={pending} onClick={() => run(() => replyToReview(id, text), () => setReplying(false))}>
               Save reply

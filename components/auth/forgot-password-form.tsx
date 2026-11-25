@@ -17,7 +17,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { EMAIL_MAX } from "@/lib/validation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Turnstile, useTurnstileOn } from "@/components/auth/turnstile";
 
@@ -85,17 +86,20 @@ export function ForgotPasswordForm() {
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+          <Field>
+            <FieldLabel htmlFor="email" required>
+              Email
+            </FieldLabel>
             <Input
               id="email"
               name="email"
               type="email"
               autoComplete="email"
+              maxLength={EMAIL_MAX}
               required
               autoFocus
             />
-          </div>
+          </Field>
           {/* Puts its token in the form as cf-turnstile-response. */}
           <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
           <Submit blocked={turnstileOn && !captcha} />

@@ -50,9 +50,15 @@ export function ImageUpload({
   if (!enabled) {
     return (
       <Input
+        id={name}
         name={name}
         type="url"
         placeholder="https://..."
+        // Web addresses only (no javascript: or data: URLs); checked on the server too.
+        pattern="https?://.+"
+        title="A web address starting with https://"
+        maxLength={2048}
+        spellCheck={false}
         defaultValue={defaultValue ?? ""}
         aria-invalid={invalid || undefined}
       />

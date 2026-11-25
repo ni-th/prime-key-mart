@@ -7,7 +7,8 @@ import { Loader2, MailCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { EMAIL_MAX } from "@/lib/validation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { lookupOrderAction, type LookupState } from "@/app/actions/order-lookup";
 
@@ -115,20 +116,39 @@ export function OrderLookup({ supportEmail }: { supportEmail?: string | null }) 
             </AlertDescription>
           </Alert>
         )}
-        <div className="space-y-1.5">
-          <Label htmlFor="orderNumber">Order number</Label>
-          <Input
-            id="orderNumber"
-            name="orderNumber"
-            placeholder="KM-XXXXXX"
-            defaultValue={typed?.orderNumber}
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email used at checkout</Label>
-          <Input id="email" name="email" type="email" defaultValue={typed?.email} required />
-        </div>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="orderNumber" required>
+              Order number
+            </FieldLabel>
+            <Input
+              id="orderNumber"
+              name="orderNumber"
+              placeholder="KM-XXXXXX"
+              defaultValue={typed?.orderNumber}
+              autoCapitalize="characters"
+              spellCheck={false}
+              minLength={3}
+              maxLength={40}
+              required
+            />
+            <FieldDescription>On your PayHere receipt and order email, e.g. KM-8F3K2Q.</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="email" required>
+              Email used at checkout
+            </FieldLabel>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              defaultValue={typed?.email}
+              maxLength={EMAIL_MAX}
+              required
+            />
+          </Field>
+        </FieldGroup>
         <SubmitButton />
         <p className="text-xs text-muted-foreground">
           For your security we never show keys here. We&apos;ll email your order to the address
